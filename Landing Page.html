@@ -1,0 +1,1709 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="description" content="Edlira — agência de marketing digital com foco em performance e automação. Tráfego pago, IA, sites e vídeos que vendem." />
+<meta name="theme-color" content="#0A0A0A" />
+<meta property="og:title" content="Edlira · Vende mais com menos esforço" />
+<meta property="og:description" content="Tráfego + IA. Mais leads, mais vendas, menos dependência de equipe." />
+<meta property="og:type" content="website" />
+<title>Edlira · Tráfego pago + IA que vende sozinho</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<style>
+/* =========================================================================
+   TOKENS
+   ========================================================================= */
+:root{
+  --bg:#0A0A0A;
+  --bg-alt:#111111;
+  --bg-card:#0E0E0E;
+  --line:rgba(255,255,255,0.08);
+  --line-strong:rgba(255,255,255,0.16);
+  --text:#FFFFFF;
+  --text-2:#A6A6A6;
+  --text-3:#6B6B6B;
+  --accent:#C5F82A;
+  --accent-2:#9DCB1F;
+  --danger:#FF5C5C;
+  --radius:14px;
+  --radius-lg:22px;
+  --ease:cubic-bezier(.2,.7,.2,1);
+  --maxw:1240px;
+}
+
+/* =========================================================================
+   RESET
+   ========================================================================= */
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  font-family:'Inter',ui-sans-serif,system-ui,-apple-system,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  font-feature-settings:"ss01","cv11";
+  font-weight:400;
+  line-height:1.5;
+  overflow-x:hidden;
+}
+img{max-width:100%;display:block}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+a{color:inherit;text-decoration:none}
+input,select,textarea{font:inherit;color:inherit}
+::selection{background:var(--accent);color:#0A0A0A}
+
+/* =========================================================================
+   LAYOUT PRIMITIVES
+   ========================================================================= */
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 28px}
+@media (max-width:640px){.wrap{padding:0 20px}}
+
+.eyebrow{
+  display:inline-flex;align-items:center;gap:10px;
+  font-size:12px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--text-2);
+}
+.eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+
+h1,h2,h3,h4{margin:0;font-weight:600;letter-spacing:-0.025em;line-height:1.04;color:#fff;text-wrap:balance}
+h1{font-size:clamp(40px,7vw,76px);font-weight:600;letter-spacing:-0.035em}
+h2{font-size:clamp(32px,4.6vw,56px);letter-spacing:-0.03em}
+h3{font-size:clamp(20px,2vw,26px)}
+p{margin:0;color:var(--text-2);text-wrap:pretty}
+.kicker{color:var(--accent)}
+.muted{color:var(--text-2)}
+
+section{position:relative;padding:120px 0;border-top:1px solid var(--line)}
+section.tight{padding:90px 0}
+@media (max-width:760px){section{padding:80px 0}}
+
+.section-head{display:flex;flex-direction:column;gap:18px;max-width:780px;margin:0 0 64px}
+.section-head .eyebrow{margin-bottom:6px}
+
+/* =========================================================================
+   BUTTONS
+   ========================================================================= */
+.btn{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:14px 22px;border-radius:999px;
+  font-weight:500;font-size:14.5px;letter-spacing:-0.005em;
+  border:1px solid transparent;
+  transition:transform .35s var(--ease), background .25s var(--ease), box-shadow .35s var(--ease), color .25s var(--ease), border-color .25s var(--ease);
+  white-space:nowrap;
+}
+.btn .arr{transition:transform .35s var(--ease)}
+.btn:hover .arr{transform:translateX(3px)}
+
+.btn-primary{
+  background:var(--accent);color:#0A0A0A;
+  box-shadow:0 0 0 0 rgba(197,248,42,0);
+}
+.btn-primary:hover{
+  transform:translateY(-2px);
+  background:#D2FF3D;
+  box-shadow:0 14px 38px -10px rgba(197,248,42,.55), 0 0 0 1px rgba(197,248,42,.4);
+}
+.btn-ghost{
+  border-color:var(--line-strong);color:#fff;background:transparent;
+}
+.btn-ghost:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.04);transform:translateY(-2px)}
+.btn-sm{padding:10px 16px;font-size:13px}
+
+/* =========================================================================
+   NAVBAR
+   ========================================================================= */
+.nav{
+  position:fixed;top:0;left:0;right:0;z-index:50;
+  display:flex;align-items:center;justify-content:center;
+  padding:14px 20px;
+  transition:background .3s var(--ease), backdrop-filter .3s var(--ease), border-color .3s var(--ease);
+  border-bottom:1px solid transparent;
+}
+.nav.scrolled{
+  background:rgba(10,10,10,.7);
+  backdrop-filter:saturate(160%) blur(14px);
+  -webkit-backdrop-filter:saturate(160%) blur(14px);
+  border-bottom-color:var(--line);
+}
+.nav-inner{
+  width:100%;max-width:var(--maxw);
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:-0.02em}
+.logo-mark{
+  width:26px;height:26px;border-radius:7px;
+  background:radial-gradient(120% 120% at 20% 20%, var(--accent) 0%, #6FA800 65%, #0A0A0A 100%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.12), 0 0 0 1px rgba(197,248,42,.15);
+  position:relative;
+}
+.logo-mark::after{
+  content:"";position:absolute;inset:6px;border-radius:3px;
+  background:#0A0A0A;
+}
+.logo-mark::before{
+  content:"";position:absolute;inset:9px 5px 9px 9px;border-radius:2px;
+  background:var(--accent);
+}
+.nav-links{display:flex;align-items:center;gap:28px;font-size:14px;color:var(--text-2)}
+.nav-links a{transition:color .2s var(--ease)}
+.nav-links a:hover{color:#fff}
+@media (max-width:880px){.nav-links{display:none}}
+
+/* =========================================================================
+   HERO
+   ========================================================================= */
+.hero{
+  position:relative;min-height:100vh;
+  padding:160px 0 120px;
+  overflow:hidden;
+  border-top:0;
+}
+.hero-grid{
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(to right,rgba(255,255,255,.045) 1px,transparent 1px),
+    linear-gradient(to bottom,rgba(255,255,255,.045) 1px,transparent 1px);
+  background-size:64px 64px;
+  background-position:center;
+  -webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 35%,#000 30%,transparent 80%);
+  mask-image:radial-gradient(ellipse 70% 60% at 50% 35%,#000 30%,transparent 80%);
+  pointer-events:none;
+}
+.orb{
+  position:absolute;width:620px;height:620px;border-radius:50%;
+  background:radial-gradient(circle at 30% 30%, rgba(197,248,42,.55), rgba(197,248,42,.08) 45%, transparent 70%);
+  filter:blur(80px);
+  top:-120px;left:50%;transform:translateX(-50%);
+  animation:orbFloat 14s ease-in-out infinite;
+  pointer-events:none;
+  z-index:0;
+}
+.orb.sm{
+  width:260px;height:260px;
+  background:radial-gradient(circle, rgba(197,248,42,.4), transparent 70%);
+  top:auto;bottom:10%;left:6%;transform:none;
+  filter:blur(60px);
+  animation:orbFloat 18s ease-in-out infinite reverse;
+}
+@keyframes orbFloat{
+  0%,100%{transform:translate(-50%,0) scale(1)}
+  50%{transform:translate(-50%,30px) scale(1.04)}
+}
+.hero .orb.sm{animation-name:orbFloat2}
+@keyframes orbFloat2{
+  0%,100%{transform:translate(0,0) scale(1)}
+  50%{transform:translate(40px,-30px) scale(1.06)}
+}
+
+.hero-inner{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;text-align:center;gap:28px}
+.hero h1{max-width:14ch}
+.hero h1 .accent{
+  color:var(--accent);
+  position:relative;
+  display:inline-block;
+}
+.hero h1 .accent::after{
+  /* removed - per brief, no gradients in text */
+}
+.hero-sub{max-width:54ch;font-size:clamp(15px,1.3vw,18px);color:var(--text-2)}
+.hero-ctas{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+
+.badge-pulse{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:8px 14px 8px 12px;border-radius:999px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.02);
+  font-size:13px;color:var(--text-2);
+}
+.badge-pulse .pulse{
+  position:relative;width:8px;height:8px;border-radius:50%;background:var(--accent);
+}
+.badge-pulse .pulse::before{
+  content:"";position:absolute;inset:-4px;border-radius:50%;
+  background:var(--accent);opacity:.5;
+  animation:pulse 1.6s ease-out infinite;
+}
+@keyframes pulse{
+  0%{transform:scale(.6);opacity:.6}
+  100%{transform:scale(2.2);opacity:0}
+}
+.badge-pulse strong{color:#fff;font-weight:500}
+
+.hero-stats{
+  margin-top:60px;display:grid;grid-template-columns:repeat(3,1fr);gap:0;
+  width:100%;max-width:920px;
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+}
+.hero-stat{
+  padding:30px 24px;text-align:center;
+  border-right:1px solid var(--line);
+}
+.hero-stat:last-child{border-right:0}
+.hero-stat .num{
+  font-size:clamp(34px,4.4vw,52px);font-weight:600;letter-spacing:-0.035em;
+  color:var(--accent);font-feature-settings:"tnum";
+  display:block;line-height:1;
+}
+.hero-stat .lbl{margin-top:10px;font-size:13px;color:var(--text-2);letter-spacing:.02em}
+@media (max-width:680px){
+  .hero-stats{grid-template-columns:1fr}
+  .hero-stat{border-right:0;border-bottom:1px solid var(--line)}
+  .hero-stat:last-child{border-bottom:0}
+}
+
+/* Down arrow scroll */
+.scroll-cue{
+  position:absolute;bottom:32px;left:50%;transform:translateX(-50%);
+  font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-3);
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  z-index:2;
+}
+.scroll-cue .line{width:1px;height:36px;background:linear-gradient(to bottom,transparent,var(--text-3));animation:dropline 2s ease-in-out infinite}
+@keyframes dropline{0%,100%{transform:scaleY(.4);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}}
+
+/* =========================================================================
+   MARQUEE
+   ========================================================================= */
+.marquee{
+  padding:36px 0;
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  background:#0c0c0c;
+  -webkit-mask-image:linear-gradient(to right,transparent,#000 12%,#000 88%,transparent);
+  mask-image:linear-gradient(to right,transparent,#000 12%,#000 88%,transparent);
+  overflow:hidden;
+}
+.marquee-row{display:flex;gap:64px;animation:marquee 38s linear infinite;width:max-content}
+.marquee-row .item{
+  display:flex;align-items:center;gap:10px;white-space:nowrap;
+  font-size:18px;font-weight:500;letter-spacing:-.01em;color:#cfcfcf;opacity:.85;
+}
+.marquee-row .item svg{width:22px;height:22px;flex:none;color:#cfcfcf}
+.marquee-row .dot{width:4px;height:4px;border-radius:50%;background:var(--text-3)}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* =========================================================================
+   PROBLEM
+   ========================================================================= */
+.problem-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius-lg);overflow:hidden}
+.problem-cell{
+  background:var(--bg);
+  padding:36px 28px;
+  display:flex;flex-direction:column;gap:14px;
+  min-height:240px;
+}
+.problem-cell .ico{
+  width:38px;height:38px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(255,92,92,.08);color:#FF7A7A;
+  border:1px solid rgba(255,92,92,.18);
+}
+.problem-cell h3{font-size:18px;font-weight:600;letter-spacing:-.015em}
+.problem-cell p{font-size:14.5px;color:var(--text-2)}
+@media (max-width:1024px){.problem-grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){.problem-grid{grid-template-columns:1fr}}
+
+/* =========================================================================
+   SOLUTION (alt bg)
+   ========================================================================= */
+.solution{background:var(--bg-alt)}
+.pillars{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.pillar{
+  position:relative;
+  padding:28px;border:1px solid var(--line);border-radius:var(--radius-lg);
+  background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);
+  display:flex;flex-direction:column;gap:14px;min-height:240px;
+}
+.pillar .num{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);letter-spacing:.1em}
+.pillar h3{font-size:19px}
+.pillar p{font-size:14px}
+.pillar .ico{
+  width:42px;height:42px;border-radius:11px;
+  background:rgba(197,248,42,.08);color:var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(197,248,42,.2);
+  margin-bottom:8px;
+}
+.pillars-flow{
+  margin-top:28px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
+  font-size:13px;color:var(--text-3);
+  font-family:'JetBrains Mono',monospace;
+  letter-spacing:.04em;
+}
+.pillars-flow .x{color:var(--accent)}
+@media (max-width:1024px){.pillars{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){.pillars{grid-template-columns:1fr}}
+
+/* =========================================================================
+   SERVICES (large cards)
+   ========================================================================= */
+.services-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+.svc{
+  position:relative;
+  padding:34px;border-radius:var(--radius-lg);
+  border:1px solid var(--line);
+  background:var(--bg-card);
+  display:flex;flex-direction:column;gap:18px;min-height:380px;
+  transition:transform .4s var(--ease), border-color .4s var(--ease), background .4s var(--ease);
+  overflow:hidden;
+}
+.svc::before{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(360px 200px at 100% 0%, rgba(197,248,42,.07), transparent 60%);
+  opacity:0;transition:opacity .4s var(--ease);pointer-events:none;
+}
+.svc:hover{transform:translateY(-4px);border-color:rgba(197,248,42,.5)}
+.svc:hover::before{opacity:1}
+.svc:hover .svc-ico{background:var(--accent);color:#0A0A0A;border-color:var(--accent)}
+
+.svc-head{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.svc-ico{
+  width:48px;height:48px;border-radius:12px;
+  background:rgba(197,248,42,.08);color:var(--accent);
+  border:1px solid rgba(197,248,42,.22);
+  display:flex;align-items:center;justify-content:center;
+  transition:background .3s var(--ease), color .3s var(--ease), border-color .3s var(--ease);
+}
+.svc-tag{
+  font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-3);
+  letter-spacing:.12em;text-transform:uppercase;
+}
+.svc h3{font-size:24px}
+.svc-desc{font-size:15px;color:var(--text-2)}
+.svc-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+.svc-list li{font-size:14px;color:#d6d6d6;display:flex;gap:10px;align-items:flex-start}
+.svc-list li::before{
+  content:"";width:14px;height:14px;flex:none;margin-top:3px;
+  background:var(--accent);
+  -webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>");
+  -webkit-mask-size:contain;-webkit-mask-repeat:no-repeat;
+  mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>");
+  mask-size:contain;mask-repeat:no-repeat;
+}
+.svc-mini{
+  margin-top:auto;font-size:13.5px;color:#fff;display:inline-flex;gap:8px;align-items:center;
+  border-top:1px solid var(--line);padding-top:18px;
+}
+.svc-mini .arr{transition:transform .3s var(--ease);color:var(--accent)}
+.svc:hover .svc-mini .arr{transform:translateX(4px)}
+@media (max-width:880px){.services-grid{grid-template-columns:1fr}}
+
+/* =========================================================================
+   PROCESS / TIMELINE
+   ========================================================================= */
+.process{background:var(--bg-alt)}
+.timeline{position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+.tl-line{
+  position:absolute;left:0;right:0;top:42px;height:1px;
+  background:linear-gradient(to right, transparent 0%, var(--line) 6%, var(--line) 94%, transparent 100%);
+}
+.tl-progress{
+  position:absolute;left:0;top:42px;height:1px;background:var(--accent);width:0%;
+  transition:width 1.2s var(--ease);
+  box-shadow:0 0 12px rgba(197,248,42,.6);
+}
+.tl-step{padding:0 18px 0 0;position:relative}
+.tl-step .dot{
+  width:14px;height:14px;border-radius:50%;
+  background:var(--bg-alt);border:1px solid var(--line-strong);
+  margin:36px 0 24px;position:relative;z-index:2;
+  transition:background .3s var(--ease), border-color .3s var(--ease), box-shadow .3s var(--ease);
+}
+.tl-step.active .dot{
+  background:var(--accent);border-color:var(--accent);
+  box-shadow:0 0 0 6px rgba(197,248,42,.12);
+}
+.tl-step .num{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-3);letter-spacing:.1em}
+.tl-step h3{font-size:20px;margin-top:6px}
+.tl-step p{font-size:14px;margin-top:8px;max-width:24ch}
+@media (max-width:880px){
+  .timeline{grid-template-columns:1fr;gap:8px}
+  .tl-line, .tl-progress{display:none}
+  .tl-step{padding:24px 0;border-top:1px solid var(--line)}
+  .tl-step:first-child{border-top:0}
+  .tl-step .dot{margin:8px 0 14px}
+}
+
+/* =========================================================================
+   COMPARISON
+   ========================================================================= */
+.compare{display:grid;grid-template-columns:1fr 80px 1fr;gap:0;align-items:stretch;border:1px solid var(--line);border-radius:var(--radius-lg);overflow:hidden}
+.cmp-col{padding:36px 32px;display:flex;flex-direction:column;gap:18px}
+.cmp-col.before{background:#0c0c0c}
+.cmp-col.after{background:linear-gradient(180deg,rgba(197,248,42,.04),transparent 60%)}
+.cmp-col h4{font-size:13px;font-weight:500;color:var(--text-3);letter-spacing:.16em;text-transform:uppercase;margin-bottom:6px}
+.cmp-col.before h4{color:#FF7A7A}
+.cmp-col.after h4{color:var(--accent)}
+.cmp-col ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+.cmp-col li{display:flex;gap:12px;align-items:flex-start;font-size:15px;color:#d6d6d6;line-height:1.5}
+.cmp-col li svg{flex:none;margin-top:3px}
+.cmp-col.before li svg{color:#FF7A7A}
+.cmp-col.after li svg{color:var(--accent)}
+.cmp-divider{
+  background:#0a0a0a;border-left:1px solid var(--line);border-right:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-3);letter-spacing:.2em;
+  writing-mode:vertical-rl;transform:rotate(180deg);
+}
+@media (max-width:760px){
+  .compare{grid-template-columns:1fr}
+  .cmp-divider{writing-mode:horizontal-tb;transform:none;padding:14px;border-left:0;border-right:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+}
+
+/* =========================================================================
+   RESULTS
+   ========================================================================= */
+.results-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.res{
+  padding:36px 30px;border:1px solid var(--line);border-radius:var(--radius-lg);
+  background:var(--bg-card);
+  display:flex;flex-direction:column;gap:14px;min-height:260px;justify-content:space-between;
+  transition:border-color .3s var(--ease), transform .3s var(--ease);
+}
+.res:hover{border-color:rgba(197,248,42,.4);transform:translateY(-3px)}
+.res .seg{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-3);letter-spacing:.14em;text-transform:uppercase}
+.res .metric{
+  font-size:clamp(40px,4.6vw,56px);font-weight:600;letter-spacing:-0.04em;
+  color:var(--accent);font-feature-settings:"tnum";line-height:1;
+}
+.res .metric .small{font-size:.55em;color:var(--accent-2);font-weight:500;margin-right:4px;letter-spacing:0}
+.res .blurb{font-size:14px;color:var(--text-2)}
+.res .name{font-size:13px;color:#fff;font-weight:500;margin-top:4px}
+.res .name span{color:var(--text-3);font-weight:400}
+@media (max-width:880px){.results-grid{grid-template-columns:1fr}}
+
+/* =========================================================================
+   TESTIMONIALS
+   ========================================================================= */
+.testimonials{background:var(--bg-alt)}
+.test-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.test{
+  padding:32px 28px;border:1px solid var(--line);border-radius:var(--radius-lg);
+  background:#0c0c0c;
+  display:flex;flex-direction:column;gap:18px;
+}
+.test blockquote{margin:0;font-size:16px;line-height:1.55;color:#e8e8e8;font-weight:400}
+.test .who{display:flex;align-items:center;gap:14px;margin-top:auto}
+.avatar{
+  width:42px;height:42px;border-radius:50%;flex:none;
+  background:linear-gradient(135deg,#3a3a3a,#1c1c1c);
+  border:1px solid var(--line-strong);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:600;font-size:14px;color:#fff;
+  letter-spacing:-.01em;
+}
+.who .meta{display:flex;flex-direction:column}
+.who .meta strong{font-weight:500;font-size:14px;color:#fff;letter-spacing:-.005em}
+.who .meta span{font-size:12.5px;color:var(--text-3)}
+.stars{display:flex;gap:2px;color:var(--accent)}
+@media (max-width:880px){.test-grid{grid-template-columns:1fr}}
+
+/* =========================================================================
+   FAQ
+   ========================================================================= */
+.faq-list{border-top:1px solid var(--line)}
+.faq-item{border-bottom:1px solid var(--line)}
+.faq-q{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:24px;
+  padding:26px 0;text-align:left;font-size:17px;font-weight:500;color:#fff;letter-spacing:-.01em;
+  transition:color .2s var(--ease);
+}
+.faq-q:hover{color:var(--accent)}
+.faq-q .chev{
+  width:36px;height:36px;border-radius:50%;border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;flex:none;
+  transition:transform .35s var(--ease), background .25s var(--ease), border-color .25s var(--ease);
+  color:#fff;
+}
+.faq-item.open .faq-q .chev{transform:rotate(45deg);background:var(--accent);color:#0A0A0A;border-color:var(--accent)}
+.faq-a{
+  max-height:0;overflow:hidden;
+  transition:max-height .45s var(--ease), padding .35s var(--ease);
+}
+.faq-item.open .faq-a{padding:0 0 26px;max-height:600px}
+.faq-a p{font-size:15px;color:var(--text-2);max-width:70ch}
+
+/* =========================================================================
+   FORM / FINAL CTA
+   ========================================================================= */
+.cta{
+  position:relative;
+  background:#0a0a0a;
+  padding:140px 0 120px;
+  overflow:hidden;
+}
+.cta .orb{filter:blur(100px);opacity:.7}
+.cta-grid{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1.05fr;gap:80px;align-items:start}
+.cta-copy h2{font-size:clamp(36px,5vw,60px)}
+.cta-copy p{margin-top:18px;font-size:16px;max-width:48ch}
+.cta-bullets{margin-top:28px;display:flex;flex-direction:column;gap:14px}
+.cta-bullets li{display:flex;gap:12px;align-items:center;font-size:14.5px;color:#d6d6d6;list-style:none}
+.cta-bullets li::before{
+  content:"";width:18px;height:18px;border-radius:50%;background:rgba(197,248,42,.16);flex:none;
+  border:1px solid rgba(197,248,42,.4);
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23C5F82A' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>");
+  background-size:11px;background-repeat:no-repeat;background-position:center;
+}
+.cta-scarcity{
+  margin-top:30px;padding:14px 16px;border:1px dashed rgba(197,248,42,.35);border-radius:12px;
+  background:rgba(197,248,42,.04);
+  display:flex;align-items:center;gap:12px;font-size:13.5px;color:#e8e8e8;
+}
+.cta-scarcity .pulse{width:8px;height:8px;border-radius:50%;background:var(--accent);position:relative}
+.cta-scarcity .pulse::before{content:"";position:absolute;inset:-3px;border-radius:50%;background:var(--accent);opacity:.4;animation:pulse 1.6s ease-out infinite}
+
+.form-card{
+  position:relative;
+  padding:32px;border:1px solid var(--line);border-radius:var(--radius-lg);
+  background:rgba(17,17,17,.6);
+  backdrop-filter:blur(8px);
+}
+.form-card h3{font-size:20px;margin-bottom:6px}
+.form-card .form-sub{font-size:13.5px;color:var(--text-2);margin-bottom:24px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field{display:flex;flex-direction:column;gap:6px;position:relative}
+.field.full{grid-column:1/-1}
+.field label{font-size:12px;color:var(--text-2);letter-spacing:.04em}
+.field label .req{color:var(--accent)}
+.field input,.field select,.field textarea{
+  width:100%;padding:12px 14px;border-radius:10px;
+  background:#0a0a0a;border:1px solid var(--line);
+  color:#fff;font-size:14.5px;
+  transition:border-color .25s var(--ease), background .25s var(--ease), box-shadow .25s var(--ease);
+  outline:none;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(197,248,42,.12);
+}
+.field input.valid,.field select.valid,.field textarea.valid{border-color:rgba(197,248,42,.6)}
+.field input.invalid,.field select.invalid{border-color:rgba(255,92,92,.6)}
+.field .err{font-size:11.5px;color:#FF7A7A;display:none;letter-spacing:0}
+.field.show-err .err{display:block}
+.field textarea{resize:vertical;min-height:96px;font-family:inherit}
+.field select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A6A6A6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");background-repeat:no-repeat;background-position:right 14px center;background-size:14px;padding-right:36px}
+.field .check{
+  position:absolute;right:12px;top:34px;color:var(--accent);
+  opacity:0;transform:scale(.6);transition:all .3s var(--ease);
+  pointer-events:none;
+}
+.field.valid-field .check{opacity:1;transform:scale(1)}
+.form-submit{
+  grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:6px;flex-wrap:wrap;
+}
+.form-submit .legal{font-size:11.5px;color:var(--text-3);max-width:36ch}
+.btn-submit{position:relative;min-width:200px;justify-content:center}
+.btn-submit .ld{display:none;width:14px;height:14px;border:2px solid #0A0A0A;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+.btn-submit.loading .ld{display:inline-block}
+.btn-submit.loading .lbl,.btn-submit.loading .arr{visibility:hidden}
+@keyframes spin{to{transform:rotate(360deg)}}
+.form-success{
+  display:none;flex-direction:column;align-items:center;gap:14px;
+  padding:40px 20px;text-align:center;
+}
+.form-success.show{display:flex}
+.form-success .ico{
+  width:54px;height:54px;border-radius:50%;background:var(--accent);color:#0A0A0A;
+  display:flex;align-items:center;justify-content:center;
+}
+.form-success h3{font-size:22px;color:#fff}
+.form-success p{font-size:14.5px;color:var(--text-2);max-width:36ch}
+
+@media (max-width:920px){
+  .cta-grid{grid-template-columns:1fr;gap:48px}
+  .form{grid-template-columns:1fr}
+}
+
+/* =========================================================================
+   FOOTER
+   ========================================================================= */
+.footer{padding:48px 0 32px;border-top:1px solid var(--line);background:#080808}
+.foot-grid{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.foot-links{display:flex;gap:22px;font-size:13px;color:var(--text-2)}
+.foot-links a:hover{color:#fff}
+.foot-social{display:flex;gap:10px}
+.foot-social a{
+  width:36px;height:36px;border-radius:50%;border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;color:var(--text-2);
+  transition:all .25s var(--ease);
+}
+.foot-social a:hover{border-color:var(--accent);color:var(--accent);background:rgba(197,248,42,.06)}
+.foot-bottom{margin-top:36px;padding-top:24px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--text-3)}
+
+/* =========================================================================
+   WHATSAPP FAB
+   ========================================================================= */
+.wa-fab{
+  position:fixed;bottom:22px;right:22px;z-index:60;
+  width:58px;height:58px;border-radius:50%;
+  background:var(--accent);color:#0A0A0A;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 14px 40px -8px rgba(197,248,42,.5), 0 0 0 1px rgba(197,248,42,.4);
+  transition:transform .3s var(--ease), box-shadow .3s var(--ease);
+}
+.wa-fab:hover{transform:translateY(-3px) scale(1.05);box-shadow:0 20px 48px -8px rgba(197,248,42,.7), 0 0 0 1px rgba(197,248,42,.6)}
+.wa-fab::after{
+  content:"";position:absolute;inset:-4px;border-radius:50%;
+  border:2px solid var(--accent);opacity:.4;animation:wa 2s ease-out infinite;
+}
+@keyframes wa{
+  0%{transform:scale(.9);opacity:.5}
+  100%{transform:scale(1.6);opacity:0}
+}
+
+/* =========================================================================
+   SCROLL REVEAL
+   ========================================================================= */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .8s var(--ease), transform .8s var(--ease)}
+.reveal.in{opacity:1;transform:none}
+.reveal.delay-1{transition-delay:.08s}
+.reveal.delay-2{transition-delay:.16s}
+.reveal.delay-3{transition-delay:.24s}
+.reveal.delay-4{transition-delay:.32s}
+
+/* =========================================================================
+   CUSTOM CURSOR (desktop only)
+   ========================================================================= */
+.cursor{
+  position:fixed;top:0;left:0;width:28px;height:28px;border-radius:50%;
+  border:1px solid rgba(197,248,42,.6);
+  pointer-events:none;z-index:100;
+  transform:translate(-50%,-50%);
+  mix-blend-mode:difference;
+  transition:width .25s var(--ease), height .25s var(--ease), background .25s var(--ease);
+  display:none;
+}
+.cursor.dot{width:6px;height:6px;background:var(--accent);border:0;mix-blend-mode:difference}
+.cursor.hover{width:48px;height:48px;background:rgba(197,248,42,.15);border-color:var(--accent)}
+@media (hover:hover) and (pointer:fine) and (min-width:1024px){
+  .cursor{display:block}
+}
+
+/* prefers-reduced-motion */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+  .reveal{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================ CUSTOM CURSOR ============================ -->
+<div class="cursor" id="cursor" aria-hidden="true"></div>
+<div class="cursor dot" id="cursorDot" aria-hidden="true"></div>
+
+<!-- ============================ NAV ============================ -->
+<nav class="nav" id="nav" aria-label="Navegação principal">
+  <div class="nav-inner">
+    <a href="#top" class="logo" aria-label="Edlira home">
+      <span class="logo-mark" aria-hidden="true"></span>
+      <span>Edlira</span>
+    </a>
+    <div class="nav-links" role="navigation">
+      <a href="#servicos">Serviços</a>
+      <a href="#processo">Como funciona</a>
+      <a href="#cases">Resultados</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <a href="#contato" class="btn btn-primary btn-sm" data-cursor="hover">
+      <span class="lbl">Falar com especialista</span>
+      <svg class="arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+    </a>
+  </div>
+</nav>
+
+<!-- ============================ HERO ============================ -->
+<header class="hero" id="top" data-screen-label="01 Hero">
+  <div class="hero-grid" aria-hidden="true"></div>
+  <div class="orb" aria-hidden="true"></div>
+  <div class="orb sm" aria-hidden="true"></div>
+
+  <div class="wrap hero-inner">
+    <span class="badge-pulse reveal" data-cursor="hover">
+      <span class="pulse" aria-hidden="true"></span>
+      <span><strong>3 vagas</strong> abertas para Maio · agenda travando rápido</span>
+    </span>
+
+    <h1 class="reveal delay-1">
+      Tráfego pago + IA<br/>
+      que vendem <span class="accent">enquanto você dorme</span>
+    </h1>
+
+    <p class="hero-sub reveal delay-2">
+      Você não precisa de mais um post bonito. Precisa de um motor de aquisição que
+      atrai, qualifica e converte sem depender de equipe inflada — e a gente constrói esse motor pra você em 30 dias.
+    </p>
+
+    <div class="hero-ctas reveal delay-3">
+      <a href="#contato" class="btn btn-primary" data-cursor="hover">
+        <span class="lbl">Quero meu diagnóstico gratuito</span>
+        <svg class="arr" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+      </a>
+      <a href="#servicos" class="btn btn-ghost" data-cursor="hover">
+        <span class="lbl">Ver como funciona</span>
+      </a>
+    </div>
+
+    <div class="hero-stats reveal delay-4" aria-label="Resultados agregados">
+      <div class="hero-stat">
+        <span class="num" data-count="340" data-suffix="%" data-prefix="+">+0%</span>
+        <span class="lbl">ROAS médio dos clientes ativos</span>
+      </div>
+      <div class="hero-stat">
+        <span class="num" data-count="2.4" data-suffix="M" data-prefix="R$ " data-decimals="1">R$ 0M</span>
+        <span class="lbl">Em vendas geradas em 12 meses</span>
+      </div>
+      <div class="hero-stat">
+        <span class="num" data-count="87" data-suffix="%" data-prefix="−">−0%</span>
+        <span class="lbl">Redução média de CAC</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll-cue" aria-hidden="true">
+    <span>scroll</span>
+    <span class="line"></span>
+  </div>
+</header>
+
+<!-- ============================ MARQUEE ============================ -->
+<section class="marquee" aria-label="Plataformas que dominamos" style="padding:36px 0;border-top:1px solid var(--line)">
+  <div class="marquee-row" id="marqueeRow">
+    <!-- items will be duplicated for infinite loop -->
+    <div class="item"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 11v3h7c-.3 1.8-2 5-7 5-4.2 0-7.6-3.5-7.6-7.8S7.8 3.4 12 3.4c2.4 0 4 1 4.9 1.9l3.4-3.3C18 0 15.4-1 12-1 5.4-1-1 5.4-1 12s6.4 13 13 13c7.5 0 12.5-5.3 12.5-12.7 0-.9-.1-1.5-.2-2.1H12z"/></svg>Google Ads</div>
+    <span class="dot"></span>
+    <div class="item"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.5 2 12c0 5 3.7 9.1 8.4 9.9V14.9H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.3v6.9C18.3 21.1 22 17 22 12c0-5.5-4.5-10-10-10z"/></svg>Meta Ads</div>
+    <span class="dot"></span>
+    <div class="item"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.6 6.3c-1.4-.3-2.6-1.2-3.2-2.4-.2-.4-.3-.7-.4-1.1V2h-3v12c0 1.1-.7 2-1.8 2.3-.4.1-.8.1-1.2 0-.9-.2-1.6-1-1.8-1.9-.2-1.3.6-2.5 1.8-2.7.3-.1.6-.1.9 0V8.5c-.3-.1-.6-.1-.9-.1-2.7 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5V8c1.2.7 2.6 1.2 4 1.2V6.3z"/></svg>TikTok Ads</div>
+    <span class="dot"></span>
+    <div class="item"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 22h20L12 2zm0 4l6.5 13h-13L12 6z"/></svg>OpenAI</div>
+    <span class="dot"></span>
+    <div class="item"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path fill="#0A0A0A" d="M12 6c-3.3 0-6 2.7-6 6s2.7 6 6 6 6-2.7 6-6-2.7-6-6-6zm0 9.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5z"/></svg>WhatsApp Business</div>
+    <span class="dot"></span>
+    <div class="item"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 4h18v4H3zm0 6h18v4H3zm0 6h18v4H3z"/></svg>HubSpot</div>
+    <span class="dot"></span>
+    <div class="item"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 12l10 10 10-10z"/></svg>Make</div>
+    <span class="dot"></span>
+    <div class="item"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path stroke="currentColor" stroke-width="1.5" d="M9 12l6-6M9 12l6 6"/></svg>n8n</div>
+    <span class="dot"></span>
+    <div class="item"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h18v18H3z"/></svg>RD Station</div>
+    <span class="dot"></span>
+    <div class="item"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>Anthropic Claude</div>
+    <span class="dot"></span>
+  </div>
+</section>
+
+<!-- ============================ PROBLEM ============================ -->
+<section id="problema" data-screen-label="02 Problema">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow"><span class="dot"></span>O problema</span>
+      <h2>Você está queimando dinheiro<br/>e nem sabe onde.</h2>
+      <p style="max-width:60ch">Quase todo dono de empresa que chega aqui tem o mesmo combo. Reconhece algum?</p>
+    </div>
+
+    <div class="problem-grid">
+      <div class="problem-cell reveal">
+        <span class="ico" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z"/></svg>
+        </span>
+        <h3>Lead esfriando no WhatsApp</h3>
+        <p>Você paga caro pelo clique, o lead chega quente — e morre na fila do "vou retornar amanhã". Resultado: oportunidade perdida e CAC subindo.</p>
+      </div>
+      <div class="problem-cell reveal delay-1">
+        <span class="ico" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </span>
+        <h3>Anúncio rodando no escuro</h3>
+        <p>Campanhas ligadas há meses sem ROAS claro. Gestor entrega "engajamento", "alcance" — você quer faturamento. Métricas bonitas não pagam aluguel.</p>
+      </div>
+      <div class="problem-cell reveal delay-2">
+        <span class="ico" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/></svg>
+        </span>
+        <h3>Equipe que não escala</h3>
+        <p>Cada novo cliente exige mais um SDR, mais um vendedor, mais um atendente. Sua margem afunila e você vira refém do operacional.</p>
+      </div>
+      <div class="problem-cell reveal delay-3">
+        <span class="ico" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        </span>
+        <h3>Planilha + CRM bagunçado</h3>
+        <p>Lead vem do Instagram, vai pra planilha, depois pro WhatsApp do vendedor, depois… some. Sem rastro, sem follow-up, sem cultura de dado.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ SOLUTION ============================ -->
+<section class="solution" id="solucao" data-screen-label="03 Solução">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow"><span class="dot"></span>A solução</span>
+      <h2>Um ecossistema, não 4 fornecedores.</h2>
+      <p style="max-width:60ch">Tráfego, IA, site e conteúdo trabalhando como uma máquina única — onde cada peça faz a próxima render mais.</p>
+    </div>
+
+    <div class="pillars">
+      <div class="pillar reveal">
+        <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 17-6-6-4 4-7-7"/><path d="M16 17h6v-6"/></svg></div>
+        <span class="num">01</span>
+        <h3>Tráfego</h3>
+        <p>Atrai pessoas certas com criativo afiado e estrutura de campanha que escala sem inflar CPA.</p>
+      </div>
+      <div class="pillar reveal delay-1">
+        <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h.01M15 9h.01M9 15c1 1 2 1.5 3 1.5s2-.5 3-1.5"/></svg></div>
+        <span class="num">02</span>
+        <h3>IA & Automação</h3>
+        <p>Qualifica, responde e faz follow-up 24/7. Seu vendedor só fala com lead pronto pra fechar.</p>
+      </div>
+      <div class="pillar reveal delay-2">
+        <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M3 17l4-4 3 3 5-5 6 6"/></svg></div>
+        <span class="num">03</span>
+        <h3>Site & LP</h3>
+        <p>Páginas que carregam em &lt;1s, com copy testada e CRO embutido. Convertem em vez de apresentar.</p>
+      </div>
+      <div class="pillar reveal delay-3">
+        <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
+        <span class="num">04</span>
+        <h3>Conteúdo & Vídeo</h3>
+        <p>Criativos curtos para anúncios e orgânico, editados pra prender nos 3 primeiros segundos.</p>
+      </div>
+    </div>
+
+    <div class="pillars-flow reveal delay-4">
+      <span>Tráfego</span>
+      <span class="x">→</span>
+      <span>IA qualifica</span>
+      <span class="x">→</span>
+      <span>Site converte</span>
+      <span class="x">→</span>
+      <span>Conteúdo aquece</span>
+      <span class="x">↻</span>
+      <span style="color:var(--accent)">Loop infinito de aquisição</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ SERVICES (detail) ============================ -->
+<section id="servicos" data-screen-label="04 Serviços">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow"><span class="dot"></span>O que entregamos</span>
+      <h2>Resultado, não entregável.</h2>
+      <p style="max-width:60ch">Nenhum serviço aqui é vendido por hora ou por post. Vendemos por número que aparece no seu extrato.</p>
+    </div>
+
+    <div class="services-grid">
+      <!-- 1 Tráfego -->
+      <article class="svc reveal" data-cursor="hover">
+        <header class="svc-head">
+          <div class="svc-ico" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 4 4 6-6"/></svg>
+          </div>
+          <span class="svc-tag">01 / Tráfego pago</span>
+        </header>
+        <h3>Mais venda por real investido — sem correr da plataforma.</h3>
+        <p class="svc-desc">Estrutura técnica completa em Google, Meta e TikTok com gestão semanal de leilão e criativos novos a cada 14 dias para evitar fadiga.</p>
+        <ul class="svc-list">
+          <li>Gestão diária com scripts de otimização</li>
+          <li>Esteira de criativos validados por dado</li>
+          <li>Tagging server-side e dashboard ao vivo</li>
+        </ul>
+        <a href="#contato" class="svc-mini">Ver case real <svg class="arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></a>
+      </article>
+
+      <!-- 2 IA -->
+      <article class="svc reveal delay-1" data-cursor="hover">
+        <header class="svc-head">
+          <div class="svc-ico" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 9h.01M16 9h.01M8 15c1.5 1 2.5 1.5 4 1.5s2.5-.5 4-1.5"/></svg>
+          </div>
+          <span class="svc-tag">02 / IA & Automação</span>
+        </header>
+        <h3>Atendimento que vende às 3 da manhã, sem CLT.</h3>
+        <p class="svc-desc">Agentes treinados na sua oferta + CRM inteligente + cadências de follow-up automáticas. O lead nunca esfria, o vendedor só recebe quem está pronto.</p>
+        <ul class="svc-list">
+          <li>Bot multi-canal (WhatsApp, Insta, site)</li>
+          <li>CRM com score automático de quente/frio</li>
+          <li>Disparos e follow-up sem cara de robô</li>
+        </ul>
+        <a href="#contato" class="svc-mini">Ver fluxo da IA <svg class="arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></a>
+      </article>
+
+      <!-- 3 Sites -->
+      <article class="svc reveal delay-2" data-cursor="hover">
+        <header class="svc-head">
+          <div class="svc-ico" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M3 9h18M8 21h8M12 17v4"/></svg>
+          </div>
+          <span class="svc-tag">03 / Sites & LP</span>
+        </header>
+        <h3>Páginas que pesam pouco e convertem muito.</h3>
+        <p class="svc-desc">Landing pages e páginas de venda construídas com copy validada, hierarquia visual cirúrgica e A/B test integrado ao tráfego.</p>
+        <ul class="svc-list">
+          <li>LightHouse 95+ em mobile (de verdade)</li>
+          <li>Copy estruturada em fórmula de venda</li>
+          <li>Pixel + GTM + tracking server-side</li>
+        </ul>
+        <a href="#contato" class="svc-mini">Ver páginas que entregamos <svg class="arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></a>
+      </article>
+
+      <!-- 4 Vídeo -->
+      <article class="svc reveal delay-3" data-cursor="hover">
+        <header class="svc-head">
+          <div class="svc-ico" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          </div>
+          <span class="svc-tag">04 / Edição de vídeo</span>
+        </header>
+        <h3>Criativos que prendem nos primeiros 3 segundos.</h3>
+        <p class="svc-desc">Edição focada em retenção: hook agressivo, ritmo testado e variações para cada plataforma. Mais CTR, menos CPM.</p>
+        <ul class="svc-list">
+          <li>Esteira semanal com 6–10 cortes</li>
+          <li>Hooks testados em batch (A/B/C)</li>
+          <li>Versões para Reels, Shorts, TikTok e ads</li>
+        </ul>
+        <a href="#contato" class="svc-mini">Quero criativos novos <svg class="arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ PROCESS ============================ -->
+<section class="process" id="processo" data-screen-label="05 Processo">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow"><span class="dot"></span>Como funciona</span>
+      <h2>30 dias do diagnóstico ao primeiro pico de vendas.</h2>
+    </div>
+
+    <div class="timeline" id="timeline">
+      <div class="tl-line" aria-hidden="true"></div>
+      <div class="tl-progress" id="tlProgress" aria-hidden="true"></div>
+
+      <div class="tl-step reveal">
+        <div class="dot" aria-hidden="true"></div>
+        <span class="num">01 · Semana 1</span>
+        <h3>Diagnóstico</h3>
+        <p>Auditamos campanhas, funil e CRM. Mapa de vazamentos e plano em 72h.</p>
+      </div>
+      <div class="tl-step reveal delay-1">
+        <div class="dot" aria-hidden="true"></div>
+        <span class="num">02 · Semana 2</span>
+        <h3>Estratégia</h3>
+        <p>Definimos oferta, copy, criativos e arquitetura de IA + tracking.</p>
+      </div>
+      <div class="tl-step reveal delay-2">
+        <div class="dot" aria-hidden="true"></div>
+        <span class="num">03 · Semana 3</span>
+        <h3>Execução</h3>
+        <p>Lançamos páginas, automações e tráfego. Daily de leitura de número.</p>
+      </div>
+      <div class="tl-step reveal delay-3">
+        <div class="dot" aria-hidden="true"></div>
+        <span class="num">04 · Contínuo</span>
+        <h3>Otimização</h3>
+        <p>Loop semanal: teste → leitura → escala. Sem reunião inútil, só dado.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ COMO FUNCIONA (animation) ============================ -->
+<section data-screen-label="05b Como Funciona" style="padding:80px 0 0;border-top:1px solid var(--line)">
+  <div class="wrap">
+    <div class="section-head reveal" style="margin-bottom:40px">
+      <span class="eyebrow">O sistema</span>
+      <h2>Como funciona, na prática.</h2>
+      <p class="body-lg" style="max-width:600px">Do anúncio ao lead qualificado — veja cada etapa em ação.</p>
+    </div>
+  </div>
+  <div style="width:100%;aspect-ratio:16/9;max-height:600px;background:#000;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+    <iframe
+      src="como-funciona.html"
+      style="width:100%;height:100%;border:none;display:block;"
+      loading="lazy"
+      title="Como funciona a Edlira — animação interativa"
+      allow="autoplay"
+    ></iframe>
+  </div>
+</section>
+
+<!-- ============================ COMPARISON ============================ -->
+<section data-screen-label="06 Comparativo">
+  <div class="wrap">
+    <div class="section-head reveal" style="text-align:center;align-items:center;margin-left:auto;margin-right:auto">
+      <span class="eyebrow"><span class="dot"></span>Antes vs depois</span>
+      <h2 style="text-align:center">A diferença não é técnica.<br/>É operacional.</h2>
+    </div>
+
+    <div class="compare reveal">
+      <div class="cmp-col before">
+        <h4>Sem a Edlira</h4>
+        <ul>
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>
+            <span>Reunião semanal pra entender por que o ROAS caiu</span>
+          </li>
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>
+            <span>Lead respondido em 6h — quando muito</span>
+          </li>
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>
+            <span>Vendedor afogado em lead frio</span>
+          </li>
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>
+            <span>Cada R$ 1k de aumento exige mais 1 contratação</span>
+          </li>
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>
+            <span>Relatório bonito, faturamento estagnado</span>
+          </li>
+        </ul>
+      </div>
+      <div class="cmp-divider">VS · TRANSFORMAÇÃO</div>
+      <div class="cmp-col after">
+        <h4>Com a Edlira</h4>
+        <ul>
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Dashboard ao vivo: ROAS, CAC, LTV num lugar só</span>
+          </li>
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Lead respondido em 30s, dia ou madrugada</span>
+          </li>
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Vendedor só fala com quem está pronto pra fechar</span>
+          </li>
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Você escala faturamento sem inflar folha</span>
+          </li>
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Receita previsível, mês a mês, com prova</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ RESULTS ============================ -->
+<section id="cases" data-screen-label="07 Cases">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow"><span class="dot"></span>Resultados</span>
+      <h2>Números que clientes nossos fecharam — sem photoshop.</h2>
+    </div>
+
+    <div class="results-grid">
+      <div class="res reveal" data-cursor="hover">
+        <span class="seg">E-commerce · Moda</span>
+        <span class="metric"><span class="small">+R$</span><span data-count="2.4" data-decimals="1">0</span>M</span>
+        <p class="blurb">Em 9 meses, com mesma equipe e crescimento orgânico do ticket médio.</p>
+        <span class="name">Marca de roupa feminina · <span>SP</span></span>
+      </div>
+      <div class="res reveal delay-1" data-cursor="hover">
+        <span class="seg">Educação · Curso online</span>
+        <span class="metric"><span data-count="3.2" data-decimals="1">0</span>x</span>
+        <p class="blurb">ROAS 3.2x sustentado por 6 meses, com IA filtrando 78% dos leads frios.</p>
+        <span class="name">Plataforma de educação · <span>Brasil</span></span>
+      </div>
+      <div class="res reveal delay-2" data-cursor="hover">
+        <span class="seg">Serviço local · Estética</span>
+        <span class="metric">−<span data-count="87">0</span>%</span>
+        <p class="blurb">Redução de CAC em 4 meses, dobrando volume de procedimentos agendados.</p>
+        <span class="name">Rede de clínicas · <span>RJ + ES</span></span>
+      </div>
+      <div class="res reveal" data-cursor="hover">
+        <span class="seg">SaaS · B2B</span>
+        <span class="metric">+<span data-count="412">0</span>%</span>
+        <p class="blurb">Em demonstrações qualificadas, com fluxo de IA pré-vendas.</p>
+        <span class="name">Software para agências · <span>BR</span></span>
+      </div>
+      <div class="res reveal delay-1" data-cursor="hover">
+        <span class="seg">Imobiliário · Alto padrão</span>
+        <span class="metric"><span class="small">R$</span><span data-count="18">0</span>M</span>
+        <p class="blurb">Em VGV gerado por leads de tráfego pago em 5 meses.</p>
+        <span class="name">Construtora · <span>SC</span></span>
+      </div>
+      <div class="res reveal delay-2" data-cursor="hover">
+        <span class="seg">Saúde · Clínica</span>
+        <span class="metric">+<span data-count="220">0</span>%</span>
+        <p class="blurb">No volume de consultas particulares, com automação de pré-atendimento.</p>
+        <span class="name">Rede odontológica · <span>MG</span></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ TESTIMONIALS ============================ -->
+<section class="testimonials" data-screen-label="08 Depoimentos">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow"><span class="dot"></span>O que dizem</span>
+      <h2>Fundadores que pararam de queimar dinheiro.</h2>
+    </div>
+
+    <div class="test-grid">
+      <article class="test reveal">
+        <div class="stars" aria-label="5 estrelas">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 8.5 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 9 8.5 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 8.5 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 9 8.5 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 8.5 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 9 8.5 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 8.5 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 9 8.5 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 8.5 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 9 8.5 12 2"/></svg>
+        </div>
+        <blockquote>"A gente vinha trocando de agência todo trimestre. Com a Edlira foi a primeira vez que entendi <em>onde</em> meu dinheiro ia — e por que ele voltava. Em 60 dias o ROAS triplicou."</blockquote>
+        <div class="who">
+          <div class="avatar">RM</div>
+          <div class="meta">
+            <strong>Rafael Mendes</strong>
+            <span>CEO, Linha Norte (e-commerce)</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="test reveal delay-1">
+        <div class="stars" aria-label="5 estrelas">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 8.5 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 9 8.5 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 8.5 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 9 8.5 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 8.5 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 9 8.5 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 8.5 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 9 8.5 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 8.5 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 9 8.5 12 2"/></svg>
+        </div>
+        <blockquote>"O bot da IA respondeu meus leads enquanto eu dormia, qualificou e marcou orçamento sozinho. Meu vendedor só fechou. Faturei mais com metade do esforço."</blockquote>
+        <div class="who">
+          <div class="avatar">CT</div>
+          <div class="meta">
+            <strong>Camila Torres</strong>
+            <span>Sócia, Estúdio Halo (estética)</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="test reveal delay-2">
+        <div class="stars" aria-label="5 estrelas">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 8.5 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 9 8.5 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 8.5 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 9 8.5 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 8.5 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 9 8.5 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 8.5 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 9 8.5 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 8.5 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 9 8.5 12 2"/></svg>
+        </div>
+        <blockquote>"Já trabalhei com 4 agências grandes. Nenhuma falava do meu CAC. A Edlira foi a primeira a abrir planilha e dizer: 'aqui você está perdendo dinheiro.' Mudou meu jogo."</blockquote>
+        <div class="who">
+          <div class="avatar">LP</div>
+          <div class="meta">
+            <strong>Lucas Pereira</strong>
+            <span>Founder, NorteSaaS (B2B)</span>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ FAQ ============================ -->
+<section id="faq" data-screen-label="09 FAQ">
+  <div class="wrap" style="max-width:920px">
+    <div class="section-head reveal">
+      <span class="eyebrow"><span class="dot"></span>Perguntas frequentes</span>
+      <h2>O que costuma travar a decisão.</h2>
+    </div>
+
+    <div class="faq-list" id="faqList">
+      <div class="faq-item reveal">
+        <button class="faq-q" aria-expanded="false">
+          <span>Quanto custa trabalhar com a Edlira?</span>
+          <span class="chev" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </span>
+        </button>
+        <div class="faq-a">
+          <p>Trabalhamos com fee mensal + verba mínima de tráfego. O fee varia conforme o escopo (Tráfego, IA, Site, Vídeo) e o estágio do seu negócio. No diagnóstico gratuito a gente já te diz exatamente quanto vai custar e em quanto tempo se paga — sem proposta engessada de gaveta.</p>
+        </div>
+      </div>
+
+      <div class="faq-item reveal delay-1">
+        <button class="faq-q" aria-expanded="false">
+          <span>Em quanto tempo eu vejo resultado?</span>
+          <span class="chev" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </span>
+        </button>
+        <div class="faq-a">
+          <p>Lead novo nas primeiras 2 semanas. Estabilização do CAC entre 30-60 dias. Resultado consistente e escalável a partir do dia 90. Quem promete "venda no primeiro dia" está mentindo ou queimando dinheiro: bom tráfego precisa de aprendizado de algoritmo + criativo testado.</p>
+        </div>
+      </div>
+
+      <div class="faq-item reveal delay-2">
+        <button class="faq-q" aria-expanded="false">
+          <span>Eu preciso ter site pronto pra começar?</span>
+          <span class="chev" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </span>
+        </button>
+        <div class="faq-a">
+          <p>Não. Construímos a página de venda como parte do pacote. Se você já tem site mas ele converte mal, refazemos a LP de campanha. O que não dá é rodar tráfego pago em página lenta ou desorganizada — a gente prioriza isso na primeira semana.</p>
+        </div>
+      </div>
+
+      <div class="faq-item reveal">
+        <button class="faq-q" aria-expanded="false">
+          <span>A IA substitui meus vendedores?</span>
+          <span class="chev" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </span>
+        </button>
+        <div class="faq-a">
+          <p>Não. Ela faz o que vendedor humano não deveria estar fazendo: responder dúvida básica, qualificar, filtrar curioso, agendar. Seu time fica livre pra fechar. Resultado típico: dobra ou triplica a venda por vendedor sem contratar.</p>
+        </div>
+      </div>
+
+      <div class="faq-item reveal delay-1">
+        <button class="faq-q" aria-expanded="false">
+          <span>Vocês trabalham com qual ticket / faturamento?</span>
+          <span class="chev" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </span>
+        </button>
+        <div class="faq-a">
+          <p>Atendemos negócios a partir de R$ 80k/mês de faturamento, com verba de tráfego mínima de R$ 8k/mês. Abaixo disso o investimento não fecha conta pra nenhum dos lados. Se você está nesse estágio, recomendamos focar em orgânico primeiro.</p>
+        </div>
+      </div>
+
+      <div class="faq-item reveal delay-2">
+        <button class="faq-q" aria-expanded="false">
+          <span>Tem fidelidade no contrato?</span>
+          <span class="chev" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </span>
+        </button>
+        <div class="faq-a">
+          <p>3 meses iniciais — não por capricho, é o tempo mínimo pra estruturar e ler resultado de tráfego com seriedade. Depois disso, mês a mês. A gente prefere te perder do que te prender.</p>
+        </div>
+      </div>
+
+      <div class="faq-item reveal">
+        <button class="faq-q" aria-expanded="false">
+          <span>Como funciona o diagnóstico gratuito?</span>
+          <span class="chev" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </span>
+        </button>
+        <div class="faq-a">
+          <p>Você preenche o formulário, agendamos uma call de 30 min com nosso head de growth. Auditamos suas campanhas ao vivo, mostramos onde está vazando dinheiro e — se fizer sentido — apresentamos um plano. Sem compromisso, sem script de venda batida.</p>
+        </div>
+      </div>
+
+      <div class="faq-item reveal delay-1">
+        <button class="faq-q" aria-expanded="false">
+          <span>Vocês atendem fora do Brasil?</span>
+          <span class="chev" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </span>
+        </button>
+        <div class="faq-a">
+          <p>Sim. Atendemos em português, espanhol e inglês. Já operamos campanhas em PT, ES, EN e FR — incluindo gestão de conta Meta/Google em moeda diferente do BRL.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ CTA + FORM ============================ -->
+<section class="cta" id="contato" data-screen-label="10 Contato">
+  <div class="orb sm" aria-hidden="true" style="top:10%;right:-10%;left:auto;width:520px;height:520px"></div>
+
+  <div class="wrap cta-grid">
+    <div class="cta-copy reveal">
+      <span class="eyebrow"><span class="dot"></span>Última parada</span>
+      <h2 style="margin-top:18px">Diagnóstico gratuito.<br/>Você sai sabendo onde está vazando dinheiro.</h2>
+      <p>30 minutos com nosso head de growth. Auditamos suas campanhas ao vivo e te mostramos um plano executável — quer você feche conosco ou não.</p>
+
+      <ul class="cta-bullets">
+        <li>Auditoria de tráfego pago e funil em tempo real</li>
+        <li>Mapa de vazamentos no seu CAC</li>
+        <li>Plano de 90 dias com metas claras</li>
+        <li>Sem proposta engessada nem script de venda</li>
+      </ul>
+
+      <div class="cta-scarcity">
+        <span class="pulse" aria-hidden="true"></span>
+        <span><strong>3 vagas</strong> restantes para diagnóstico em Maio. Próximas em Junho.</span>
+      </div>
+    </div>
+
+    <div class="form-card reveal delay-1">
+      <h3>Falar com especialista</h3>
+      <p class="form-sub">Resposta em até 2h úteis. Direto no seu WhatsApp.</p>
+
+      <form class="form" id="leadForm" novalidate>
+        <div class="field">
+          <label for="f-name">Nome <span class="req">*</span></label>
+          <input id="f-name" name="name" type="text" required autocomplete="name" placeholder="Seu nome" />
+          <span class="check" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          <span class="err">Por favor preencha seu nome</span>
+        </div>
+        <div class="field">
+          <label for="f-company">Empresa <span class="req">*</span></label>
+          <input id="f-company" name="company" type="text" required autocomplete="organization" placeholder="Nome da empresa" />
+          <span class="check" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          <span class="err">Informe sua empresa</span>
+        </div>
+        <div class="field">
+          <label for="f-wa">WhatsApp <span class="req">*</span></label>
+          <input id="f-wa" name="whatsapp" type="tel" required autocomplete="tel" placeholder="(11) 99999-9999" inputmode="tel" />
+          <span class="check" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          <span class="err">WhatsApp inválido</span>
+        </div>
+        <div class="field">
+          <label for="f-email">E-mail <span class="req">*</span></label>
+          <input id="f-email" name="email" type="email" required autocomplete="email" placeholder="voce@empresa.com" />
+          <span class="check" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          <span class="err">E-mail inválido</span>
+        </div>
+        <div class="field">
+          <label for="f-svc">Qual serviço interessa? <span class="req">*</span></label>
+          <select id="f-svc" name="service" required>
+            <option value="">Selecione…</option>
+            <option>Tráfego pago (Google / Meta / TikTok)</option>
+            <option>IA & Automação</option>
+            <option>Site / Landing Page</option>
+            <option>Edição de vídeo / criativos</option>
+            <option>Pacote completo (Tráfego + IA + Site + Vídeo)</option>
+            <option>Ainda não sei — quero diagnóstico</option>
+          </select>
+          <span class="err">Selecione um serviço</span>
+        </div>
+        <div class="field">
+          <label for="f-rev">Faturamento mensal aproximado <span class="req">*</span></label>
+          <select id="f-rev" name="revenue" required>
+            <option value="">Selecione…</option>
+            <option>Até R$ 50 mil</option>
+            <option>R$ 50 – 150 mil</option>
+            <option>R$ 150 – 500 mil</option>
+            <option>R$ 500 mil – 1 milhão</option>
+            <option>Acima de R$ 1 milhão</option>
+          </select>
+          <span class="err">Selecione uma faixa</span>
+        </div>
+        <div class="field full">
+          <label for="f-msg">Mensagem (opcional)</label>
+          <textarea id="f-msg" name="message" placeholder="Conte rapidamente seu maior desafio hoje"></textarea>
+        </div>
+
+        <div class="form-submit">
+          <p class="legal">Ao enviar, você concorda com nossa política de privacidade. Não fazemos spam.</p>
+          <button type="submit" class="btn btn-primary btn-submit" data-cursor="hover">
+            <span class="ld" aria-hidden="true"></span>
+            <span class="lbl">Quero meu diagnóstico</span>
+            <svg class="arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+          </button>
+        </div>
+      </form>
+
+      <div class="form-success" id="formSuccess" role="status" aria-live="polite">
+        <div class="ico" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <h3>Recebemos seu pedido</h3>
+        <p>Nosso head de growth vai chamar no seu WhatsApp em até 2h úteis. Prepare suas dúvidas.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ FOOTER ============================ -->
+<footer class="footer" data-screen-label="11 Footer">
+  <div class="wrap">
+    <div class="foot-grid">
+      <a href="#top" class="logo" aria-label="Edlira home">
+        <span class="logo-mark" aria-hidden="true"></span>
+        <span>Edlira</span>
+      </a>
+
+      <nav class="foot-links" aria-label="Links rápidos">
+        <a href="#servicos">Serviços</a>
+        <a href="#processo">Processo</a>
+        <a href="#cases">Cases</a>
+        <a href="#faq">FAQ</a>
+        <a href="#contato">Contato</a>
+      </nav>
+
+      <div class="foot-social">
+        <a href="#" aria-label="Instagram">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>
+        </a>
+        <a href="#" aria-label="LinkedIn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        </a>
+        <a href="#" aria-label="YouTube">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22.5 6.4a2.8 2.8 0 0 0-2-2C18.7 4 12 4 12 4s-6.7 0-8.5.4a2.8 2.8 0 0 0-2 2A29 29 0 0 0 1 12a29 29 0 0 0 .5 5.6 2.8 2.8 0 0 0 2 2C5.3 20 12 20 12 20s6.7 0 8.5-.4a2.8 2.8 0 0 0 2-2A29 29 0 0 0 23 12a29 29 0 0 0-.5-5.6z"/><polygon points="9.8 15.5 15.8 12 9.8 8.5 9.8 15.5"/></svg>
+        </a>
+        <a href="#" aria-label="WhatsApp">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <div class="foot-bottom">
+      <span>© 2026 Edlira Marketing Digital · CNPJ 00.000.000/0001-00</span>
+      <span>Feito com obsessão por números — São Paulo, BR</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ============================ WHATSAPP FAB ============================ -->
+<a href="https://wa.me/5512981680894?text=Oi! Quero falar com a Edlira" class="wa-fab" target="_blank" rel="noopener" aria-label="Falar no WhatsApp" data-cursor="hover">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.8.9-1 1.1-.2.2-.4.2-.7.1-.3-.1-1.2-.4-2.4-1.5-.9-.8-1.5-1.7-1.7-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.7.4-.2.3-.9.9-.9 2.2 0 1.3.9 2.5 1.1 2.7.1.2 1.8 2.7 4.4 3.8.6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.7-.7 1.9-1.4.2-.7.2-1.3.2-1.4-.1-.1-.3-.2-.6-.3zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.4 1.3 4.9L2 22l5.2-1.4c1.4.8 3 1.2 4.7 1.2h.1c5.5 0 10-4.5 10-10S17.5 2 12 2z"/></svg>
+</a>
+
+<script>
+/* =========================================================================
+   1. NAV SCROLL STATE
+   ========================================================================= */
+(function(){
+  const nav = document.getElementById('nav');
+  const onScroll = () => {
+    if (window.scrollY > 12) nav.classList.add('scrolled');
+    else nav.classList.remove('scrolled');
+  };
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+})();
+
+/* =========================================================================
+   2. SCROLL REVEAL (IntersectionObserver)
+   ========================================================================= */
+(function(){
+  if (!('IntersectionObserver' in window)) {
+    document.querySelectorAll('.reveal').forEach(el => el.classList.add('in'));
+    return;
+  }
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      }
+    });
+  }, {threshold: 0.12, rootMargin: '0px 0px -8% 0px'});
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+})();
+
+/* =========================================================================
+   3. ANIMATED COUNTERS
+   ========================================================================= */
+(function(){
+  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+  function animateCounter(el){
+    const target = parseFloat(el.dataset.count);
+    const decimals = parseInt(el.dataset.decimals || '0', 10);
+    const prefix = el.dataset.prefix || '';
+    const suffix = el.dataset.suffix || '';
+    const duration = 1600;
+    const start = performance.now();
+    function tick(now){
+      const t = Math.min(1, (now - start) / duration);
+      const v = target * easeOut(t);
+      el.textContent = prefix + v.toFixed(decimals) + suffix;
+      if (t < 1) requestAnimationFrame(tick);
+      else el.textContent = prefix + target.toFixed(decimals) + suffix;
+    }
+    requestAnimationFrame(tick);
+  }
+  if (!('IntersectionObserver' in window)) {
+    document.querySelectorAll('[data-count]').forEach(animateCounter);
+    return;
+  }
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting){
+        animateCounter(e.target);
+        io.unobserve(e.target);
+      }
+    });
+  }, {threshold:0.4});
+  document.querySelectorAll('[data-count]').forEach(el => io.observe(el));
+})();
+
+/* =========================================================================
+   4. MARQUEE (duplicate items for seamless loop)
+   ========================================================================= */
+(function(){
+  const row = document.getElementById('marqueeRow');
+  if (!row) return;
+  row.innerHTML += row.innerHTML;
+})();
+
+/* =========================================================================
+   5. TIMELINE PROGRESS
+   ========================================================================= */
+(function(){
+  const tl = document.getElementById('timeline');
+  const prog = document.getElementById('tlProgress');
+  const steps = tl ? tl.querySelectorAll('.tl-step') : [];
+  if (!tl || !prog || !steps.length) return;
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting){
+        // animate progress to 100% and turn dots active sequentially
+        prog.style.width = '100%';
+        steps.forEach((s,i) => setTimeout(() => s.classList.add('active'), 250 + i * 250));
+        io.disconnect();
+      }
+    });
+  }, {threshold:0.3});
+  io.observe(tl);
+})();
+
+/* =========================================================================
+   6. FAQ ACCORDION
+   ========================================================================= */
+(function(){
+  document.querySelectorAll('.faq-item').forEach(item => {
+    const btn = item.querySelector('.faq-q');
+    btn.addEventListener('click', () => {
+      const open = item.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  });
+})();
+
+/* =========================================================================
+   7. CUSTOM CURSOR
+   ========================================================================= */
+(function(){
+  const c = document.getElementById('cursor');
+  const d = document.getElementById('cursorDot');
+  if (!c || !d) return;
+  if (window.matchMedia('(hover:hover) and (pointer:fine)').matches === false) return;
+  if (window.innerWidth < 1024) return;
+
+  let x = 0, y = 0, tx = 0, ty = 0;
+  document.addEventListener('mousemove', (e) => {
+    tx = e.clientX; ty = e.clientY;
+    d.style.transform = `translate(${tx}px, ${ty}px) translate(-50%,-50%)`;
+  });
+  function loop(){
+    x += (tx - x) * 0.18;
+    y += (ty - y) * 0.18;
+    c.style.transform = `translate(${x}px, ${y}px) translate(-50%,-50%)`;
+    requestAnimationFrame(loop);
+  }
+  loop();
+
+  document.querySelectorAll('a, button, [data-cursor="hover"], input, select, textarea').forEach(el => {
+    el.addEventListener('mouseenter', () => c.classList.add('hover'));
+    el.addEventListener('mouseleave', () => c.classList.remove('hover'));
+  });
+})();
+
+/* =========================================================================
+   8. FORM: validation, mask, submit
+   ========================================================================= */
+(function(){
+  const form = document.getElementById('leadForm');
+  if (!form) return;
+
+  // WhatsApp mask
+  const wa = form.querySelector('#f-wa');
+  wa.addEventListener('input', (e) => {
+    let v = e.target.value.replace(/\D/g,'').slice(0,11);
+    if (v.length > 6) v = `(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`;
+    else if (v.length > 2) v = `(${v.slice(0,2)}) ${v.slice(2)}`;
+    else if (v.length > 0) v = `(${v}`;
+    e.target.value = v;
+    validateField(wa);
+  });
+
+  function isValidEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())}
+  function isValidWa(v){return v.replace(/\D/g,'').length >= 10}
+
+  function validateField(el){
+    const wrap = el.closest('.field');
+    let ok = true;
+    if (el.required){
+      if (el.type === 'email') ok = isValidEmail(el.value);
+      else if (el.id === 'f-wa') ok = isValidWa(el.value);
+      else ok = el.value.trim().length >= 2;
+    }
+    el.classList.toggle('valid', ok && el.value.length>0);
+    el.classList.toggle('invalid', !ok && wrap.classList.contains('show-err'));
+    wrap.classList.toggle('valid-field', ok && el.value.length>0);
+    if (ok) wrap.classList.remove('show-err');
+    return ok;
+  }
+
+  form.querySelectorAll('input, select, textarea').forEach(el => {
+    el.addEventListener('blur', () => {
+      if (el.required && !validateField(el)) el.closest('.field').classList.add('show-err');
+    });
+    el.addEventListener('input', () => validateField(el));
+    el.addEventListener('change', () => validateField(el));
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    let allOk = true;
+    form.querySelectorAll('input, select, textarea').forEach(el => {
+      if (el.required){
+        const ok = validateField(el);
+        if (!ok){ el.closest('.field').classList.add('show-err'); allOk = false; }
+      }
+    });
+    if (!allOk){
+      const firstBad = form.querySelector('.show-err input, .show-err select, .show-err textarea');
+      if (firstBad) firstBad.focus();
+      return;
+    }
+    const btn = form.querySelector('.btn-submit');
+    btn.classList.add('loading');
+    btn.disabled = true;
+    setTimeout(() => {
+      form.style.display = 'none';
+      document.getElementById('formSuccess').classList.add('show');
+    }, 1100);
+  });
+})();
+
+/* =========================================================================
+   9. SMOOTH SCROLL with offset for fixed nav (anchor links)
+   ========================================================================= */
+(function(){
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      const id = a.getAttribute('href');
+      if (id.length < 2) return;
+      const target = document.querySelector(id);
+      if (!target) return;
+      e.preventDefault();
+      const y = target.getBoundingClientRect().top + window.scrollY - 60;
+      window.scrollTo({top: y, behavior: 'smooth'});
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
