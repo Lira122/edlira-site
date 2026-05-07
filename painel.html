@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>·</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root{--bg:#0A0A0A;--bg-alt:#111;--bg-card:#161616;--bg-input:#1c1c1c;--line:rgba(255,255,255,0.07);--line2:rgba(255,255,255,0.13);--text:#fff;--text-2:#A0A0A0;--text-3:#555;--accent:#C5F82A;--accent-d:rgba(197,248,42,0.12);--danger:#FF5C5C;--warn:#F5A623;--info:#4A9EFF;--ok:#34D399;--r:10px;--rs:6px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+
+/* AUTH */
+#auth{position:fixed;inset:0;z-index:999;background:#000;display:flex;align-items:center;justify-content:center}
+#auth.h{display:none}
+.auth-box{width:100%;max-width:300px;display:flex;flex-direction:column;gap:14px}
+.auth-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);margin:0 auto 20px}
+.auth-in{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:var(--rs);padding:14px 16px;color:#fff;font-size:16px;font-family:inherit;letter-spacing:.12em;outline:none;text-align:center;transition:border-color 150ms}
+.auth-in:focus{border-color:var(--accent)}
+.auth-in.err{border-color:var(--danger)}
+.auth-btn{background:var(--accent);color:#000;border:none;border-radius:var(--rs);padding:13px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer}
+.auth-err{color:var(--danger);font-size:12px;text-align:center;min-height:16px}
+
+/* LAYOUT */
+#app{display:flex;height:100vh;overflow:hidden}
+#app.h{display:none}
+.sb{width:216px;flex-shrink:0;background:var(--bg);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:20px 0}
+.sb-brand{padding:0 18px 20px;font-size:15px;font-weight:700;letter-spacing:-.03em;border-bottom:1px solid var(--line);margin-bottom:12px}
+.sb-brand span{color:var(--accent)}
+.sb-nav{flex:1;display:flex;flex-direction:column;gap:2px;padding:0 8px}
+.ni{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--rs);font-size:13px;font-weight:500;color:var(--text-2);cursor:pointer;transition:background 100ms,color 100ms;user-select:none}
+.ni svg{flex-shrink:0;opacity:.7}
+.ni:hover{background:rgba(255,255,255,0.05);color:var(--text)}
+.ni:hover svg{opacity:1}
+.ni.on{background:var(--accent-d);color:var(--accent)}
+.ni.on svg{opacity:1}
+.sb-foot{padding:16px 18px 0;border-top:1px solid var(--line);font-size:11px;color:var(--text-3)}
+.main{flex:1;overflow-y:auto;background:var(--bg-alt);display:flex;flex-direction:column}
+.topbar{padding:18px 26px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;background:var(--bg-alt);position:sticky;top:0;z-index:10}
+.topbar h1{font-size:17px;font-weight:600}
+.tb-acts{display:flex;gap:8px}
+.content{padding:26px;flex:1}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:var(--rs);font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;border:none;transition:opacity 120ms}
+.btn:hover{opacity:.82}
+.bp{background:var(--accent);color:#000}
+.bg{background:rgba(255,255,255,0.06);color:var(--text);border:1px solid var(--line2)}
+.bd{background:rgba(255,92,92,.12);color:var(--danger);border:1px solid rgba(255,92,92,.2)}
+.bsm{padding:5px 11px;font-size:12px}
+.bic{padding:6px}
+
+/* STATS */
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+.sc{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.sl{font-size:11px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.sv{font-size:26px;font-weight:700;letter-spacing:-.03em}
+.sv.ac{color:var(--accent)}
+.ss{font-size:11px;color:var(--text-3);margin-top:4px}
+
+/* TABLE */
+.tw{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.th{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.th h3{font-size:13px;font-weight:600}
+.si{background:var(--bg-input);border:1px solid var(--line);border-radius:var(--rs);padding:7px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none;width:190px;transition:border-color 150ms}
+.si:focus{border-color:var(--accent)}
+.si::placeholder{color:var(--text-3)}
+table{width:100%;border-collapse:collapse}
+thead tr{border-bottom:1px solid var(--line)}
+th{padding:9px 15px;text-align:left;font-size:11px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:.07em}
+td{padding:12px 15px;font-size:13px;border-bottom:1px solid var(--line)}
+tbody tr:last-child td{border-bottom:none}
+tbody tr{transition:background 80ms;cursor:pointer}
+tbody tr:hover{background:rgba(255,255,255,0.025)}
+.tn{font-weight:500}
+.tm{color:var(--text-2);font-size:12px}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.b-novo{background:rgba(74,158,255,.15);color:#4A9EFF}
+.b-qualificado{background:rgba(245,166,35,.15);color:#F5A623}
+.b-proposta{background:rgba(167,139,250,.15);color:#A78BFA}
+.b-fechado{background:rgba(52,211,153,.15);color:#34D399}
+.b-perdido{background:rgba(255,92,92,.15);color:var(--danger)}
+.b-ativo{background:rgba(52,211,153,.15);color:#34D399}
+.b-inativo{background:rgba(255,255,255,.06);color:var(--text-3)}
+
+/* FILTERS */
+.fr{display:flex;gap:6px;flex-wrap:wrap;padding:11px 18px;border-bottom:1px solid var(--line)}
+.fc{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--text-2);cursor:pointer;transition:all 100ms}
+.fc:hover{color:var(--text)}
+.fc.on{background:var(--accent-d);color:var(--accent);border-color:rgba(197,248,42,.3)}
+
+/* KANBAN */
+.kanban{display:flex;gap:12px;overflow-x:auto;padding-bottom:12px}
+.kc{flex-shrink:0;width:232px;background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column}
+.kch{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.kct{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+.kcn{font-size:11px;background:rgba(255,255,255,.06);padding:2px 7px;border-radius:10px;color:var(--text-3)}
+.kcards{padding:8px;display:flex;flex-direction:column;gap:7px;min-height:80px}
+.kcard{background:var(--bg-alt);border:1px solid var(--line);border-radius:var(--rs);padding:11px 13px;cursor:pointer;transition:border-color 100ms}
+.kcard:hover{border-color:var(--line2)}
+.kcard-name{font-size:13px;font-weight:500;margin-bottom:3px}
+.kcard-co{font-size:11px;color:var(--text-2);margin-bottom:7px}
+.kcard-ft{display:flex;align-items:center;justify-content:space-between}
+.kcard-val{font-size:12px;font-weight:600;color:var(--accent)}
+.kcard-svc{font-size:11px;color:var(--text-3)}
+
+/* CHART */
+.cw{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:22px}
+.ct{font-size:13px;font-weight:600;margin-bottom:18px}
+.bc{display:flex;align-items:flex-end;gap:8px;height:110px}
+.bg2{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end}
+.bar{width:100%;border-radius:4px 4px 0 0;background:var(--accent-d);border:1px solid rgba(197,248,42,.2);min-height:2px;transition:background 200ms}
+.bar.cur{background:var(--accent);border-color:transparent}
+.bl{font-size:10px;color:var(--text-3)}
+.bv{font-size:10px;color:var(--text-2)}
+
+/* AGENTS */
+.ag{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.acard{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:11px}
+.ach{display:flex;align-items:flex-start;justify-content:space-between}
+.an{font-size:14px;font-weight:600}
+.acan{font-size:12px;color:var(--text-2);margin-top:2px}
+.aprompt{font-size:11.5px;color:var(--text-2);line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;padding:9px;background:rgba(255,255,255,.03);border-radius:var(--rs);border:1px solid var(--line);font-family:ui-monospace,monospace}
+.aft{display:flex;align-items:center;justify-content:space-between}
+.aacts{display:flex;gap:6px}
+
+/* FAT SUMMARY */
+.fs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px}
+
+/* MODAL */
+.ov{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:20px}
+.ov.h{display:none}
+.modal{background:var(--bg-card);border:1px solid var(--line2);border-radius:var(--r);width:100%;max-width:510px;max-height:90vh;overflow-y:auto}
+.mh{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.mt{font-size:14px;font-weight:600}
+.mx{background:none;border:none;color:var(--text-3);cursor:pointer;padding:4px;border-radius:4px;display:flex;align-items:center;justify-content:center}
+.mx:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.mb{padding:22px;display:flex;flex-direction:column;gap:14px}
+.mf{padding:14px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+
+/* FORM */
+.fg{display:flex;flex-direction:column;gap:5px}
+.fl{font-size:12px;font-weight:500;color:var(--text-2)}
+.fi,.fsl,.fta{background:var(--bg-input);border:1px solid var(--line);border-radius:var(--rs);padding:9px 11px;color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color 150ms;width:100%}
+.fi:focus,.fsl:focus,.fta:focus{border-color:var(--accent)}
+.fsl{appearance:none;cursor:pointer}
+.fta{resize:vertical;min-height:76px;line-height:1.5}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+
+/* TOAST */
+.tc{position:fixed;bottom:22px;right:22px;z-index:200;display:flex;flex-direction:column;gap:7px}
+.toast{background:var(--bg-card);border:1px solid var(--line2);border-radius:var(--rs);padding:11px 15px;font-size:13px;display:flex;align-items:center;gap:9px;animation:tin 180ms ease-out;min-width:220px}
+.toast.ok{border-left:3px solid var(--ok)}
+.toast.er{border-left:3px solid var(--danger)}
+@keyframes tin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.empty{text-align:center;padding:44px 20px;color:var(--text-3);font-size:13px}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
+
+@media(max-width:768px){
+  .sb{width:56px}
+  .sb-brand,.ni span,.sb-foot{display:none}
+  .ni{justify-content:center;padding:11px}
+  .sg{grid-template-columns:1fr 1fr}
+  .fs{grid-template-columns:1fr}
+  .frow{grid-template-columns:1fr}
+  .content{padding:14px}
+  .topbar{padding:14px}
+}
+@media(max-width:480px){.sg{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth">
+  <div class="auth-box">
+    <div class="auth-dot"></div>
+    <input type="password" class="auth-in" id="ain" placeholder="••••••••••••••••" autocomplete="off">
+    <button class="auth-btn" onclick="doAuth()">Entrar</button>
+    <div class="auth-err" id="aerr"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="h">
+  <aside class="sb">
+    <div class="sb-brand">Edlira<span>.</span></div>
+    <nav class="sb-nav">
+      <div class="ni" data-v="dashboard" onclick="go('dashboard')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <span>Dashboard</span>
+      </div>
+      <div class="ni" data-v="clientes" onclick="go('clientes')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Clientes</span>
+      </div>
+      <div class="ni" data-v="pipeline" onclick="go('pipeline')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="4" height="18"/><rect x="10" y="3" width="4" height="18"/><rect x="18" y="3" width="4" height="18"/></svg>
+        <span>Pipeline</span>
+      </div>
+      <div class="ni" data-v="faturamento" onclick="go('faturamento')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <span>Faturamento</span>
+      </div>
+      <div class="ni" data-v="agentes" onclick="go('agentes')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>Agentes IA</span>
+      </div>
+    </nav>
+    <div class="sb-foot">CRM v1.0</div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <h1 id="vtitle">Dashboard</h1>
+      <div class="tb-acts" id="tbacts"></div>
+    </div>
+    <div class="content" id="content"></div>
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="ov h" id="ov" onclick="ovClick(event)">
+  <div class="modal" id="modal">
+    <div class="mh">
+      <span class="mt" id="mtitle"></span>
+      <button class="mx" onclick="closeModal()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="mb" id="mbody"></div>
+    <div class="mf" id="mfoot"></div>
+  </div>
+</div>
+
+<div class="tc" id="tc"></div>
+
+<script>
+const SB_URL = 'https://flzpblpegoqjxaacjvhf.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsenBibHBlZ29xanhhYWNqdmhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxODM2NDUsImV4cCI6MjA5Mzc1OTY0NX0.U_JPnFs2ZJ-E5PQqqrUR-KZewysszgMCwWpi82zTy10';
+const _pw = ['X6vk','QW9Y','5mIG','l5W1'].join('');
+const AK = 'e_auth_1';
+const db = supabase.createClient(SB_URL, SB_KEY);
+
+// ── AUTH ──────────────────────────────────────
+function authed() {
+  try { const d = JSON.parse(localStorage.getItem(AK)||'null'); return d && Date.now() < d.e; } catch { return false; }
+}
+function doAuth() {
+  const v = document.getElementById('ain').value;
+  if (v === _pw) {
+    localStorage.setItem(AK, JSON.stringify({ e: Date.now() + 30*24*60*60*1000 }));
+    document.getElementById('auth').classList.add('h');
+    document.getElementById('app').classList.remove('h');
+    go('dashboard');
+  } else {
+    const el = document.getElementById('ain'); el.classList.add('err');
+    document.getElementById('aerr').textContent = 'Senha incorreta.';
+    setTimeout(() => { el.classList.remove('err'); document.getElementById('aerr').textContent=''; }, 2000);
+  }
+}
+document.getElementById('ain').addEventListener('keydown', e => { if(e.key==='Enter') doAuth(); });
+if (authed()) {
+  document.getElementById('auth').classList.add('h');
+  document.getElementById('app').classList.remove('h');
+  go('dashboard');
+}
+
+// ── NAV ───────────────────────────────────────
+let curView = 'dashboard';
+const vTitles = { dashboard:'Dashboard', clientes:'Clientes', pipeline:'Pipeline', faturamento:'Faturamento', agentes:'Agentes IA' };
+const vRenders = { dashboard:renderDash, clientes:renderClientes, pipeline:renderPipeline, faturamento:renderFat, agentes:renderAgentes };
+
+function go(v) {
+  curView = v;
+  document.querySelectorAll('.ni').forEach(el => el.classList.toggle('on', el.dataset.v === v));
+  document.getElementById('vtitle').textContent = vTitles[v];
+  document.getElementById('tbacts').innerHTML = '';
+  vRenders[v]();
+}
+
+// ── TOAST ─────────────────────────────────────
+function toast(msg, type='ok') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('tc').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ── MODAL ─────────────────────────────────────
+function openModal(title, body, foot) {
+  document.getElementById('mtitle').textContent = title;
+  document.getElementById('mbody').innerHTML = body;
+  document.getElementById('mfoot').innerHTML = foot;
+  document.getElementById('ov').classList.remove('h');
+}
+function closeModal() { document.getElementById('ov').classList.add('h'); }
+function ovClick(e) { if (e.target === document.getElementById('ov')) closeModal(); }
+
+// ── UTILS ─────────────────────────────────────
+const MES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const MESF = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const STATS = ['novo','qualificado','proposta','fechado','perdido'];
+const CANAIS = ['WhatsApp','Instagram','Site','Telegram','Email','Outro'];
+
+function brl(v) {
+  if (!v && v !== 0) return '—';
+  return 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function fmtd(iso) { if (!iso) return '—'; return new Date(iso).toLocaleDateString('pt-BR'); }
+function badge(s) { return `<span class="badge b-${s}">${s.charAt(0).toUpperCase()+s.slice(1)}</span>`; }
+function bk(v) { return v >= 1000 ? (v/1000).toFixed(1)+'k' : String(Math.round(v)); }
+
+// ── DASHBOARD ─────────────────────────────────
+async function renderDash() {
+  const c = document.getElementById('content');
+  c.innerHTML = '<div class="empty">Carregando...</div>';
+  const now = new Date(); const mes = now.getMonth()+1; const ano = now.getFullYear();
+  const [{ data: cl },{ data: fat },{ data: ag }] = await Promise.all([
+    db.from('clientes').select('*').order('criado_em',{ascending:false}),
+    db.from('faturamento').select('*'),
+    db.from('agentes').select('*'),
+  ]);
+  const clientes = cl||[], fats = fat||[], agentes = ag||[];
+  const ativos = clientes.filter(x => x.status !== 'perdido').length;
+  const novos = clientes.filter(x => { const d=new Date(x.criado_em); return d.getMonth()+1===mes&&d.getFullYear()===ano; }).length;
+  const agAtivos = agentes.filter(a => a.status==='ativo').length;
+  const fatMes = fats.filter(f => f.mes===mes&&f.ano===ano).reduce((s,f)=>s+Number(f.valor),0);
+
+  const chart = [];
+  for (let i=5; i>=0; i--) {
+    const d = new Date(ano, mes-1-i, 1);
+    const m = d.getMonth()+1, y = d.getFullYear();
+    const val = fats.filter(f=>f.mes===m&&f.ano===y).reduce((s,f)=>s+Number(f.valor),0);
+    chart.push({label:MES[m-1], val, cur:i===0});
+  }
+  const maxV = Math.max(...chart.map(d=>d.val),1);
+
+  c.innerHTML = `
+    <div class="sg">
+      <div class="sc"><div class="sl">Faturamento do mês</div><div class="sv ac">${brl(fatMes)}</div><div class="ss">${MESF[mes-1]} ${ano}</div></div>
+      <div class="sc"><div class="sl">Clientes ativos</div><div class="sv">${ativos}</div><div class="ss">Na base</div></div>
+      <div class="sc"><div class="sl">Leads este mês</div><div class="sv">${novos}</div><div class="ss">${MES[mes-1]} ${ano}</div></div>
+      <div class="sc"><div class="sl">Agentes IA ativos</div><div class="sv">${agAtivos}</div><div class="ss">Em operação</div></div>
+    </div>
+    <div class="cw">
+      <div class="ct">Faturamento — últimos 6 meses</div>
+      <div class="bc">
+        ${chart.map(d=>`
+          <div class="bg2">
+            <div class="bv">${d.val>0?'R$'+bk(d.val):''}</div>
+            <div class="bar${d.cur?' cur':''}" style="height:${Math.round(d.val/maxV*100)}%"></div>
+            <div class="bl">${d.label}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    <div class="tw">
+      <div class="th"><h3>Últimos clientes</h3><button class="btn bg bsm" onclick="go('clientes')">Ver todos →</button></div>
+      <table>
+        <thead><tr><th>Nome</th><th>Empresa</th><th>Serviço</th><th>Status</th><th>Valor</th></tr></thead>
+        <tbody>
+          ${clientes.slice(0,6).map(x=>`
+            <tr onclick="go('clientes')">
+              <td class="tn">${x.nome}</td><td class="tm">${x.empresa||'—'}</td><td class="tm">${x.servico||'—'}</td>
+              <td>${badge(x.status)}</td><td>${brl(x.valor)}</td>
+            </tr>`).join('') || '<tr><td colspan="5"><div class="empty">Sem clientes ainda.</div></td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+// ── CLIENTES ──────────────────────────────────
+let cFil = 'todos', cSrch = '';
+window._cl = [];
+
+async function renderClientes() {
+  document.getElementById('tbacts').innerHTML = `<button class="btn bp" onclick="addCliente()">+ Novo cliente</button>`;
+  const c = document.getElementById('content');
+  c.innerHTML = '<div class="empty">Carregando...</div>';
+  const { data } = await db.from('clientes').select('*').order('criado_em',{ascending:false});
+  window._cl = data || [];
+  renderCLTable();
+}
+
+function renderCLTable() {
+  let list = window._cl;
+  if (cFil !== 'todos') list = list.filter(x => x.status === cFil);
+  if (cSrch) list = list.filter(x => x.nome.toLowerCase().includes(cSrch.toLowerCase()) || (x.empresa||'').toLowerCase().includes(cSrch.toLowerCase()));
+  document.getElementById('content').innerHTML = `
+    <div class="tw">
+      <div class="th">
+        <h3>Clientes <span style="color:var(--text-3);font-weight:400">(${list.length})</span></h3>
+        <input class="si" placeholder="Buscar..." value="${cSrch}" oninput="cSrch=this.value;renderCLTable()">
+      </div>
+      <div class="fr">
+        ${['todos',...STATS].map(s=>`<div class="fc${cFil===s?' on':''}" onclick="cFil='${s}';renderCLTable()">${s==='todos'?'Todos':s.charAt(0).toUpperCase()+s.slice(1)}</div>`).join('')}
+      </div>
+      <table>
+        <thead><tr><th>Nome</th><th>Empresa</th><th>Serviço</th><th>Status</th><th>Valor</th><th>WhatsApp</th><th>Entrada</th><th></th></tr></thead>
+        <tbody>
+          ${list.length ? list.map(x=>`
+            <tr onclick="editCliente('${x.id}')">
+              <td class="tn">${x.nome}</td><td class="tm">${x.empresa||'—'}</td><td class="tm">${x.servico||'—'}</td>
+              <td>${badge(x.status)}</td><td>${brl(x.valor)}</td>
+              <td class="tm">${x.whatsapp?`<a href="https://wa.me/${x.whatsapp.replace(/\D/g,'')}" target="_blank" onclick="event.stopPropagation()" style="color:var(--accent);text-decoration:none">${x.whatsapp}</a>`:'—'}</td>
+              <td class="tm">${fmtd(x.criado_em)}</td>
+              <td onclick="event.stopPropagation()">
+                <button class="btn bd bsm bic" onclick="delCliente('${x.id}')">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+                </button>
+              </td>
+            </tr>`).join('') : '<tr><td colspan="8"><div class="empty">Nenhum resultado.</div></td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function clForm(x={}) {
+  return `
+    <div class="frow">
+      <div class="fg"><label class="fl">Nome *</label><input class="fi" id="fn" value="${x.nome||''}"></div>
+      <div class="fg"><label class="fl">Empresa</label><input class="fi" id="fe" value="${x.empresa||''}"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">WhatsApp</label><input class="fi" id="fw" value="${x.whatsapp||''}" placeholder="5512..."></div>
+      <div class="fg"><label class="fl">E-mail</label><input class="fi" id="fem" value="${x.email||''}"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Serviço</label><input class="fi" id="fs" value="${x.servico||''}" placeholder="Ex: Tráfego + IA"></div>
+      <div class="fg"><label class="fl">Valor/mês (R$)</label><input class="fi" id="fv" type="number" value="${x.valor||''}"></div>
+    </div>
+    <div class="fg"><label class="fl">Status</label>
+      <select class="fsl" id="fst">${STATS.map(s=>`<option value="${s}"${x.status===s?' selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}</select>
+    </div>
+    <div class="fg"><label class="fl">Observações</label><textarea class="fta" id="fob">${x.observacoes||''}</textarea></div>`;
+}
+
+function addCliente() { openModal('Novo cliente', clForm(), `<button class="btn bg" onclick="closeModal()">Cancelar</button><button class="btn bp" onclick="saveCliente()">Salvar</button>`); }
+function editCliente(id) {
+  const x = window._cl.find(c=>c.id===id); if(!x) return;
+  openModal('Editar cliente', clForm(x), `<button class="btn bg" onclick="closeModal()">Cancelar</button><button class="btn bp" onclick="saveCliente('${id}')">Salvar</button>`);
+}
+async function saveCliente(id) {
+  const d = { nome:document.getElementById('fn').value.trim(), empresa:document.getElementById('fe').value.trim(), whatsapp:document.getElementById('fw').value.trim(), email:document.getElementById('fem').value.trim(), servico:document.getElementById('fs').value.trim(), valor:parseFloat(document.getElementById('fv').value)||null, status:document.getElementById('fst').value, observacoes:document.getElementById('fob').value.trim(), atualizado_em:new Date().toISOString() };
+  if (!d.nome) { toast('Nome obrigatório.','er'); return; }
+  const { error } = id ? await db.from('clientes').update(d).eq('id',id) : await db.from('clientes').insert(d);
+  if (error) { toast('Erro ao salvar.','er'); return; }
+  toast(id ? 'Cliente atualizado.' : 'Cliente adicionado.');
+  closeModal();
+  if (curView==='pipeline') renderPipeline(); else renderClientes();
+}
+async function delCliente(id) {
+  if (!confirm('Remover este cliente?')) return;
+  const { error } = await db.from('clientes').delete().eq('id',id);
+  if (error) { toast('Erro.','er'); return; }
+  toast('Removido.');
+  renderClientes();
+}
+
+// ── PIPELINE ──────────────────────────────────
+async function renderPipeline() {
+  const c = document.getElementById('content');
+  c.innerHTML = '<div class="empty">Carregando...</div>';
+  const { data } = await db.from('clientes').select('*').order('criado_em',{ascending:false});
+  window._cl = data || [];
+  const cols = [
+    {k:'novo',l:'Novo',cor:'#4A9EFF'},{k:'qualificado',l:'Qualificado',cor:'#F5A623'},
+    {k:'proposta',l:'Proposta',cor:'#A78BFA'},{k:'fechado',l:'Fechado',cor:'#34D399'},{k:'perdido',l:'Perdido',cor:'#FF5C5C'}
+  ];
+  c.innerHTML = `<div class="kanban">${cols.map(col=>{
+    const cards = window._cl.filter(x=>x.status===col.k);
+    const tot = cards.reduce((s,x)=>s+Number(x.valor||0),0);
+    return `<div class="kc">
+      <div class="kch"><span class="kct" style="color:${col.cor}">${col.l}</span><span class="kcn">${cards.length}</span></div>
+      ${tot>0?`<div style="padding:5px 13px;font-size:11px;color:var(--text-3);border-bottom:1px solid var(--line)">${brl(tot)}</div>`:''}
+      <div class="kcards">${cards.length ? cards.map(x=>`
+        <div class="kcard" onclick="editCliente('${x.id}')">
+          <div class="kcard-name">${x.nome}</div>
+          ${x.empresa?`<div class="kcard-co">${x.empresa}</div>`:''}
+          <div class="kcard-ft"><span class="kcard-val">${x.valor?brl(x.valor):'—'}</span><span class="kcard-svc">${x.servico||''}</span></div>
+        </div>`).join('') : `<div style="font-size:12px;color:var(--text-3);text-align:center;padding:14px 0">Vazio</div>`}
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+// ── FATURAMENTO ───────────────────────────────
+window._fat = [];
+async function renderFat() {
+  document.getElementById('tbacts').innerHTML = `<button class="btn bp" onclick="addFat()">+ Lançamento</button>`;
+  const c = document.getElementById('content');
+  c.innerHTML = '<div class="empty">Carregando...</div>';
+  const { data } = await db.from('faturamento').select('*').order('ano',{ascending:false}).order('mes',{ascending:false});
+  window._fat = data || [];
+  const now = new Date(); const ano = now.getFullYear(); const mes = now.getMonth()+1;
+  const totAno = window._fat.filter(f=>f.ano===ano).reduce((s,f)=>s+Number(f.valor),0);
+  const mWithData = [...new Set(window._fat.filter(f=>f.ano===ano).map(f=>f.mes))];
+  const media = mWithData.length ? totAno/mWithData.length : 0;
+  const melhor = window._fat.reduce((b,f)=>(!b||Number(f.valor)>Number(b.valor)?f:b),null);
+  const chart = [];
+  for (let i=11; i>=0; i--) {
+    const d = new Date(ano, mes-1-i, 1); const m=d.getMonth()+1, y=d.getFullYear();
+    const val = window._fat.filter(f=>f.mes===m&&f.ano===y).reduce((s,f)=>s+Number(f.valor),0);
+    chart.push({label:MES[m-1],val,cur:i===0});
+  }
+  const maxV = Math.max(...chart.map(d=>d.val),1);
+  c.innerHTML = `
+    <div class="fs">
+      <div class="sc"><div class="sl">Total ${ano}</div><div class="sv ac">${brl(totAno)}</div></div>
+      <div class="sc"><div class="sl">Média mensal</div><div class="sv">${brl(media)}</div></div>
+      <div class="sc"><div class="sl">Melhor mês</div><div class="sv">${melhor?brl(melhor.valor):'—'}</div><div class="ss">${melhor?MESF[melhor.mes-1]+' '+melhor.ano:''}</div></div>
+    </div>
+    <div class="cw">
+      <div class="ct">Faturamento — últimos 12 meses</div>
+      <div class="bc">${chart.map(d=>`
+        <div class="bg2">
+          <div class="bv">${d.val>0?'R$'+bk(d.val):''}</div>
+          <div class="bar${d.cur?' cur':''}" style="height:${Math.round(d.val/maxV*100)}%"></div>
+          <div class="bl">${d.label}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="tw">
+      <div class="th"><h3>Lançamentos</h3></div>
+      <table>
+        <thead><tr><th>Mês</th><th>Ano</th><th>Valor</th><th>Descrição</th><th>Data</th><th></th></tr></thead>
+        <tbody>${window._fat.length ? window._fat.map(f=>`
+          <tr>
+            <td>${MESF[f.mes-1]}</td><td class="tm">${f.ano}</td>
+            <td style="font-weight:600;color:var(--accent)">${brl(f.valor)}</td>
+            <td class="tm">${f.descricao||'—'}</td><td class="tm">${fmtd(f.criado_em)}</td>
+            <td style="display:flex;gap:6px;align-items:center">
+              <button class="btn bg bsm" onclick="editFat('${f.id}')">Editar</button>
+              <button class="btn bd bsm bic" onclick="delFat('${f.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+            </td>
+          </tr>`).join('') : '<tr><td colspan="6"><div class="empty">Sem lançamentos.</div></td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function fatForm(f={}) {
+  const now = new Date();
+  return `
+    <div class="frow">
+      <div class="fg"><label class="fl">Mês *</label>
+        <select class="fsl" id="fmes">${MESF.map((m,i)=>`<option value="${i+1}"${(f.mes||now.getMonth()+1)===i+1?' selected':''}>${m}</option>`).join('')}</select>
+      </div>
+      <div class="fg"><label class="fl">Ano *</label><input class="fi" id="fano" type="number" value="${f.ano||now.getFullYear()}"></div>
+    </div>
+    <div class="fg"><label class="fl">Valor (R$) *</label><input class="fi" id="fval" type="number" step="0.01" value="${f.valor||''}"></div>
+    <div class="fg"><label class="fl">Descrição</label><input class="fi" id="fdesc" value="${f.descricao||''}" placeholder="Ex: Clientes recorrentes"></div>`;
+}
+function addFat() { openModal('Novo lançamento',fatForm(),`<button class="btn bg" onclick="closeModal()">Cancelar</button><button class="btn bp" onclick="saveFat()">Salvar</button>`); }
+function editFat(id) {
+  const f = window._fat.find(x=>x.id===id); if(!f) return;
+  openModal('Editar lançamento',fatForm(f),`<button class="btn bg" onclick="closeModal()">Cancelar</button><button class="btn bp" onclick="saveFat('${id}')">Salvar</button>`);
+}
+async function saveFat(id) {
+  const d = { mes:parseInt(document.getElementById('fmes').value), ano:parseInt(document.getElementById('fano').value), valor:parseFloat(document.getElementById('fval').value)||0, descricao:document.getElementById('fdesc').value.trim() };
+  if (!d.valor) { toast('Valor obrigatório.','er'); return; }
+  const { error } = id ? await db.from('faturamento').update(d).eq('id',id) : await db.from('faturamento').insert(d);
+  if (error) { toast('Erro.','er'); return; }
+  toast(id?'Atualizado.':'Adicionado.');
+  closeModal(); renderFat();
+}
+async function delFat(id) {
+  if (!confirm('Remover?')) return;
+  await db.from('faturamento').delete().eq('id',id);
+  toast('Removido.'); renderFat();
+}
+
+// ── AGENTES ───────────────────────────────────
+window._ag = [];
+async function renderAgentes() {
+  document.getElementById('tbacts').innerHTML = `<button class="btn bp" onclick="addAgente()">+ Novo agente</button>`;
+  const c = document.getElementById('content');
+  c.innerHTML = '<div class="empty">Carregando...</div>';
+  const { data } = await db.from('agentes').select('*').order('criado_em',{ascending:false});
+  window._ag = data || [];
+  if (!window._ag.length) { c.innerHTML = '<div class="empty">Nenhum agente ainda.</div>'; return; }
+  c.innerHTML = `<div class="ag">${window._ag.map(a=>`
+    <div class="acard">
+      <div class="ach">
+        <div><div class="an">${a.nome}</div><div class="acan">${a.canal||'Canal não definido'}</div></div>
+        <span class="badge b-${a.status}">${a.status}</span>
+      </div>
+      ${a.prompt?`<div class="aprompt">${a.prompt}</div>`:''}
+      ${a.notas?`<div style="font-size:12px;color:var(--text-2);line-height:1.5">${a.notas}</div>`:''}
+      <div class="aft">
+        <div class="aacts">
+          <button class="btn bg bsm" onclick="editAgente('${a.id}')">Editar</button>
+          <button class="btn bd bsm bic" onclick="delAgente('${a.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+        </div>
+        <span style="font-size:11px;color:var(--text-3)">${fmtd(a.criado_em)}</span>
+      </div>
+    </div>`).join('')}</div>`;
+}
+function agForm(a={}) {
+  return `
+    <div class="frow">
+      <div class="fg"><label class="fl">Nome *</label><input class="fi" id="agn" value="${a.nome||''}" placeholder="Ex: Qualificador WA"></div>
+      <div class="fg"><label class="fl">Canal</label>
+        <select class="fsl" id="agc"><option value="">Selecione...</option>${CANAIS.map(c=>`<option value="${c}"${a.canal===c?' selected':''}>${c}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">Status</label>
+      <select class="fsl" id="agst"><option value="ativo"${a.status==='ativo'?' selected':''}>Ativo</option><option value="inativo"${a.status==='inativo'?' selected':''}>Inativo</option></select>
+    </div>
+    <div class="fg"><label class="fl">Prompt / Instrução</label><textarea class="fta" id="agp" style="min-height:110px;font-family:ui-monospace,monospace;font-size:12px">${a.prompt||''}</textarea></div>
+    <div class="fg"><label class="fl">Notas</label><textarea class="fta" id="agno">${a.notas||''}</textarea></div>`;
+}
+function addAgente() { openModal('Novo agente IA',agForm(),`<button class="btn bg" onclick="closeModal()">Cancelar</button><button class="btn bp" onclick="saveAgente()">Salvar</button>`); }
+function editAgente(id) {
+  const a = window._ag.find(x=>x.id===id); if(!a) return;
+  openModal('Editar agente',agForm(a),`<button class="btn bg" onclick="closeModal()">Cancelar</button><button class="btn bp" onclick="saveAgente('${id}')">Salvar</button>`);
+}
+async function saveAgente(id) {
+  const d = { nome:document.getElementById('agn').value.trim(), canal:document.getElementById('agc').value, status:document.getElementById('agst').value, prompt:document.getElementById('agp').value.trim(), notas:document.getElementById('agno').value.trim() };
+  if (!d.nome) { toast('Nome obrigatório.','er'); return; }
+  const { error } = id ? await db.from('agentes').update(d).eq('id',id) : await db.from('agentes').insert(d);
+  if (error) { toast('Erro.','er'); return; }
+  toast(id?'Agente atualizado.':'Agente criado.');
+  closeModal(); renderAgentes();
+}
+async function delAgente(id) {
+  if (!confirm('Remover agente?')) return;
+  await db.from('agentes').delete().eq('id',id);
+  toast('Removido.'); renderAgentes();
+}
+</script>
+</body>
+</html>
