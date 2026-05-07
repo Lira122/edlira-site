@@ -1010,7 +1010,7 @@ section.tight{padding:90px 0}
       <p class="body-lg" style="max-width:600px">Do anúncio ao lead qualificado — veja cada etapa em ação.</p>
     </div>
   </div>
-  <div style="width:100%;aspect-ratio:16/9;max-height:600px;background:#000;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <div id="anim-wrap" style="width:100%;background:#000;border-top:1px solid var(--line);border-bottom:1px solid var(--line);aspect-ratio:16/9;max-height:600px">
     <iframe
       src="como-funciona.html"
       style="width:100%;height:100%;border:none;display:block;"
@@ -1019,6 +1019,15 @@ section.tight{padding:90px 0}
       allow="autoplay"
     ></iframe>
   </div>
+  <style>
+    @media (max-width:760px) {
+      #anim-wrap {
+        aspect-ratio: unset !important;
+        height: 100vw;
+        max-height: unset !important;
+      }
+    }
+  </style>
 </section>
 
 <!-- ============================ COMPARISON ============================ -->
