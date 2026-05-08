@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>·</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -298,10 +301,38 @@ function doAuth() {
   }
 }
 document.getElementById('ain').addEventListener('keydown', e => { if(e.key==='Enter') doAuth(); });
-if (authed()) {
+function startApp() {
   document.getElementById('auth').classList.add('h');
   document.getElementById('app').classList.remove('h');
   go('dashboard');
+  startRealtime();
+}
+
+if (authed()) startApp();
+
+// ── REALTIME ──────────────────────────────────
+function startRealtime() {
+  // Tabelas que disparam re-render da view atual
+  const reloadMap = {
+    chatbot_conversations: ['agentes','dashboard'],
+    clientes:              ['clientes','pipeline','mensalidades','dashboard'],
+    faturamento:           ['faturamento','mensalidades','dashboard'],
+    agentes:               ['agentes'],
+    conhecimentos:         ['agentes'],
+  };
+  let reloadTimer = null;
+  function scheduleReload(view) {
+    if (curView !== view) return;
+    clearTimeout(reloadTimer);
+    reloadTimer = setTimeout(() => vRenders[curView]?.(), 800);
+  }
+  Object.entries(reloadMap).forEach(([table, views]) => {
+    db.channel(`rt-${table}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table }, () => {
+        views.forEach(v => scheduleReload(v));
+      })
+      .subscribe();
+  });
 }
 
 // ── NAV ───────────────────────────────────────
