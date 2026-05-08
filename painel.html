@@ -83,7 +83,7 @@ tbody tr:hover{background:rgba(255,255,255,0.025)}
 .b-proposta{background:rgba(167,139,250,.15);color:#A78BFA}
 .b-fechado{background:rgba(52,211,153,.15);color:#34D399}
 .b-perdido{background:rgba(255,92,92,.15);color:var(--danger)}
-.b-ativo{background:rgba(52,211,153,.15);color:#34D399}
+.b-ativo{background:rgba(197,248,42,.15);color:#C5F82A}
 .b-inativo{background:rgba(255,255,255,.06);color:var(--text-3)}
 
 /* FILTERS */
@@ -117,15 +117,43 @@ tbody tr:hover{background:rgba(255,255,255,0.025)}
 .bl{font-size:10px;color:var(--text-3)}
 .bv{font-size:10px;color:var(--text-2)}
 
-/* AGENTS */
-.ag{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
-.acard{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:11px}
-.ach{display:flex;align-items:flex-start;justify-content:space-between}
-.an{font-size:14px;font-weight:600}
-.acan{font-size:12px;color:var(--text-2);margin-top:2px}
-.aprompt{font-size:11.5px;color:var(--text-2);line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;padding:9px;background:rgba(255,255,255,.03);border-radius:var(--rs);border:1px solid var(--line);font-family:ui-monospace,monospace}
-.aft{display:flex;align-items:center;justify-content:space-between}
-.aacts{display:flex;gap:6px}
+/* AGENTS v2 */
+.ag2{display:flex;flex-direction:column;gap:16px}
+.acard2{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.acard2-top{padding:18px 20px 16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.acard2-name{font-size:15px;font-weight:600;margin-bottom:5px}
+.acard2-sub{font-size:12px;color:var(--text-3);display:flex;align-items:center;gap:8px}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--ok);flex-shrink:0;animation:pulseAnim 2s infinite}
+@keyframes pulseAnim{0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,.5)}60%{box-shadow:0 0 0 6px rgba(52,211,153,0)}}
+.acard2-stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.astat{padding:14px 18px}
+.astat+.astat{border-left:1px solid var(--line)}
+.astat-val{font-size:22px;font-weight:700;letter-spacing:-.03em}
+.astat-lbl{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.07em;margin-top:3px}
+.acard2-foot{padding:11px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(0,0,0,.2)}
+.acard2-url{font-size:11px;color:var(--text-3);font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+/* CONV LIST */
+.conv-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:background 80ms}
+.conv-row:last-child{border-bottom:none}
+.conv-row:hover{background:rgba(255,255,255,.025)}
+.conv-av{width:36px;height:36px;border-radius:50%;background:var(--bg-input);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--accent);flex-shrink:0}
+.conv-info{flex:1;min-width:0}
+.conv-name{font-size:13px;font-weight:500;margin-bottom:2px}
+.conv-prev{font-size:12px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conv-meta{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+/* CHAT */
+.chat-info{display:flex;gap:20px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.15)}
+.ci{display:flex;flex-direction:column;gap:2px}
+.ci-l{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em}
+.ci-v{font-size:13px;font-weight:500}
+.chat-msgs{display:flex;flex-direction:column;gap:8px;padding:16px;max-height:400px;overflow-y:auto}
+.cmsg{display:flex;flex-direction:column;max-width:78%}
+.cmsg.u{align-self:flex-end;align-items:flex-end}
+.cmsg.a{align-self:flex-start}
+.cbubble{padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.cmsg.u .cbubble{background:#1a3300;color:#c8f060;border-radius:14px 14px 3px 14px}
+.cmsg.a .cbubble{background:var(--bg-input);border:1px solid var(--line);color:var(--text);border-radius:14px 14px 14px 3px}
+.crole{font-size:10px;color:var(--text-3);padding:0 4px;margin-top:2px}
 
 /* FAT SUMMARY */
 .fs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px}
@@ -133,7 +161,8 @@ tbody tr:hover{background:rgba(255,255,255,0.025)}
 /* MODAL */
 .ov{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:20px}
 .ov.h{display:none}
-.modal{background:var(--bg-card);border:1px solid var(--line2);border-radius:var(--r);width:100%;max-width:510px;max-height:90vh;overflow-y:auto}
+.modal{background:var(--bg-card);border:1px solid var(--line2);border-radius:var(--r);width:100%;max-width:560px;max-height:90vh;overflow-y:auto}
+.modal.wide{max-width:680px}
 .mh{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
 .mt{font-size:14px;font-weight:600}
 .mx{background:none;border:none;color:var(--text-3);cursor:pointer;padding:4px;border-radius:4px;display:flex;align-items:center;justify-content:center}
@@ -209,6 +238,10 @@ tbody tr:hover{background:rgba(255,255,255,0.025)}
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         <span>Faturamento</span>
       </div>
+      <div class="ni" data-v="mensalidades" onclick="go('mensalidades')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>Mensalidades</span>
+      </div>
       <div class="ni" data-v="agentes" onclick="go('agentes')">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         <span>Agentes IA</span>
@@ -273,8 +306,8 @@ if (authed()) {
 
 // ── NAV ───────────────────────────────────────
 let curView = 'dashboard';
-const vTitles = { dashboard:'Dashboard', clientes:'Clientes', pipeline:'Pipeline', faturamento:'Faturamento', agentes:'Agentes IA' };
-const vRenders = { dashboard:renderDash, clientes:renderClientes, pipeline:renderPipeline, faturamento:renderFat, agentes:renderAgentes };
+const vTitles = { dashboard:'Dashboard', clientes:'Clientes', pipeline:'Pipeline', mensalidades:'Mensalidades', faturamento:'Faturamento', agentes:'Agentes IA' };
+const vRenders = { dashboard:renderDash, clientes:renderClientes, pipeline:renderPipeline, mensalidades:renderMensalidades, faturamento:renderFat, agentes:renderAgentes };
 
 function go(v) {
   curView = v;
@@ -306,7 +339,7 @@ function ovClick(e) { if (e.target === document.getElementById('ov')) closeModal
 // ── UTILS ─────────────────────────────────────
 const MES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const MESF = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-const STATS = ['novo','qualificado','proposta','fechado','perdido'];
+const STATS = ['novo','qualificado','proposta','ativo','fechado','perdido'];
 const CANAIS = ['WhatsApp','Instagram','Site','Telegram','Email','Outro'];
 
 function brl(v) {
@@ -328,7 +361,8 @@ async function renderDash() {
     db.from('agentes').select('*'),
   ]);
   const clientes = cl||[], fats = fat||[], agentes = ag||[];
-  const ativos = clientes.filter(x => x.status !== 'perdido').length;
+  const ativos = clientes.filter(x => x.status === 'ativo').length;
+  const mrr = clientes.filter(x => x.status === 'ativo').reduce((s,x) => s + Number(x.valor||0), 0);
   const novos = clientes.filter(x => { const d=new Date(x.criado_em); return d.getMonth()+1===mes&&d.getFullYear()===ano; }).length;
   const agAtivos = agentes.filter(a => a.status==='ativo').length;
   const fatMes = fats.filter(f => f.mes===mes&&f.ano===ano).reduce((s,f)=>s+Number(f.valor),0);
@@ -344,8 +378,8 @@ async function renderDash() {
 
   c.innerHTML = `
     <div class="sg">
-      <div class="sc"><div class="sl">Faturamento do mês</div><div class="sv ac">${brl(fatMes)}</div><div class="ss">${MESF[mes-1]} ${ano}</div></div>
-      <div class="sc"><div class="sl">Clientes ativos</div><div class="sv">${ativos}</div><div class="ss">Na base</div></div>
+      <div class="sc"><div class="sl">Faturamento — ${MES[mes-1]}</div><div class="sv ac">${brl(fatMes)}</div><div class="ss">${MESF[mes-1]} ${ano}</div></div>
+      <div class="sc"><div class="sl">MRR</div><div class="sv ac">${brl(mrr)}</div><div class="ss">${ativos} cliente(s) ativo(s)</div></div>
       <div class="sc"><div class="sl">Leads este mês</div><div class="sv">${novos}</div><div class="ss">${MES[mes-1]} ${ano}</div></div>
       <div class="sc"><div class="sl">Agentes IA ativos</div><div class="sv">${agAtivos}</div><div class="ss">Em operação</div></div>
     </div>
@@ -577,63 +611,254 @@ async function delFat(id) {
   toast('Removido.'); renderFat();
 }
 
-// ── AGENTES ───────────────────────────────────
-window._ag = [];
+// ── MENSALIDADES ──────────────────────────────
+async function renderMensalidades() {
+  document.getElementById('tbacts').innerHTML = `<button class="btn bp" onclick="addCliente()">+ Novo cliente</button>`;
+  const c = document.getElementById('content');
+  c.innerHTML = '<div class="empty">Carregando...</div>';
+  const now = new Date(); const mes = now.getMonth()+1; const ano = now.getFullYear();
+  const [{ data: cl }, { data: fat }] = await Promise.all([
+    db.from('clientes').select('*').order('nome',{ascending:true}),
+    db.from('faturamento').select('*').eq('mes',mes).eq('ano',ano),
+  ]);
+  const ativos = (cl||[]).filter(x => x.status === 'ativo');
+  const fats = fat||[];
+  const mrr = ativos.reduce((s,x) => s + Number(x.valor||0), 0);
+  const recebido = fats.reduce((s,f) => s + Number(f.valor||0), 0);
+  const pendente = Math.max(0, mrr - recebido);
+
+  // check which clients already have a payment this month (by name in descricao)
+  const pagoIds = new Set(fats.map(f => (f.cliente_id||null)).filter(Boolean));
+
+  c.innerHTML = `
+    <div class="sg" style="grid-template-columns:repeat(4,1fr)">
+      <div class="sc"><div class="sl">MRR</div><div class="sv ac">${brl(mrr)}</div><div class="ss">Recorrência mensal</div></div>
+      <div class="sc"><div class="sl">Clientes ativos</div><div class="sv">${ativos.length}</div><div class="ss">Com contrato vigente</div></div>
+      <div class="sc"><div class="sl">Recebido em ${MES[mes-1]}</div><div class="sv" style="color:var(--ok)">${brl(recebido)}</div><div class="ss">${fats.length} lançamento(s)</div></div>
+      <div class="sc"><div class="sl">Pendente</div><div class="sv" style="color:${pendente>0?'var(--warn)':'var(--text-3)'}">${brl(pendente)}</div><div class="ss">${pendente>0?'A receber':'Em dia'}</div></div>
+    </div>
+
+    <div class="tw" style="margin-bottom:22px">
+      <div class="th">
+        <h3>Clientes ativos <span style="color:var(--text-3);font-weight:400">(${ativos.length})</span></h3>
+        <span style="font-size:12px;color:var(--text-3)">Clique em "Registrar" para lançar o pagamento do mês</span>
+      </div>
+      ${ativos.length ? `
+      <table>
+        <thead><tr><th>Nome</th><th>Empresa</th><th>Serviço</th><th>Valor/mês</th><th>${MES[mes-1]}/${ano}</th><th></th></tr></thead>
+        <tbody>
+          ${ativos.map(x => {
+            const jaPagou = fats.some(f => f.cliente_id === x.id);
+            return `<tr>
+              <td class="tn">${x.nome}</td>
+              <td class="tm">${x.empresa||'—'}</td>
+              <td class="tm">${x.servico||'—'}</td>
+              <td style="font-weight:600;color:var(--accent)">${brl(x.valor)}</td>
+              <td>${jaPagou ? '<span class="badge b-ativo">Pago</span>' : '<span class="badge b-inativo">Pendente</span>'}</td>
+              <td>
+                ${jaPagou
+                  ? `<button class="btn bg bsm" onclick="estornarMens('${x.id}','${x.nome}',${mes},${ano})">Estornar</button>`
+                  : `<button class="btn bp bsm" onclick="registrarMens('${x.id}','${x.nome}',${x.valor||0},${mes},${ano})">Registrar</button>`
+                }
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>` : '<div class="empty">Nenhum cliente com status "Ativo".<br>Altere o status do cliente para <strong>Ativo</strong> para aparecer aqui.</div>'}
+    </div>
+
+    <div class="tw">
+      <div class="th">
+        <h3>Lançamentos — ${MESF[mes-1]} ${ano}</h3>
+        <button class="btn bg bsm" onclick="addFat()">+ Lançamento manual</button>
+      </div>
+      <table>
+        <thead><tr><th>Descrição</th><th>Valor</th><th>Data</th><th></th></tr></thead>
+        <tbody id="mensLanc">
+          ${fats.length ? fats.map(f => `
+            <tr>
+              <td class="tn">${f.descricao||'—'}</td>
+              <td style="font-weight:600;color:var(--accent)">${brl(f.valor)}</td>
+              <td class="tm">${fmtd(f.criado_em)}</td>
+              <td><button class="btn bd bsm bic" onclick="delFatMens('${f.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button></td>
+            </tr>`).join('')
+          : '<tr><td colspan="4"><div class="empty">Sem lançamentos este mês.</div></td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+async function registrarMens(clienteId, nome, valor, mes, ano) {
+  const d = { mes, ano, valor: Number(valor)||0, descricao: nome, cliente_id: clienteId };
+  const { error } = await db.from('faturamento').insert(d);
+  if (error) { toast('Erro ao registrar.','er'); return; }
+  toast(`${nome} — pagamento registrado.`);
+  renderMensalidades();
+}
+
+async function estornarMens(clienteId, nome, mes, ano) {
+  if (!confirm(`Estornar pagamento de ${nome} em ${MESF[mes-1]}/${ano}?`)) return;
+  const { error } = await db.from('faturamento').delete().eq('cliente_id', clienteId).eq('mes', mes).eq('ano', ano);
+  if (error) { toast('Erro.','er'); return; }
+  toast('Estornado.');
+  renderMensalidades();
+}
+
+async function delFatMens(id) {
+  if (!confirm('Remover lançamento?')) return;
+  await db.from('faturamento').delete().eq('id', id);
+  toast('Removido.');
+  renderMensalidades();
+}
+
+// ── AGENTES v2 ────────────────────────────────
+window._ag = []; window._convs = [];
+const STAGE_LABEL = {inicio:'Início',situacao:'Situação',problema:'Problema',implicacao:'Implicação',necessidade:'Necessidade',proposta:'Proposta',fechamento:'Fechamento',encerrado:'Encerrado'};
+const STAGE_CLR   = {inicio:'#555',situacao:'#4A9EFF',problema:'#F5A623',implicacao:'#A78BFA',necessidade:'#C5F82A',proposta:'#34D399',fechamento:'#34D399',encerrado:'#444'};
+const INTER_CLR   = {alto:'var(--ok)',medio:'var(--warn)',baixo:'var(--danger)',indefinido:'var(--text-3)'};
+
 async function renderAgentes() {
   document.getElementById('tbacts').innerHTML = `<button class="btn bp" onclick="addAgente()">+ Novo agente</button>`;
   const c = document.getElementById('content');
   c.innerHTML = '<div class="empty">Carregando...</div>';
-  const { data } = await db.from('agentes').select('*').order('criado_em',{ascending:false});
-  window._ag = data || [];
+  const [{ data: ag }, { data: cv }] = await Promise.all([
+    db.from('agentes').select('*').order('criado_em',{ascending:false}),
+    db.from('chatbot_conversations').select('phone,stage,lead_data,updated_at,messages').neq('phone','__debug__').order('updated_at',{ascending:false})
+  ]);
+  window._ag = ag || [];
+  window._convs = cv || [];
   if (!window._ag.length) { c.innerHTML = '<div class="empty">Nenhum agente ainda.</div>'; return; }
-  c.innerHTML = `<div class="ag">${window._ag.map(a=>`
-    <div class="acard">
-      <div class="ach">
-        <div><div class="an">${a.nome}</div><div class="acan">${a.canal||'Canal não definido'}</div></div>
-        <span class="badge b-${a.status}">${a.status}</span>
-      </div>
-      ${a.prompt?`<div class="aprompt">${a.prompt}</div>`:''}
-      ${a.notas?`<div style="font-size:12px;color:var(--text-2);line-height:1.5">${a.notas}</div>`:''}
-      <div class="aft">
-        <div class="aacts">
-          <button class="btn bg bsm" onclick="editAgente('${a.id}')">Editar</button>
+  const total = window._convs.length;
+  const qualif = window._convs.filter(x=>['fechamento','encerrado'].includes(x.stage)).length;
+  const alto   = window._convs.filter(x=>x.lead_data?.interesse==='alto').length;
+  c.innerHTML = `<div class="ag2">${window._ag.map(a=>{
+    const webhook = (a.notas||'').match(/Webhook:\s*(https?:\/\/[^\s|]+)/)?.[1]||'';
+    const ativo = a.status==='ativo';
+    return `
+    <div class="acard2">
+      <div class="acard2-top">
+        <div>
+          <div class="acard2-name">${a.nome}</div>
+          <div class="acard2-sub">
+            ${ativo?'<div class="pulse"></div>':''}
+            <span>${a.canal||'—'}</span>
+            <span style="color:${ativo?'var(--ok)':'var(--text-3)'}">${ativo?'Ativo':'Inativo'}</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn bg bsm" onclick="editAgente('${a.id}')">Configurar</button>
           <button class="btn bd bsm bic" onclick="delAgente('${a.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
         </div>
-        <span style="font-size:11px;color:var(--text-3)">${fmtd(a.criado_em)}</span>
       </div>
-    </div>`).join('')}</div>`;
+      <div class="acard2-stats">
+        <div class="astat"><div class="astat-val">${total}</div><div class="astat-lbl">Conversas</div></div>
+        <div class="astat"><div class="astat-val" style="color:var(--ok)">${qualif}</div><div class="astat-lbl">Qualificados</div></div>
+        <div class="astat"><div class="astat-val" style="color:var(--accent)">${alto}</div><div class="astat-lbl">Alto interesse</div></div>
+      </div>
+      <div class="acard2-foot">
+        ${webhook
+          ? `<div class="acard2-url" title="${webhook}">${webhook}</div><button class="btn bg bsm" style="flex-shrink:0" onclick="copyText('${webhook}')">Copiar URL</button>`
+          : `<span style="font-size:12px;color:var(--text-3)">Webhook não configurado</span>`}
+      </div>
+    </div>
+    <div class="tw">
+      <div class="th" style="flex-wrap:wrap;gap:10px">
+        <h3>Conversas <span style="color:var(--text-3);font-weight:400">(${total})</span></h3>
+        <input class="si" placeholder="Buscar por nome ou número..." oninput="filterConvs(this.value)">
+      </div>
+      <div id="convList">${buildConvList(window._convs)}</div>
+    </div>`}).join('')}</div>`;
 }
+
+function buildConvList(list) {
+  if (!list.length) return '<div class="empty">Nenhuma conversa ainda.<br>Quando alguém mandar mensagem no WhatsApp, aparece aqui.</div>';
+  return list.map(cv=>{
+    const nome = cv.lead_data?.nome || cv.phone;
+    const emp  = cv.lead_data?.empresa ? ` · ${cv.lead_data.empresa}` : '';
+    const msgs = cv.messages||[];
+    const last = msgs[msgs.length-1];
+    const prev = (last?.content||'').replace(/\n/g,' ').slice(0,55)||(last?'…':'—');
+    const ini  = nome.charAt(0).toUpperCase();
+    const int  = cv.lead_data?.interesse||'indefinido';
+    return `<div class="conv-row" onclick="viewConversa('${cv.phone}')">
+      <div class="conv-av">${ini}</div>
+      <div class="conv-info">
+        <div class="conv-name">${nome}<span style="color:var(--text-3);font-weight:400">${emp}</span></div>
+        <div class="conv-prev">${prev}</div>
+      </div>
+      <div class="conv-meta">
+        <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${STAGE_CLR[cv.stage]||'#555'}22;color:${STAGE_CLR[cv.stage]||'#555'}">${STAGE_LABEL[cv.stage]||cv.stage}</span>
+        <span style="font-size:10px;color:${INTER_CLR[int]||'var(--text-3)'}">${int}</span>
+        <span style="font-size:10px;color:var(--text-3)">${fmtd(cv.updated_at)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterConvs(q) {
+  const f = q ? window._convs.filter(c=>(c.lead_data?.nome||'').toLowerCase().includes(q.toLowerCase())||c.phone.includes(q)) : window._convs;
+  const el = document.getElementById('convList');
+  if (el) el.innerHTML = buildConvList(f);
+}
+
+function viewConversa(phone) {
+  const cv = window._convs.find(c=>c.phone===phone); if(!cv) return;
+  const nome = cv.lead_data?.nome||phone;
+  const msgs = cv.messages||[];
+  const ld   = cv.lead_data||{};
+  const infos = [
+    ld.nome      && ['Nome',ld.nome],
+    ld.empresa   && ['Empresa',ld.empresa],
+    ld.segmento  && ['Segmento',ld.segmento],
+    ld.faturamento && ['Faturamento',ld.faturamento],
+    ld.interesse && ['Interesse',ld.interesse],
+    ['WhatsApp', phone],
+    ['Estágio', STAGE_LABEL[cv.stage]||cv.stage],
+    ld.dores?.length && ['Dores', ld.dores.join(', ')],
+  ].filter(Boolean);
+  const body = `
+    <div class="chat-info">${infos.map(([l,v])=>`<div class="ci"><div class="ci-l">${l}</div><div class="ci-v">${v}</div></div>`).join('')}</div>
+    <div class="chat-msgs">${msgs.length
+      ? msgs.map(m=>`<div class="cmsg ${m.role==='user'?'u':'a'}"><div class="cbubble">${m.content}</div><div class="crole">${m.role==='user'?'Lead':'Assistente'}</div></div>`).join('')
+      : '<div class="empty" style="padding:20px">Sem mensagens registradas.</div>'
+    }</div>`;
+  openModal(nome, body, `<button class="btn bg" onclick="closeModal()">Fechar</button><a href="https://wa.me/${phone.replace(/\D/g,'')}" target="_blank" class="btn bp">Abrir no WhatsApp</a>`);
+  setTimeout(()=>{ const el=document.querySelector('.chat-msgs'); if(el) el.scrollTop=el.scrollHeight; },50);
+}
+
+function copyText(t) { navigator.clipboard.writeText(t).then(()=>toast('Copiado!')).catch(()=>toast('Erro ao copiar','er')); }
+
 function agForm(a={}) {
   return `
     <div class="frow">
-      <div class="fg"><label class="fl">Nome *</label><input class="fi" id="agn" value="${a.nome||''}" placeholder="Ex: Qualificador WA"></div>
+      <div class="fg"><label class="fl">Nome *</label><input class="fi" id="agn" value="${a.nome||''}" placeholder="Ex: Assistente Virtual do Lira"></div>
       <div class="fg"><label class="fl">Canal</label>
         <select class="fsl" id="agc"><option value="">Selecione...</option>${CANAIS.map(c=>`<option value="${c}"${a.canal===c?' selected':''}>${c}</option>`).join('')}</select>
       </div>
     </div>
     <div class="fg"><label class="fl">Status</label>
-      <select class="fsl" id="agst"><option value="ativo"${a.status==='ativo'?' selected':''}>Ativo</option><option value="inativo"${a.status==='inativo'?' selected':''}>Inativo</option></select>
+      <select class="fsl" id="agst"><option value="ativo"${(a.status||'ativo')==='ativo'?' selected':''}>Ativo</option><option value="inativo"${a.status==='inativo'?' selected':''}>Inativo</option></select>
     </div>
-    <div class="fg"><label class="fl">Prompt / Instrução</label><textarea class="fta" id="agp" style="min-height:110px;font-family:ui-monospace,monospace;font-size:12px">${a.prompt||''}</textarea></div>
-    <div class="fg"><label class="fl">Notas</label><textarea class="fta" id="agno">${a.notas||''}</textarea></div>`;
+    <div class="fg"><label class="fl">Prompt / Instrução</label><textarea class="fta" id="agp" style="min-height:120px;font-family:ui-monospace,monospace;font-size:12px">${a.prompt||''}</textarea></div>
+    <div class="fg"><label class="fl">Notas (webhook URL, número, etc.)</label><textarea class="fta" id="agno" style="min-height:70px">${a.notas||''}</textarea></div>`;
 }
 function addAgente() { openModal('Novo agente IA',agForm(),`<button class="btn bg" onclick="closeModal()">Cancelar</button><button class="btn bp" onclick="saveAgente()">Salvar</button>`); }
 function editAgente(id) {
-  const a = window._ag.find(x=>x.id===id); if(!a) return;
-  openModal('Editar agente',agForm(a),`<button class="btn bg" onclick="closeModal()">Cancelar</button><button class="btn bp" onclick="saveAgente('${id}')">Salvar</button>`);
+  const a=window._ag.find(x=>x.id===id); if(!a) return;
+  openModal('Configurar agente',agForm(a),`<button class="btn bg" onclick="closeModal()">Cancelar</button><button class="btn bp" onclick="saveAgente('${id}')">Salvar</button>`);
 }
 async function saveAgente(id) {
-  const d = { nome:document.getElementById('agn').value.trim(), canal:document.getElementById('agc').value, status:document.getElementById('agst').value, prompt:document.getElementById('agp').value.trim(), notas:document.getElementById('agno').value.trim() };
-  if (!d.nome) { toast('Nome obrigatório.','er'); return; }
-  const { error } = id ? await db.from('agentes').update(d).eq('id',id) : await db.from('agentes').insert(d);
-  if (error) { toast('Erro.','er'); return; }
+  const d={nome:document.getElementById('agn').value.trim(),canal:document.getElementById('agc').value,status:document.getElementById('agst').value,prompt:document.getElementById('agp').value.trim(),notas:document.getElementById('agno').value.trim()};
+  if(!d.nome){toast('Nome obrigatório.','er');return;}
+  const{error}=id?await db.from('agentes').update(d).eq('id',id):await db.from('agentes').insert(d);
+  if(error){toast('Erro.','er');return;}
   toast(id?'Agente atualizado.':'Agente criado.');
-  closeModal(); renderAgentes();
+  closeModal();renderAgentes();
 }
 async function delAgente(id) {
-  if (!confirm('Remover agente?')) return;
+  if(!confirm('Remover agente?'))return;
   await db.from('agentes').delete().eq('id',id);
-  toast('Removido.'); renderAgentes();
+  toast('Removido.');renderAgentes();
 }
 </script>
 </body>
