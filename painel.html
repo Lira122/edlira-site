@@ -191,6 +191,37 @@ tbody tr:hover{background:rgba(255,255,255,0.025)}
 
 .empty{text-align:center;padding:44px 20px;color:var(--text-3);font-size:13px}
 
+/* EQUIPE */
+.eq-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:24px}
+.eq-card{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;cursor:pointer;transition:border-color 150ms,transform 100ms;user-select:none}
+.eq-card:hover{border-color:var(--line2);transform:translateY(-1px)}
+.eq-card.active{border-color:var(--accent);background:var(--accent-d)}
+.eq-emoji{font-size:28px;margin-bottom:10px}
+.eq-name{font-size:14px;font-weight:600;margin-bottom:4px}
+.eq-desc{font-size:12px;color:var(--text-3);line-height:1.5}
+.eq-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:6px}
+/* CHAT EQUIPE */
+.eq-chat{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;height:600px}
+.eq-chat-head{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.eq-chat-info{display:flex;align-items:center;gap:10px}
+.eq-chat-ava{font-size:22px}
+.eq-chat-name{font-size:14px;font-weight:600}
+.eq-chat-sub{font-size:11px;color:var(--text-3);margin-top:1px}
+.eq-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.eq-msg{display:flex;flex-direction:column;max-width:82%}
+.eq-msg.u{align-self:flex-end;align-items:flex-end}
+.eq-msg.a{align-self:flex-start}
+.eq-bubble{padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+.eq-msg.u .eq-bubble{background:var(--accent);color:#000;border-radius:14px 14px 3px 14px}
+.eq-msg.a .eq-bubble{background:var(--bg-input);border:1px solid var(--line);color:var(--text);border-radius:14px 14px 14px 3px}
+.eq-bubble.thinking{color:var(--text-3);font-style:italic}
+.eq-role{font-size:10px;color:var(--text-3);margin-top:3px;padding:0 4px}
+.eq-foot{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:flex-end}
+.eq-input{flex:1;background:var(--bg-input);border:1px solid var(--line);border-radius:var(--rs);padding:10px 13px;color:var(--text);font-size:13px;font-family:inherit;resize:none;outline:none;line-height:1.5;max-height:120px;transition:border-color 150ms}
+.eq-input:focus{border-color:var(--accent)}
+.eq-send{background:var(--accent);border:none;border-radius:var(--rs);padding:10px 16px;color:#000;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0;transition:opacity 120ms}
+.eq-send:hover{opacity:.85}
+.eq-send:disabled{opacity:.4;cursor:not-allowed}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
@@ -249,6 +280,10 @@ tbody tr:hover{background:rgba(255,255,255,0.025)}
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         <span>Agentes IA</span>
       </div>
+      <div class="ni" data-v="equipe" onclick="go('equipe')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Equipe</span>
+      </div>
     </nav>
     <div class="sb-foot">CRM v1.0</div>
   </aside>
@@ -279,6 +314,8 @@ tbody tr:hover{background:rgba(255,255,255,0.025)}
 <script>
 const SB_URL = 'https://flzpblpegoqjxaacjvhf.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsenBibHBlZ29xanhhYWNqdmhmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODE4MzY0NSwiZXhwIjoyMDkzNzU5NjQ1fQ.7Faqa-D_TfflCgZ3Yq7yicZKYAfZ3WHBdSBKvLSDRY8';
+// ⬇️ Chave OpenRouter para a Equipe de Conteúdo (openrouter.ai → Keys)
+const OR_KEY = 'OPENROUTER_KEY_AQUI';
 const _pw = ['X6vk','QW9Y','5mIG','l5W1'].join('');
 const AK = 'e_auth_1';
 const db = supabase.createClient(SB_URL, SB_KEY);
@@ -337,8 +374,8 @@ function startRealtime() {
 
 // ── NAV ───────────────────────────────────────
 let curView = 'dashboard';
-const vTitles = { dashboard:'Dashboard', clientes:'Clientes', pipeline:'Pipeline', mensalidades:'Mensalidades', faturamento:'Faturamento', agentes:'Agentes IA' };
-const vRenders = { dashboard:renderDash, clientes:renderClientes, pipeline:renderPipeline, mensalidades:renderMensalidades, faturamento:renderFat, agentes:renderAgentes };
+const vTitles = { dashboard:'Dashboard', clientes:'Clientes', pipeline:'Pipeline', mensalidades:'Mensalidades', faturamento:'Faturamento', agentes:'Agentes IA', equipe:'Equipe de Conteúdo' };
+const vRenders = { dashboard:renderDash, clientes:renderClientes, pipeline:renderPipeline, mensalidades:renderMensalidades, faturamento:renderFat, agentes:renderAgentes, equipe:renderEquipe };
 
 function go(v) {
   curView = v;
@@ -960,6 +997,343 @@ async function delKnowledge(id) {
   if (!confirm('Remover este conhecimento?')) return;
   await db.from('conhecimentos').delete().eq('id',id);
   toast('Removido.'); loadKnowledgeList();
+}
+
+// ── EQUIPE DE CONTEÚDO ────────────────────────
+const EQ_AGENTS = [
+  {
+    id: 'roteirista',
+    emoji: '✍️',
+    name: 'Roteirista',
+    desc: 'Cria roteiros de Reels, vídeos curtos e stories. Hook poderoso nos primeiros 3 segundos garantido.',
+    model: 'anthropic/claude-3.5-sonnet',
+    color: '#4A9EFF',
+    // skill: social-content + video
+    system: `Você é o Roteirista da Equipe Edlira, especialista em short-form video scripting para Instagram Reels, TikTok e YouTube Shorts.
+
+## Seu Framework de Roteiro
+
+Cada roteiro segue esta estrutura obrigatória:
+
+**[GANCHO — 0 a 3 seg]**
+O primeiro frame decide tudo. Use uma dessas fórmulas:
+- Curiosidade: "Eu estava errado sobre [crença comum]."
+- Resultado surpreendente: "[Resultado incrível] — e só levou [tempo curto]."
+- Contraditório: "Para de [prática comum]. Faz isso em vez."
+- Pergunta direta: "Você sabe por que [problema que o público tem]?"
+
+**[DESENVOLVIMENTO — o valor]**
+- Problema → Agitação → Solução (PAS)
+- Ou: Antes → Depois → Como
+- Linguagem simples, frases curtas (máx 8 palavras por frase no roteiro)
+- Uma ideia por cena — nunca sobrecarregue
+
+**[CTA — últimos 3 seg]**
+- Um único CTA. Nunca dois.
+- Exemplos: "Salva pra não perder", "Comenta X se quer mais", "Segue pra próximo"
+
+## Entrega padrão para cada roteiro:
+📌 GANCHO (texto exato, tempo: 0-3s)
+🎬 DESENVOLVIMENTO (cena por cena, tempo estimado)
+📣 CTA (texto exato)
+🎵 Sugestão de áudio/trilha
+📝 Legenda completa + hashtags
+
+Adapte o tom para o nicho do cliente. Seja direto — palavras que não servem à venda são cortadas.`
+  },
+  {
+    id: 'analista',
+    emoji: '📊',
+    name: 'Analista de Tendências',
+    desc: 'Pesquisa em tempo real o que está viralizando. Traz dados frescos do Instagram, TikTok e mercado.',
+    model: 'perplexity/llama-3.1-sonar-large-128k-online',
+    color: '#A78BFA',
+    // skill: social-content (viral reverse engineering) + marketing-ideas
+    system: `Você é o Analista de Tendências da Equipe Edlira. Você tem acesso à internet em tempo real e pesquisa o que está em alta no marketing digital e redes sociais agora.
+
+## Sua metodologia de análise
+
+### Reverse Engineering de Conteúdo Viral
+Quando analisar tendências, responda:
+1. O QUE está viralizando (formato, tema, estilo)
+2. POR QUE está funcionando (gatilho psicológico, timing, novidade)
+3. COMO aplicar para a Edlira e seus clientes
+4. QUANDO usar (urgência da tendência — dias ou semanas?)
+
+### Categorias que você monitora
+- Formatos: Reels, carrosséis, stories interativos, lives
+- Áudios virais do momento no Brasil
+- Trends de hashtag e nichos em crescimento
+- Estratégias de concorrentes e referências do mercado
+- O que está sendo compartilhado por agências de marketing digitais
+- Novidades de algoritmo (Instagram, TikTok, YouTube Shorts)
+
+### Entrega padrão de tendências:
+Para cada tendência encontrada, entregue:
+🔥 **[Nome da tendência]**
+• O que é: ...
+• Por que funciona: (gatilho psicológico)
+• Como aplicar: (passo a passo concreto)
+• Urgência: 🟢 Alta (usar esta semana) / 🟡 Média / 🔴 Baixa (já passando)
+• Fonte / referência: ...
+
+Sempre baseie em dados reais e cite fontes. Não invente tendências — pesquise.`
+  },
+  {
+    id: 'carrossel',
+    emoji: '🎨',
+    name: 'Criador de Carrossel',
+    desc: 'Estrutura carrosséis que geram salvamentos. Slide por slide, com copy e orientação visual.',
+    model: 'anthropic/claude-3.5-sonnet',
+    color: '#F5A623',
+    // skill: social-content (carousels) + copywriting
+    system: `Você é o Criador de Carrossel da Equipe Edlira, especialista em montar carrosséis de alto engajamento para Instagram.
+
+## Princípios de copywriting aplicados
+- Clareza > Criatividade: se tiver que escolher, escolha claro
+- Benefícios > Features: o que MUDA para o cliente, não o que o produto tem
+- Especificidade > Vaguidão: "Corte de 4h para 15min" > "Economize tempo"
+- Uma ideia por slide — nunca sobrecarregue
+
+## Estrutura obrigatória de carrossel
+
+**SLIDE 1 — CAPA (para o scroll)**
+- Título com promessa específica ou curiosidade
+- Subheadline que complementa, não repete
+- Visual: simples, contraste alto, tipografia legível no feed
+
+**SLIDES 2-9 — DESENVOLVIMENTO**
+- Cada slide = 1 ponto, 1 ideia
+- Progressão lógica: problema → aprofundamento → solução → prova
+- Texto curto por slide: máx 3-4 linhas
+- Use números, listas e bullets para escaneabilidade
+
+**SLIDE FINAL — CTA**
+- Um único CTA direto
+- Oferta clara: salvar, comentar, seguir, link na bio
+- Recapitula o valor entregue em 1 frase
+
+## Formato de entrega:
+📌 SLIDE [N] — [Função do slide]
+**Título:** ...
+**Texto:** ...
+**Elemento visual:** (cor dominante, tipo de imagem, ícone sugerido)
+**Tamanho de texto:** curto / médio
+
+Após todos os slides, entregue também:
+🖼️ Paleta sugerida (3 cores hex)
+🔤 Estilo de fonte (ex: bold sans-serif para título, regular para corpo)
+📝 Legenda completa para o post + hashtags`
+  },
+  {
+    id: 'estrategista',
+    emoji: '🧠',
+    name: 'Estrategista',
+    desc: 'Planos de conteúdo, calendários editoriais e estratégia de crescimento baseados em dados.',
+    model: 'anthropic/claude-3.5-sonnet',
+    color: '#34D399',
+    // skill: content-strategy + marketing-ideas
+    system: `Você é o Estrategista de Conteúdo da Equipe Edlira. Você planeja conteúdo que é pesquisável, compartilhável ou ambos — priorizando nessa ordem.
+
+## Seu Framework de Estratégia
+
+### Pilares de Conteúdo (3-5 por perfil)
+Para cada perfil/cliente, defina pilares. Exemplo para agência de marketing:
+| Pilar | % do Conteúdo | Exemplos |
+|-------|--------------|---------|
+| Educacional | 30% | Dicas, frameworks, como fazer |
+| Prova social | 25% | Cases, resultados, depoimentos |
+| Bastidores | 20% | Processo, dia a dia, erros |
+| Entretenimento | 20% | Tendências, humor do nicho |
+| Venda | 5% | Serviços, oferta, CTA direto |
+
+### Calendário Editorial
+Quando criar um plano mensal, entregue:
+- Mix de formatos (Reels / Carrosséis / Stories / Posts estáticos)
+- Frequência recomendada por plataforma
+- Semana 1-4 com temas definidos
+- Quick wins: 3 ações de alto impacto imediato
+
+### Métricas que importam
+**Awareness:** Alcance, impressões, crescimento de seguidores
+**Engajamento:** Taxa de engajamento, comentários (>likes), salvamentos, compartilhamentos
+**Conversão:** Cliques no link, DMs recebidas, leads gerados
+
+### Entrega padrão de estratégia:
+🎯 **Objetivo** (claro e mensurável)
+🏛️ **Pilares de conteúdo** (3-5 com % e exemplos)
+📅 **Calendário** (por semana, com formato e tema)
+📈 **KPIs para acompanhar**
+⚡ **Quick wins** (top 3 ações para fazer essa semana)
+🚫 **O que parar de fazer** (se tiver diagnóstico)
+
+Baseie em dados quando possível. Seja direto — estratégia sem execução é teoria.`
+  }
+];
+
+let eqActive = null;
+let eqChats = {}; // { agentId: [{role, content}] }
+let eqLoading = false;
+
+async function renderEquipe() {
+  document.getElementById('tbacts').innerHTML = `<button class="btn bg bsm" onclick="eqClear()">Limpar conversa</button>`;
+  const c = document.getElementById('content');
+  if (!eqActive) eqActive = EQ_AGENTS[0].id;
+  eqRender(c);
+}
+
+function eqRender(c) {
+  c = c || document.getElementById('content');
+  const agent = EQ_AGENTS.find(a => a.id === eqActive);
+  const msgs = eqChats[eqActive] || [];
+  c.innerHTML = `
+    <div class="eq-grid">
+      ${EQ_AGENTS.map(a=>`
+        <div class="eq-card${a.id===eqActive?' active':''}" onclick="eqSelect('${a.id}')">
+          <div class="eq-emoji">${a.emoji}</div>
+          <div class="eq-name">${a.name}</div>
+          <div class="eq-desc">${a.desc}</div>
+          <div style="margin-top:10px"><span class="eq-dot" style="background:${a.color}"></span><span style="font-size:11px;color:var(--text-3)">${a.model.split('/')[0]}</span></div>
+        </div>`).join('')}
+    </div>
+    <div class="eq-chat">
+      <div class="eq-chat-head">
+        <div class="eq-chat-info">
+          <div class="eq-chat-ava">${agent.emoji}</div>
+          <div>
+            <div class="eq-chat-name">${agent.name}</div>
+            <div class="eq-chat-sub">${agent.desc}</div>
+          </div>
+        </div>
+        <button class="btn bg bsm" onclick="eqClear()">Limpar</button>
+      </div>
+      <div class="eq-msgs" id="eqMsgs">
+        ${msgs.length ? msgs.map(m=>`
+          <div class="eq-msg ${m.role==='user'?'u':'a'}">
+            <div class="eq-bubble">${m.content}</div>
+            <div class="eq-role">${m.role==='user'?'Você':agent.name}</div>
+          </div>`).join('')
+        : `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:12px;color:var(--text-3);text-align:center;padding:40px 20px">
+            <div style="font-size:40px">${agent.emoji}</div>
+            <div style="font-size:14px;font-weight:500;color:var(--text-2)">${agent.name}</div>
+            <div style="font-size:13px;max-width:340px;line-height:1.6">${agent.desc}</div>
+            <div style="font-size:11px;margin-top:8px;padding:4px 12px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid var(--line)">${agent.model}</div>
+          </div>`}
+      </div>
+      <div class="eq-foot">
+        <textarea class="eq-input" id="eqInput" placeholder="Fale com ${agent.name}..." rows="1"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();eqSend()}"
+          oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+        <button class="eq-send" id="eqSend" onclick="eqSend()">Enviar</button>
+      </div>
+    </div>`;
+  eqScrollBottom();
+  setTimeout(()=>{ const el=document.getElementById('eqInput'); if(el) el.focus(); },100);
+}
+
+function eqSelect(id) {
+  eqActive = id;
+  eqRender();
+}
+
+function eqClear() {
+  eqChats[eqActive] = [];
+  eqRender();
+  toast('Conversa limpa.');
+}
+
+function eqScrollBottom() {
+  setTimeout(()=>{ const el=document.getElementById('eqMsgs'); if(el) el.scrollTop=el.scrollHeight; },50);
+}
+
+function eqAppendMsg(role, content) {
+  const container = document.getElementById('eqMsgs');
+  if (!container) return;
+  // remove empty state if present
+  const empty = container.querySelector('div[style*="flex-direction:column"]');
+  if (empty) empty.remove();
+  const agent = EQ_AGENTS.find(a=>a.id===eqActive);
+  const div = document.createElement('div');
+  div.className = `eq-msg ${role==='user'?'u':'a'}`;
+  div.innerHTML = `<div class="eq-bubble">${content}</div><div class="eq-role">${role==='user'?'Você':agent.name}</div>`;
+  container.appendChild(div);
+  eqScrollBottom();
+  return div;
+}
+
+async function eqSend() {
+  if (eqLoading) return;
+  if (!OR_KEY) { toast('Configure OR_KEY no código (chave OpenRouter).','er'); return; }
+  const input = document.getElementById('eqInput');
+  const text = (input?.value||'').trim();
+  if (!text) return;
+  input.value = '';
+  input.style.height = 'auto';
+
+  const agent = EQ_AGENTS.find(a=>a.id===eqActive);
+  if (!eqChats[eqActive]) eqChats[eqActive] = [];
+  eqChats[eqActive].push({ role:'user', content: text });
+  eqAppendMsg('user', text);
+
+  eqLoading = true;
+  const sendBtn = document.getElementById('eqSend');
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = '...'; }
+
+  // add thinking bubble
+  const thinking = eqAppendMsg('assistant', '');
+  if (thinking) thinking.querySelector('.eq-bubble').classList.add('thinking');
+  if (thinking) thinking.querySelector('.eq-bubble').textContent = agent.name + ' está pensando...';
+
+  try {
+    const messages = eqChats[eqActive].map(m=>({ role: m.role, content: m.content }));
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OR_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': location.href,
+        'X-Title': 'Edlira CRM — Equipe de Conteúdo'
+      },
+      body: JSON.stringify({
+        model: agent.model,
+        messages: [
+          { role: 'system', content: agent.system },
+          ...messages
+        ],
+        temperature: 0.8,
+        max_tokens: 2048
+      })
+    });
+    if (!res.ok) { const err = await res.text(); throw new Error(err); }
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || '(sem resposta)';
+
+    eqChats[eqActive].push({ role:'assistant', content: reply });
+
+    if (thinking) {
+      thinking.querySelector('.eq-bubble').classList.remove('thinking');
+      thinking.querySelector('.eq-bubble').textContent = reply;
+    }
+
+    // persist to DB (best effort)
+    db.from('content_chats').insert({
+      agent_id: eqActive,
+      agent_name: agent.name,
+      messages: eqChats[eqActive]
+    }).then(()=>{}).catch(()=>{});
+
+  } catch(err) {
+    console.error(err);
+    if (thinking) {
+      thinking.querySelector('.eq-bubble').classList.remove('thinking');
+      thinking.querySelector('.eq-bubble').textContent = 'Erro ao conectar com a IA. Verifique a chave OpenRouter.';
+    }
+    eqChats[eqActive].pop(); // remove failed assistant msg
+    toast('Erro na IA. Verifique OR_KEY.','er');
+  } finally {
+    eqLoading = false;
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Enviar'; }
+  }
 }
 </script>
 </body>
