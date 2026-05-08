@@ -1,5 +1,17 @@
-[project]
-id = "flzpblpegoqjxaacjvhf"
+[api]
+enabled = true
 
 [functions.webhook]
+verify_jwt = false
+
+[functions.form-lead]
+verify_jwt = false
+
+[functions.webchat]
+verify_jwt = false
+
+[functions.followup]
+verify_jwt = false
+
+[functions.gerar-criativo]
 verify_jwt = false
