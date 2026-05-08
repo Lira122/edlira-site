@@ -767,7 +767,15 @@ async function renderAgentes() {
         <input class="si" placeholder="Buscar por nome ou número..." oninput="filterConvs(this.value)">
       </div>
       <div id="convList">${buildConvList(window._convs)}</div>
+    </div>
+    <div class="tw" id="knowledgeBox">
+      <div class="th">
+        <h3>Base de Conhecimento <span style="color:var(--text-3);font-weight:400;font-size:12px">— o que a IA sabe sobre você</span></h3>
+        <button class="btn bp bsm" onclick="addKnowledge()">+ Adicionar</button>
+      </div>
+      <div id="knowledgeList"><div class="empty">Carregando...</div></div>
     </div>`}).join('')}</div>`;
+  loadKnowledgeList();
 }
 
 function buildConvList(list) {
@@ -859,6 +867,68 @@ async function delAgente(id) {
   if(!confirm('Remover agente?'))return;
   await db.from('agentes').delete().eq('id',id);
   toast('Removido.');renderAgentes();
+}
+
+// ── CONHECIMENTOS ─────────────────────────────
+window._know = [];
+async function loadKnowledgeList() {
+  const { data } = await db.from('conhecimentos').select('*').order('criado_em',{ascending:true});
+  window._know = data || [];
+  const el = document.getElementById('knowledgeList');
+  if (!el) return;
+  if (!window._know.length) {
+    el.innerHTML = '<div class="empty">Nenhum conhecimento ainda.<br>Adicione informações sobre serviços, preços, cases, FAQ — a IA vai usar nas conversas.</div>';
+    return;
+  }
+  el.innerHTML = window._know.map(k=>`
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line)">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="font-size:13px;font-weight:600">${k.titulo}</span>
+          <span style="font-size:11px;padding:2px 7px;border-radius:10px;background:${k.ativo?'rgba(197,248,42,.15)':'rgba(255,255,255,.05)'};color:${k.ativo?'var(--accent)':'var(--text-3)'}">${k.ativo?'Ativo':'Inativo'}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-2);line-height:1.5;white-space:pre-wrap;max-height:80px;overflow:hidden">${k.conteudo}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn bg bsm" onclick="editKnowledge('${k.id}')">Editar</button>
+        <button class="btn bd bsm bic" onclick="delKnowledge('${k.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+      </div>
+    </div>`).join('');
+}
+
+function knowForm(k={}) {
+  return `
+    <div class="fg"><label class="fl">Título *</label><input class="fi" id="kt" value="${k.titulo||''}" placeholder="Ex: Nossos serviços, Preços, FAQ, Cases de sucesso"></div>
+    <div class="fg"><label class="fl">Conteúdo *</label><textarea class="fta" id="kc" style="min-height:160px;line-height:1.6">${k.conteudo||''}</textarea></div>
+    <div class="fg"><label class="fl">Status</label>
+      <select class="fsl" id="ks">
+        <option value="true"${k.ativo!==false?' selected':''}>Ativo — a IA usa este conhecimento</option>
+        <option value="false"${k.ativo===false?' selected':''}>Inativo — ignorado pela IA</option>
+      </select>
+    </div>`;
+}
+function addKnowledge() {
+  openModal('Novo conhecimento', knowForm(), `<button class="btn bg" onclick="closeModal()">Cancelar</button><button class="btn bp" onclick="saveKnowledge()">Salvar</button>`);
+}
+function editKnowledge(id) {
+  const k = window._know.find(x=>x.id===id); if(!k) return;
+  openModal('Editar conhecimento', knowForm(k), `<button class="btn bg" onclick="closeModal()">Cancelar</button><button class="btn bp" onclick="saveKnowledge('${id}')">Salvar</button>`);
+}
+async function saveKnowledge(id) {
+  const titulo   = document.getElementById('kt').value.trim();
+  const conteudo = document.getElementById('kc').value.trim();
+  const ativo    = document.getElementById('ks').value === 'true';
+  if (!titulo || !conteudo) { toast('Título e conteúdo obrigatórios.','er'); return; }
+  const d = { titulo, conteudo, ativo };
+  const { error } = id ? await db.from('conhecimentos').update(d).eq('id',id) : await db.from('conhecimentos').insert(d);
+  if (error) { toast('Erro ao salvar.','er'); return; }
+  toast(id ? 'Atualizado.' : 'Conhecimento adicionado. A IA já usa nas próximas conversas.');
+  closeModal(); loadKnowledgeList();
+}
+async function delKnowledge(id) {
+  if (!confirm('Remover este conhecimento?')) return;
+  await db.from('conhecimentos').delete().eq('id',id);
+  toast('Removido.'); loadKnowledgeList();
 }
 </script>
 </body>

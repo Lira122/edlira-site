@@ -10,13 +10,14 @@ const UAZAPI_TOKEN = Deno.env.get('UAZAPI_TOKEN')!
 const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY')!
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY')!
 
-const WELCOME = `Olá! 👋 Aqui é a *Sofia*, da *Edlira* — agência de marketing com IA e tráfego pago.
+const WELCOME_MSGS = [
+  `Oi! 👋 Aqui é a assistente virtual do Lira, da *Edlira* — agência de marketing com IA e tráfego pago.`,
+  `Fico feliz que entrou em contato! Com quem tenho o prazer de falar? 😊`
+]
 
-Fico feliz que entrou em contato! Com quem tenho o prazer de falar? 😊`
+const SYSTEM_PROMPT = `Você é a assistente virtual do Lira, da Edlira — agência especializada em IA aplicada ao marketing e tráfego pago.
 
-const SYSTEM_PROMPT = `Você é Sofia, consultora de marketing da Edlira — agência especializada em IA aplicada ao marketing e tráfego pago.
-
-Seu único objetivo é qualificar o lead e agendar uma reunião de diagnóstico GRATUITA de 30 minutos com o Edmilson (fundador da agência).
+Seu único objetivo é qualificar o lead e agendar uma reunião de diagnóstico GRATUITA de 30 minutos com o Lira (fundador da agência).
 
 ## SOBRE A EDLIRA
 - Gerenciamos Meta Ads, TikTok Ads e Google Ads com IA
@@ -56,7 +57,7 @@ Exemplos: Se você tivesse rastreamento preciso e campanhas otimizadas por IA, c
 Confirme: nome completo, empresa e melhor horário (manhã/tarde/noite + dia da semana)
 
 ## REGRAS GERAIS
-1. Mensagens curtas — máx 3-4 linhas, como conversa real de WhatsApp
+1. Escreva como humano — quebre em 2 a 3 mensagens curtas separadas, como se estivesse digitando no WhatsApp
 2. UMA pergunta por vez, nunca duas seguidas
 3. Tom profissional mas descontraído — você é humana, não robô
 4. Não use listas com bullet points — escreva em texto corrido
@@ -66,9 +67,10 @@ Confirme: nome completo, empresa e melhor horário (manhã/tarde/noite + dia da 
 8. Nunca prometa resultado específico sem diagnóstico
 
 ## RETORNO
-Sempre retorne APENAS um JSON válido, sem markdown, sem \`\`\`json, apenas o objeto:
+Sempre retorne APENAS um JSON válido, sem markdown, sem \`\`\`json, apenas o objeto.
+O campo "messages" é um ARRAY com 2 a 3 mensagens curtas separadas (como um humano digitaria no WhatsApp):
 {
-  "message": "mensagem para enviar ao lead (texto puro, sem markdown)",
+  "messages": ["primeira mensagem curta", "segunda mensagem", "pergunta final (se houver)"],
   "stage": "inicio|situacao|problema|implicacao|necessidade|proposta|fechamento|encerrado",
   "lead_data": {
     "nome": "",
@@ -98,58 +100,70 @@ async function sendTextDelayed(phone: string, text: string) {
   await sendText(phone, text)
 }
 
-function parseWebhook(body: Record<string, unknown>) {
+function parseWebhook(body: unknown) {
   try {
+    console.log('[RAW]', JSON.stringify(body).slice(0, 3000))
+
     const events = Array.isArray(body) ? body : [body]
 
     for (const event of events) {
-      const data = (event as Record<string, unknown>)?.data || event
-      const msg  = (data as Record<string, unknown>)?.messages?.[0] ||
-                   (data as Record<string, unknown>)?.message || data
+      if (!event || typeof event !== 'object') continue
+      const e = event as Record<string, unknown>
 
-      if (!msg) continue
+      // ── Formato UazAPI nativo (BaseUrl + EventType + message) ──
+      if (e.EventType === 'messages' && e.message) {
+        const msg = e.message as Record<string, unknown>
+        if (msg.fromMe === true) continue
+        if (msg.wasSentByApi === true) continue
+        if (msg.isGroup === true) continue
 
-      const key    = (msg as Record<string, unknown>).key || msg
-      const fromMe = (key as Record<string, unknown>)?.fromMe === true
+        const chatid = String(msg.chatid || msg.chatId || msg.from || '')
+        const phone  = chatid.replace(/@s\.whatsapp\.net$/, '').replace(/@c\.us$/, '')
+        if (!phone) continue
+
+        const text     = (msg.text as string) || (msg.content as string) || (msg.body as string) || null
+        const msgType  = String(msg.type || msg.messageType || '')
+        const isAudio  = msgType === 'audio' || msgType === 'ptt' || msgType === 'AudioMessage'
+        const audioUrl = (msg.mediaUrl as string) || null
+        const pushName = String(msg.senderName || msg.pushName || (e.chat as Record<string, unknown>)?.name || '')
+
+        if (!text && !isAudio) continue
+        return { phone, text, isAudio, audioBase64: null, audioUrl, pushName }
+      }
+
+      // ── Formato Evolution/WhatsApp Web (key + message) ──
+      const data = e.data || e
+      const d    = data as Record<string, unknown>
+      const raw  = (Array.isArray(d.messages) ? d.messages[0] : d.message || (d.key ? d : null)) as Record<string, unknown> | null
+      if (!raw) continue
+
+      const key    = raw.key as Record<string, unknown> | undefined
+      const fromMe = key?.fromMe === true
       if (fromMe) continue
 
-      const jid   = (key as Record<string, unknown>)?.remoteJid ||
-                    (msg as Record<string, unknown>)?.remoteJid || ''
-      const phone = String(jid)
-        .replace(/@s\.whatsapp\.net$/, '')
-        .replace(/@c\.us$/, '')
+      const jid   = String(key?.remoteJid || raw.remoteJid || '')
+      const phone = jid.replace(/@s\.whatsapp\.net$/, '').replace(/@c\.us$/, '')
+      if (!phone || jid.includes('@g')) continue
 
-      if (!phone || phone.includes('@g')) continue
-
-      const msgContent = (msg as Record<string, unknown>).message || msg
-
+      const msgContent = (raw.message || raw) as Record<string, unknown>
       const text =
-        (msgContent as Record<string, unknown>)?.conversation ||
-        (msgContent as Record<string, unknown>)?.extendedTextMessage?.text ||
-        (msgContent as Record<string, unknown>)?.buttonsResponseMessage?.selectedDisplayText ||
-        (msgContent as Record<string, unknown>)?.listResponseMessage?.singleSelectReply?.selectedRowId ||
+        (msgContent.conversation as string) ||
+        ((msgContent.extendedTextMessage as Record<string, unknown>)?.text as string) ||
         null
 
-      const isAudio = !!(
-        (msgContent as Record<string, unknown>)?.audioMessage ||
-        (msgContent as Record<string, unknown>)?.pttMessage
-      )
-
-      const audioBase64 =
-        (msgContent as Record<string, unknown>)?.audioMessage?.base64 ||
-        (msgContent as Record<string, unknown>)?.pttMessage?.base64 ||
-        null
-
-      const audioUrl =
-        (msgContent as Record<string, unknown>)?.audioMessage?.url ||
-        (msgContent as Record<string, unknown>)?.pttMessage?.url ||
-        null
-
-      const pushName = String((msg as Record<string, unknown>)?.pushName || '')
+      const isAudio = !!(msgContent.audioMessage || msgContent.pttMessage)
+      const audioSrc = ((msgContent.audioMessage || msgContent.pttMessage || {}) as Record<string, unknown>)
+      const pushName = String(raw.pushName || '')
 
       if (!text && !isAudio) continue
-
-      return { phone, text, isAudio, audioBase64, audioUrl, pushName }
+      return {
+        phone,
+        text,
+        isAudio,
+        audioBase64: (audioSrc.base64 as string) || null,
+        audioUrl:    (audioSrc.url    as string) || null,
+        pushName
+      }
     }
 
     return null
@@ -238,7 +252,19 @@ async function updateConversation(
   if (error) throw error
 }
 
-async function saveLeadToCRM(phone: string, lead_data: Record<string, unknown>) {
+function spinToPipeline(stage: string, interesse: string): string {
+  if (stage === 'encerrado') return interesse === 'baixo' ? 'perdido' : 'proposta'
+  if (['proposta', 'fechamento'].includes(stage)) return 'proposta'
+  if (['implicacao', 'necessidade'].includes(stage)) return 'qualificado'
+  return 'novo' // inicio, situacao, problema
+}
+
+async function syncLeadCRM(phone: string, stage: string, lead_data: Record<string, unknown>) {
+  // Só sincroniza quando tiver pelo menos o telefone e passou da etapa inicial
+  if (stage === 'inicio') return
+
+  const pipelineStatus = spinToPipeline(stage, String(lead_data.interesse || ''))
+
   try {
     const { error } = await supabase
       .from('clientes')
@@ -247,22 +273,37 @@ async function saveLeadToCRM(phone: string, lead_data: Record<string, unknown>) 
         empresa:  lead_data.empresa  || '',
         whatsapp: phone,
         servico:  'Marketing IA + Tráfego Pago',
-        status:   'lead_qualificado',
+        status:   pipelineStatus,
         observacoes: [
-          lead_data.segmento     ? `Segmento: ${lead_data.segmento}`           : '',
-          lead_data.faturamento  ? `Faturamento: ${lead_data.faturamento}`     : '',
-          lead_data.investe_ads  ? `Ads atual: ${lead_data.investe_ads}`       : '',
+          lead_data.segmento    ? `Segmento: ${lead_data.segmento}`        : '',
+          lead_data.faturamento ? `Faturamento: ${lead_data.faturamento}`  : '',
+          lead_data.investe_ads ? `Ads atual: ${lead_data.investe_ads}`    : '',
           Array.isArray(lead_data.dores) && lead_data.dores.length
-            ? `Dores: ${(lead_data.dores as string[]).join(', ')}`             : '',
-          `Interesse: ${lead_data.interesse || 'indefinido'}`
+            ? `Dores: ${(lead_data.dores as string[]).join(', ')}`         : '',
+          `Interesse: ${lead_data.interesse || 'indefinido'}`,
+          `Etapa SPIN: ${stage}`
         ].filter(Boolean).join(' | ')
       }, { onConflict: 'whatsapp' })
 
     if (error) throw error
-    console.log(`[CRM] Lead salvo: ${lead_data.nome} (${phone})`)
+    console.log(`[CRM] ${phone} → pipeline: ${pipelineStatus} (SPIN: ${stage})`)
   } catch (err) {
-    console.error('[CRM] Erro ao salvar lead:', err)
+    console.error('[CRM] Erro ao sincronizar lead:', err)
   }
+}
+
+// ─── Conhecimentos ────────────────────────────────────────────────────────────
+
+async function loadKnowledge(): Promise<string> {
+  const { data } = await supabase
+    .from('conhecimentos')
+    .select('titulo, conteudo')
+    .eq('ativo', true)
+    .order('criado_em', { ascending: true })
+
+  if (!data?.length) return ''
+  return '\n\n## CONHECIMENTOS ADICIONAIS (use quando relevante)\n' +
+    data.map(k => `### ${k.titulo}\n${k.conteudo}`).join('\n\n')
 }
 
 // ─── Agente IA (OpenRouter) ───────────────────────────────────────────────────
@@ -271,6 +312,9 @@ async function processMessage(conversation: Record<string, unknown>, userMessage
   const messages  = (conversation.messages  as unknown[]) || []
   const stage     = (conversation.stage     as string)   || 'inicio'
   const lead_data = (conversation.lead_data as Record<string, unknown>) || {}
+
+  const knowledge = await loadKnowledge()
+  const systemWithKnowledge = SYSTEM_PROMPT + knowledge
 
   const history = (messages.slice(-12) as Array<{ role: string; content: string }>).map(m => ({
     role: m.role,
@@ -282,11 +326,15 @@ async function processMessage(conversation: Record<string, unknown>, userMessage
     content: `[CONTEXTO INTERNO — NÃO REVELAR AO LEAD]
 Estágio atual: ${stage}
 Dados coletados até agora: ${JSON.stringify(lead_data)}
+Origem: ${lead_data.origem === 'formulario_site' ? 'FORMULÁRIO DO SITE — lead já demonstrou intenção de agendar reunião. Não recomece com perguntas de situação. Foque em confirmar data e horário.' : 'WhatsApp orgânico — siga o SPIN normalmente.'}
 [FIM DO CONTEXTO]
 
 Mensagem do lead: ${userMessage}
 
-Responda como Sofia seguindo o SPIN Selling. Retorne apenas JSON válido.`
+${stage === 'fechamento' && lead_data.origem === 'formulario_site'
+  ? 'O lead veio do formulário e já quer agendar. Confirme nome completo (se ainda não tiver), melhor dia da semana e período (manhã/tarde/noite). Retorne apenas JSON válido.'
+  : 'Responda seguindo o SPIN Selling. Retorne apenas JSON válido com o array "messages".'
+}`
   })
 
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -302,7 +350,7 @@ Responda como Sofia seguindo o SPIN Selling. Retorne apenas JSON válido.`
       max_tokens: 512,
       temperature: 0.7,
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: systemWithKnowledge },
         ...history
       ]
     })
@@ -311,20 +359,25 @@ Responda como Sofia seguindo o SPIN Selling. Retorne apenas JSON válido.`
   const json = await res.json() as { choices?: Array<{ message?: { content?: string } }> }
   const rawText = json.choices?.[0]?.message?.content || ''
 
-  let parsed: { message: string; stage: string; lead_data: Record<string, unknown> }
+  let parsed: { messages: string[]; stage: string; lead_data: Record<string, unknown> }
   try {
     const clean = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
     const match = clean.match(/\{[\s\S]*\}/)
-    parsed = JSON.parse(match![0])
+    const obj   = JSON.parse(match![0])
+    // compatibilidade: aceita "message" (string) ou "messages" (array)
+    const msgs  = obj.messages || (obj.message ? [obj.message] : null)
+    parsed = { messages: Array.isArray(msgs) ? msgs : ['Desculpe, pode repetir?'], stage: obj.stage || stage, lead_data: obj.lead_data || lead_data }
   } catch {
     console.error('[Agent] Falha no parse JSON:', rawText)
-    parsed = { message: rawText || 'Desculpe, pode repetir?', stage, lead_data }
+    parsed = { messages: ['Desculpe, pode repetir?'], stage, lead_data }
   }
+
+  const fullText = parsed.messages.join('\n')
 
   const updatedMessages = [
     ...messages,
     { role: 'user', content: userMessage },
-    { role: 'assistant', content: parsed.message }
+    { role: 'assistant', content: fullText }
   ]
 
   const mergedLeadData = {
@@ -337,9 +390,9 @@ Responda como Sofia seguindo o SPIN Selling. Retorne apenas JSON válido.`
   }
 
   return {
-    message: parsed.message,
+    messages: parsed.messages,
     stage: parsed.stage || stage,
-    messages: updatedMessages,
+    history: updatedMessages,
     lead_data: mergedLeadData
   }
 }
@@ -357,61 +410,67 @@ Deno.serve(async (req: Request) => {
     return new Response('Method Not Allowed', { status: 405 })
   }
 
-  // Responde 200 imediatamente pro UazAPI não retentar
   const body = await req.json().catch(() => ({}))
 
-  // Processa em background (Edge Functions têm timeout de 150s)
-  EdgeRuntime.waitUntil((async () => {
-    try {
-      const parsed = parseWebhook(body)
-      if (!parsed) return
+  // DEBUG temporário — salva payload bruto no banco
+  try {
+    await supabase.from('chatbot_conversations').upsert({
+      phone: '__debug__',
+      stage: 'debug',
+      messages: [{ raw: body }],
+      lead_data: {}
+    }, { onConflict: 'phone' })
+  } catch (_) { /* ignora */ }
 
-      const { phone, text, isAudio, audioBase64, audioUrl, pushName } = parsed
-      console.log(`[MSG] ${phone} (${pushName}): ${isAudio ? '[ÁUDIO]' : text}`)
+  try {
+    const parsed = parseWebhook(body)
+    if (!parsed) return new Response('OK', { status: 200 })
 
-      let messageText = text
+    const { phone, text, isAudio, audioBase64, audioUrl, pushName } = parsed
+    console.log(`[MSG] ${phone} (${pushName}): ${isAudio ? '[ÁUDIO]' : text}`)
 
-      if (isAudio) {
-        const transcript = await transcribeAudio({ base64: audioBase64, url: audioUrl })
-        if (!transcript) {
-          await sendTextDelayed(phone, 'Não consegui entender o áudio. Pode digitar sua mensagem? 😊')
-          return
-        }
-        messageText = `[Áudio transcrito]: ${transcript}`
-        console.log(`[Groq] Transcrito: ${transcript}`)
+    let messageText = text
+
+    if (isAudio) {
+      const transcript = await transcribeAudio({ base64: audioBase64, url: audioUrl })
+      if (!transcript) {
+        await sendTextDelayed(phone, 'Não consegui entender o áudio. Pode digitar sua mensagem? 😊')
+        return new Response('OK', { status: 200 })
       }
-
-      const conversation = await getOrCreateConversation(phone)
-
-      if (conversation.messages.length === 0) {
-        await sendTextDelayed(phone, WELCOME)
-        await updateConversation(phone, {
-          stage: 'situacao',
-          messages: [{ role: 'assistant', content: WELCOME }],
-          lead_data: { nome: pushName || '' }
-        })
-        return
-      }
-
-      if (conversation.stage === 'encerrado') return
-
-      const result = await processMessage(conversation, messageText!)
-      console.log(`[Agent] ${phone} → estágio: ${result.stage} | interesse: ${result.lead_data.interesse}`)
-
-      await sendTextDelayed(phone, result.message)
-      await updateConversation(phone, {
-        stage: result.stage,
-        messages: result.messages,
-        lead_data: result.lead_data
-      })
-
-      if (['fechamento', 'encerrado'].includes(result.stage)) {
-        await saveLeadToCRM(phone, result.lead_data)
-      }
-    } catch (err) {
-      console.error('[ERRO]', err)
+      messageText = `[Áudio transcrito]: ${transcript}`
+      console.log(`[Groq] Transcrito: ${transcript}`)
     }
-  })())
+
+    const conversation = await getOrCreateConversation(phone)
+
+    if (conversation.messages.length === 0) {
+      for (const msg of WELCOME_MSGS) await sendTextDelayed(phone, msg)
+      const welcomeText = WELCOME_MSGS.join('\n')
+      await updateConversation(phone, {
+        stage: 'situacao',
+        messages: [{ role: 'assistant', content: welcomeText }],
+        lead_data: { nome: pushName || '' }
+      })
+      return new Response('OK', { status: 200 })
+    }
+
+    if (conversation.stage === 'encerrado') return new Response('OK', { status: 200 })
+
+    const result = await processMessage(conversation, messageText!)
+    console.log(`[Agent] ${phone} → estágio: ${result.stage} | interesse: ${result.lead_data.interesse}`)
+
+    for (const msg of result.messages) await sendTextDelayed(phone, msg)
+    await updateConversation(phone, {
+      stage: result.stage,
+      messages: result.history,
+      lead_data: result.lead_data
+    })
+
+    // Sincroniza com pipeline a cada avanço de estágio
+    await syncLeadCRM(phone, result.stage, result.lead_data)
+  } catch (err) {
+    console.error('[ERRO]', err)
+  }
 
   return new Response('OK', { status: 200 })
 })
