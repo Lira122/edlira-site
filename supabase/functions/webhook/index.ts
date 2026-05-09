@@ -7,9 +7,12 @@ const supabase = createClient(
 
 const UAZAPI_URL         = Deno.env.get('UAZAPI_URL')!
 const UAZAPI_TOKEN       = Deno.env.get('UAZAPI_TOKEN')!
-const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY')!
-const GROQ_API_KEY       = Deno.env.get('GROQ_API_KEY')!
-const CAL_API_KEY        = Deno.env.get('CAL_API_KEY')!
+const OPENROUTER_API_KEY  = Deno.env.get('OPENROUTER_API_KEY')!
+const GROQ_API_KEY        = Deno.env.get('GROQ_API_KEY')!
+const CAL_API_KEY         = Deno.env.get('CAL_API_KEY')!
+const ELEVENLABS_API_KEY  = Deno.env.get('ELEVENLABS_API_KEY')!
+
+const ELEVENLABS_VOICE_ID = '33B4UnXyTNbgLmdEDh5P' // Keren — Young Brazilian Female
 
 const CAL_EVENT_TYPE_ID  = 3266163          // Reunião de 60 min
 const CAL_TIMEZONE       = 'America/Sao_Paulo'
@@ -234,6 +237,77 @@ async function sendTextDelayed(phone: string, text: string) {
   const delay = Math.min(1200 + text.length * 25, 3500)
   await new Promise(r => setTimeout(r, delay))
   await sendText(phone, text)
+}
+
+// ─── ElevenLabs TTS ──────────────────────────────────────────────────────────
+
+async function textToSpeech(text: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`,
+      {
+        method: 'POST',
+        headers: {
+          'xi-api-key': ELEVENLABS_API_KEY,
+          'Content-Type': 'application/json',
+          'Accept': 'audio/mpeg'
+        },
+        body: JSON.stringify({
+          text,
+          model_id: 'eleven_flash_v2_5',
+          output_format: 'mp3_44100_32',
+          voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+        })
+      }
+    )
+
+    if (!res.ok) {
+      console.error('[ElevenLabs] Erro:', await res.text())
+      return null
+    }
+
+    const buffer = await res.arrayBuffer()
+    const bytes  = new Uint8Array(buffer)
+    let binary   = ''
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+    return btoa(binary)
+  } catch (err) {
+    console.error('[ElevenLabs] Erro TTS:', err)
+    return null
+  }
+}
+
+async function sendVoice(phone: string, audioBase64: string) {
+  // Tenta PTT (mensagem de voz) primeiro, fallback para audio normal
+  const res = await fetch(`${UAZAPI_URL}/send/ptt`, {
+    method: 'POST',
+    headers: { 'token': UAZAPI_TOKEN, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ number: phone, audio: audioBase64 })
+  })
+  if (!res.ok) {
+    console.error('[UazAPI] PTT falhou, tentando /send/audio:', await res.text())
+    await fetch(`${UAZAPI_URL}/send/audio`, {
+      method: 'POST',
+      headers: { 'token': UAZAPI_TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ number: phone, audio: audioBase64, mimetype: 'audio/mpeg' })
+    })
+  }
+}
+
+async function sendMessagesWithVoice(phone: string, messages: string[], replyAsAudio: boolean) {
+  for (const msg of messages) {
+    if (replyAsAudio) {
+      const audio = await textToSpeech(msg)
+      if (audio) {
+        await sendVoice(phone, audio)
+        // Simula tempo de digitação entre mensagens de voz
+        const delay = Math.min(1000 + msg.length * 20, 3000)
+        await new Promise(r => setTimeout(r, delay))
+        continue
+      }
+    }
+    await sendTextDelayed(phone, msg)
+  }
 }
 
 function parseWebhook(body: unknown) {
@@ -849,7 +923,7 @@ Deno.serve(async (req: Request) => {
 
     // ── Ação de booking ──────────────────────────────────────────────────────
     if (result.action === 'book' && result.slot_iso) {
-      for (const msg of result.messages) await sendTextDelayed(phone, msg)
+      await sendMessagesWithVoice(phone, result.messages, isAudio)
 
       const leadWithPhone = { ...result.lead_data, whatsapp: phone }
       const meetingUrl = await createCalBooking(result.slot_iso, leadWithPhone)
@@ -889,7 +963,7 @@ Deno.serve(async (req: Request) => {
           `🔔 *Nova reunião agendada!*\n👤 ${nome}${empresa}\n📱 ${phone}\n📅 ${dataHora}\n🔗 ${meetingUrl || 'ver Cal.com'}`
         )
       } else {
-        await sendTextDelayed(phone, 'Tive um problema ao confirmar automaticamente — mas já passei seu contato pro Lira e ele vai confirmar o horário com você em instantes! 🙏')
+        await sendMessagesWithVoice(phone, ['Tive um problema ao confirmar automaticamente — mas já passei seu contato pro Lira e ele vai confirmar o horário com você em instantes! 🙏'], isAudio)
         await updateConversation(phone, {
           stage: result.stage,
           messages: result.history,
@@ -902,7 +976,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Fluxo normal ─────────────────────────────────────────────────────────
-    for (const msg of result.messages) await sendTextDelayed(phone, msg)
+    await sendMessagesWithVoice(phone, result.messages, isAudio)
     await updateConversation(phone, {
       stage: result.stage,
       messages: result.history,
