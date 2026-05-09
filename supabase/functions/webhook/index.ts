@@ -17,7 +17,7 @@ const ELEVENLABS_VOICE_ID = '33B4UnXyTNbgLmdEDh5P' // Keren — Young Brazilian 
 const CAL_EVENT_TYPE_ID  = 3266163          // Reunião de 60 min
 const CAL_TIMEZONE       = 'America/Sao_Paulo'
 const LIRA_PHONE         = '5512981668507'   // Notificação de booking
-const LIRA_PERSONAL      = '5521981668507'   // Modo assistente pessoal
+const LIRA_PERSONAL      = '5512981668507'   // Modo assistente pessoal
 
 const WELCOME_MSGS = [
   `Oi! 👋 Aqui é a Sofia, assistente virtual do Lira, da *Edlira* — agência de marketing com IA e tráfego pago.`,
@@ -331,10 +331,22 @@ function parseWebhook(body: unknown) {
         const phone  = chatid.replace(/@s\.whatsapp\.net$/, '').replace(/@c\.us$/, '')
         if (!phone) continue
 
-        const text     = (msg.text as string) || (msg.content as string) || (msg.body as string) || null
         const msgType  = String(msg.type || msg.messageType || '')
+        const mediaType = String(msg.mediaType || '')
+        const content  = (msg.content && typeof msg.content === 'object') ? msg.content as Record<string, unknown> : null
         const isAudio  = msgType === 'audio' || msgType === 'ptt' || msgType === 'AudioMessage'
-        const audioUrl = (msg.mediaUrl as string) || null
+                      || mediaType === 'ptt' || mediaType === 'audio'
+                      || (content?.PTT === true)
+
+        // URL do áudio: UazAPI coloca em msg.content.URL para mensagens de mídia
+        const audioUrl = (msg.mediaUrl as string)
+                      || (content?.URL as string)
+                      || (content?.url as string)
+                      || null
+
+        // Texto: ignora o campo content quando for objeto (é mídia)
+        const text = (msg.text as string) || (typeof msg.content === 'string' ? msg.content : null) || (msg.body as string) || null
+
         const pushName = String(msg.senderName || msg.pushName || (e.chat as Record<string, unknown>)?.name || '')
 
         if (!text && !isAudio) continue
