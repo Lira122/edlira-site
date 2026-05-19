@@ -186,12 +186,12 @@ section.tight{padding:90px 0}
 
 .btn-primary{
   background:var(--accent);color:#0A0A0A;
-  box-shadow:0 0 0 0 rgba(197,248,42,0);
+  box-shadow:0 4px 20px -6px rgba(197,248,42,.35);
 }
 .btn-primary:hover{
   transform:translateY(-2px);
   background:#D2FF3D;
-  box-shadow:0 14px 38px -10px rgba(197,248,42,.55), 0 0 0 1px rgba(197,248,42,.4);
+  box-shadow:0 14px 38px -10px rgba(197,248,42,.65), 0 0 0 1px rgba(197,248,42,.4), 0 0 60px -20px rgba(197,248,42,.3);
 }
 .btn-ghost{
   border-color:var(--line-strong);color:#fff;background:transparent;
@@ -426,6 +426,8 @@ section.tight{padding:90px 0}
   background:rgba(255,92,92,.08);color:#FF7A7A;
   border:1px solid rgba(255,92,92,.18);
 }
+.problem-cell{transition:border-color .3s var(--ease)}
+.problem-cell:hover{border-color:rgba(255,92,92,.18);background:rgba(14,14,14,.98)}
 .problem-cell h3{font-size:18px;font-weight:600;letter-spacing:-.015em}
 .problem-cell p{font-size:14.5px;color:var(--text-2)}
 @media (max-width:1024px){.problem-grid{grid-template-columns:repeat(2,1fr)}}
@@ -580,28 +582,6 @@ section.tight{padding:90px 0}
 }
 
 /* =========================================================================
-   RESULTS
-   ========================================================================= */
-.results-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.res{
-  padding:36px 30px;border:1px solid var(--line);border-radius:var(--radius-lg);
-  background:var(--bg-card);
-  display:flex;flex-direction:column;gap:14px;min-height:260px;justify-content:space-between;
-  transition:border-color .3s var(--ease), transform .3s var(--ease);
-}
-.res:hover{border-color:rgba(197,248,42,.4);transform:translateY(-3px)}
-.res .seg{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-3);letter-spacing:.14em;text-transform:uppercase}
-.res .metric{
-  font-size:clamp(40px,4.6vw,56px);font-weight:600;letter-spacing:-0.04em;
-  color:var(--accent);font-feature-settings:"tnum";line-height:1;
-}
-.res .metric .small{font-size:.55em;color:var(--accent-2);font-weight:500;margin-right:4px;letter-spacing:0}
-.res .blurb{font-size:14px;color:var(--text-2)}
-.res .name{font-size:13px;color:#fff;font-weight:500;margin-top:4px}
-.res .name span{color:var(--text-3);font-weight:400}
-@media (max-width:880px){.results-grid{grid-template-columns:1fr}}
-
-/* =========================================================================
    TESTIMONIALS
    ========================================================================= */
 .testimonials{background:var(--bg-alt)}
@@ -610,7 +590,14 @@ section.tight{padding:90px 0}
   padding:32px 28px;border:1px solid var(--line);border-radius:var(--radius-lg);
   background:#0c0c0c;
   display:flex;flex-direction:column;gap:18px;
+  position:relative;overflow:hidden;
+  transition:border-color .3s var(--ease), transform .3s var(--ease);
 }
+.test::before{
+  content:"";position:absolute;top:0;left:20px;right:20px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(197,248,42,.4),transparent);
+}
+.test:hover{border-color:rgba(197,248,42,.25);transform:translateY(-2px)}
 .test blockquote{margin:0;font-size:16px;line-height:1.55;color:#e8e8e8;font-weight:400}
 .test .who{display:flex;align-items:center;gap:14px;margin-top:auto}
 .avatar{
@@ -808,6 +795,46 @@ section.tight{padding:90px 0}
   .cursor{display:block}
 }
 
+/* =========================================================================
+   GRAIN TEXTURE (premium depth)
+   ========================================================================= */
+body::before{
+  content:"";position:fixed;inset:0;z-index:200;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-size:200px 200px;
+  opacity:.022;
+  mix-blend-mode:overlay;
+}
+
+/* =========================================================================
+   RESULTS CARDS
+   ========================================================================= */
+.results-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.res{
+  padding:36px 30px;border:1px solid var(--line);border-radius:var(--radius-lg);
+  background:var(--bg-card);
+  display:flex;flex-direction:column;gap:14px;min-height:260px;justify-content:space-between;
+  transition:border-color .3s var(--ease), transform .3s var(--ease), box-shadow .3s var(--ease);
+  position:relative;overflow:hidden;
+}
+.res::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);
+  opacity:0;transition:opacity .3s var(--ease);
+}
+.res:hover{border-color:rgba(197,248,42,.4);transform:translateY(-4px);box-shadow:0 20px 48px -12px rgba(0,0,0,.5)}
+.res:hover::before{opacity:1}
+.res .seg{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-3);letter-spacing:.14em;text-transform:uppercase}
+.res .metric{
+  font-size:clamp(40px,4.6vw,56px);font-weight:600;letter-spacing:-0.04em;
+  color:var(--accent);font-feature-settings:"tnum";line-height:1;
+}
+.res .metric .small{font-size:.55em;color:var(--accent-2);font-weight:500;margin-right:4px;letter-spacing:0}
+.res .blurb{font-size:14px;color:var(--text-2)}
+.res .name{font-size:13px;color:#fff;font-weight:500;margin-top:4px}
+.res .name span{color:var(--text-3);font-weight:400}
+@media (max-width:880px){.results-grid{grid-template-columns:1fr}}
+
 /* prefers-reduced-motion */
 @media (prefers-reduced-motion:reduce){
   *:not(.marquee-row),*:not(.marquee-row)::before,*:not(.marquee-row)::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
@@ -882,6 +909,21 @@ section.tight{padding:90px 0}
       <a href="#servicos" class="btn btn-ghost" data-cursor="hover">
         <span class="lbl">Ver como funciona</span>
       </a>
+    </div>
+
+    <div class="hero-stats reveal delay-4">
+      <div class="hero-stat">
+        <span class="num" data-count="3" data-suffix="x">3x</span>
+        <span class="lbl">ROAS médio em 90 dias</span>
+      </div>
+      <div class="hero-stat">
+        <span class="num" data-count="15" data-suffix="h">15h</span>
+        <span class="lbl">economizadas por semana</span>
+      </div>
+      <div class="hero-stat">
+        <span class="num" data-count="30" data-suffix=" dias">30 dias</span>
+        <span class="lbl">do diagnóstico ao 1º lead</span>
+      </div>
     </div>
 
   </div>
@@ -1278,6 +1320,40 @@ section.tight{padding:90px 0}
   </div>
 </section>
 
+
+<!-- ============================ RESULTS / CASES ============================ -->
+<section id="cases" data-screen-label="07 Resultados">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow"><span class="dot"></span>Resultados reais</span>
+      <h2>Números que aparecem no extrato.</h2>
+      <p style="max-width:56ch">Não falamos de métricas de vaidade. Falamos de ROAS, CAC e faturamento — com nome e contexto.</p>
+    </div>
+
+    <div class="results-grid">
+      <article class="res reveal">
+        <span class="seg">E-commerce · Moda</span>
+        <div class="metric"><span class="small">+</span><span data-count="312" data-suffix="%">312%</span></div>
+        <p class="blurb">Aumento em receita orgânica + paga em 90 dias após reestruturação de campanhas Meta e servidor de rastreamento CAPI.</p>
+        <p class="name">Loja de Moda Feminina <span>— São Paulo</span></p>
+      </article>
+
+      <article class="res reveal delay-1">
+        <span class="seg">Clínica · Odontologia</span>
+        <div class="metric"><span class="small">–</span><span data-count="58" data-suffix="%">58%</span></div>
+        <p class="blurb">Redução no CAC após 45 dias com IA qualificando leads e filtrando curiosos antes do vendedor.</p>
+        <p class="name">Clínica Campos Odonto <span>— Interior SP</span></p>
+      </article>
+
+      <article class="res reveal delay-2">
+        <span class="seg">Serviços · Jurídico</span>
+        <div class="metric"><span data-count="4.8" data-decimals="1" data-suffix="x">4.8x</span></div>
+        <p class="blurb">ROAS médio em Google Ads em 60 dias com copy testada em batch e tracking server-side integrado ao CRM.</p>
+        <p class="name">Guilherme Mesquita Adv. <span>— São Paulo</span></p>
+      </article>
+    </div>
+  </div>
+</section>
 
 <!-- ============================ TESTIMONIALS ============================ -->
 <section class="testimonials" data-screen-label="08 Depoimentos">

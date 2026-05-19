@@ -337,12 +337,10 @@ function parseWebhook(body: unknown) {
         const isAudio  = msgType === 'audio' || msgType === 'ptt' || msgType === 'AudioMessage'
                       || mediaType === 'ptt' || mediaType === 'audio'
                       || (content?.PTT === true)
+                      || (msgType === 'media' && content?.PTT === true)
 
-        // URL do áudio: UazAPI coloca em msg.content.URL para mensagens de mídia
-        const audioUrl = (msg.mediaUrl as string)
-                      || (content?.URL as string)
-                      || (content?.url as string)
-                      || null
+        // ID da mensagem para download via UazAPI (áudio encriptado precisa ser baixado pelo servidor)
+        const messageId = String(msg.id || '')
 
         // Texto: ignora o campo content quando for objeto (é mídia)
         const text = (msg.text as string) || (typeof msg.content === 'string' ? msg.content : null) || (msg.body as string) || null
@@ -350,7 +348,7 @@ function parseWebhook(body: unknown) {
         const pushName = String(msg.senderName || msg.pushName || (e.chat as Record<string, unknown>)?.name || '')
 
         if (!text && !isAudio) continue
-        return { phone, text, isAudio, audioBase64: null, audioUrl, pushName }
+        return { phone, text, isAudio, audioBase64: null, audioUrl: null, audioMessageId: messageId, pushName }
       }
 
       // ── Formato Evolution/WhatsApp Web (key + message) ──
@@ -382,8 +380,9 @@ function parseWebhook(body: unknown) {
         phone,
         text,
         isAudio,
-        audioBase64: (audioSrc.base64 as string) || null,
-        audioUrl:    (audioSrc.url    as string) || null,
+        audioBase64:    (audioSrc.base64 as string) || null,
+        audioUrl:       (audioSrc.url    as string) || null,
+        audioMessageId: null,
         pushName
       }
     }
@@ -395,13 +394,55 @@ function parseWebhook(body: unknown) {
   }
 }
 
+// ─── Download de mídia via UazAPI ────────────────────────────────────────────
+
+async function downloadAudioFromUazAPI(messageId: string): Promise<Uint8Array | null> {
+  try {
+    // UazAPI endpoint para download de mídia (decripta automaticamente)
+    const res = await fetch(`${UAZAPI_URL}/download/media`, {
+      method: 'POST',
+      headers: { 'token': UAZAPI_TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageId })
+    })
+
+    if (!res.ok) {
+      console.error('[UazAPI] Download falhou:', res.status, await res.text())
+      return null
+    }
+
+    const contentType = res.headers.get('content-type') || ''
+
+    // Resposta pode ser JSON com base64 ou binário direto
+    if (contentType.includes('application/json')) {
+      const json = await res.json() as Record<string, unknown>
+      const b64  = (json.base64 || json.data || json.file) as string | undefined
+      if (b64) {
+        const binary = atob(b64)
+        const bytes  = new Uint8Array(binary.length)
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+        return bytes
+      }
+      console.error('[UazAPI] JSON sem base64:', JSON.stringify(json).slice(0, 200))
+      return null
+    }
+
+    // Resposta binária direta
+    return new Uint8Array(await res.arrayBuffer())
+  } catch (err) {
+    console.error('[UazAPI] Erro no download:', err)
+    return null
+  }
+}
+
 // ─── Groq Whisper ─────────────────────────────────────────────────────────────
 
-async function transcribeAudio({ base64, url }: { base64?: string; url?: string }) {
+async function transcribeAudio({ base64, url, bytes }: { base64?: string; url?: string; bytes?: Uint8Array }) {
   try {
     let audioBytes: Uint8Array
 
-    if (base64) {
+    if (bytes) {
+      audioBytes = bytes
+    } else if (base64) {
       const binary = atob(base64)
       audioBytes = new Uint8Array(binary.length)
       for (let i = 0; i < binary.length; i++) audioBytes[i] = binary.charCodeAt(i)
@@ -855,13 +896,33 @@ Deno.serve(async (req: Request) => {
     const parsed = parseWebhook(body)
     if (!parsed) return new Response('OK', { status: 200 })
 
-    const { phone, text, isAudio, audioBase64, audioUrl, pushName } = parsed
+    const { phone, text, isAudio, audioBase64, audioUrl, audioMessageId, pushName } = parsed
     console.log(`[MSG] ${phone} (${pushName}): ${isAudio ? '[ÁUDIO]' : text}`)
 
     let messageText = text
 
     if (isAudio) {
-      const transcript = await transcribeAudio({ base64: audioBase64, url: audioUrl })
+      let transcript: string | null = null
+
+      // 1. Tenta base64 direto
+      if (audioBase64) {
+        transcript = await transcribeAudio({ base64: audioBase64 })
+      }
+
+      // 2. Tenta download via UazAPI (áudio encriptado do WhatsApp)
+      if (!transcript && audioMessageId) {
+        console.log('[Audio] Baixando via UazAPI messageId:', audioMessageId)
+        const bytes = await downloadAudioFromUazAPI(audioMessageId)
+        if (bytes) {
+          transcript = await transcribeAudio({ bytes })
+        }
+      }
+
+      // 3. Tenta URL direta como fallback
+      if (!transcript && audioUrl) {
+        transcript = await transcribeAudio({ url: audioUrl })
+      }
+
       if (!transcript) {
         await sendTextDelayed(phone, 'Não consegui entender o áudio. Pode digitar sua mensagem? 😊')
         return new Response('OK', { status: 200 })
