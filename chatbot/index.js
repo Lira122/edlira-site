@@ -8,7 +8,7 @@ import { transcribeAudio } from './groq.js'
 const app = express()
 app.use(express.json({ limit: '10mb' }))
 
-const WELCOME = `Olá! 👋 Aqui é a *Sofia*, da *Edlira* — agência de marketing com IA e tráfego pago.
+const WELCOME = `Olá! 👋 Aqui é a *Sofia*, da *Eleva Digital* — agência de marketing com IA e tráfego pago.
 
 Fico feliz que entrou em contato! Com quem tenho o prazer de falar? 😊`
 
@@ -95,7 +95,7 @@ app.get('/health', (_, res) => {
 const PORT = process.env.PORT || 3000
 
 app.listen(PORT, async () => {
-  console.log(`\n🚀 Chatbot Edlira rodando na porta ${PORT}`)
+  console.log(`\n🚀 Chatbot Eleva Digital rodando na porta ${PORT}`)
   console.log(`📡 Webhook: POST http://localhost:${PORT}/webhook`)
 
   // Configura webhook automaticamente se URL definida

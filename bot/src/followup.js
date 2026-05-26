@@ -1,5 +1,5 @@
 import cron from 'node-cron'
-import { getLeadsForFollowup, updateLead, resumeExpiredPauses } from './crm.js'
+import { getLeadsForFollowup, updateLead, resumeExpiredPauses, isBotActive } from './crm.js'
 import { sendTextTyping } from './whatsapp.js'
 import axios from 'axios'
 
@@ -44,7 +44,7 @@ Manda uma mensagem de encerramento elegante — diga que vai deixar à vontade, 
 Tom: respeitoso, sem ressentimento, com abertura futura. 2-3 linhas.`,
   }
 
-  const system = `Você é Sofia, assistente da Edlira — agência de marketing com IA e tráfego pago.
+  const system = `Você é Sofia, assistente da Eleva Digital — agência de marketing com IA e tráfego pago.
 Você escreve mensagens de WhatsApp humanizadas para follow-up com leads.
 
 REGRAS:
@@ -78,8 +78,8 @@ Escreva a mensagem agora:`
       {
         headers: {
           Authorization: `Bearer ${process.env.OPENROUTER_KEY}`,
-          'HTTP-Referer': 'https://edlira.com.br',
-          'X-Title': 'Edlira Follow-up',
+          'HTTP-Referer': 'https://elevabrands.com.br',
+          'X-Title': 'Eleva Digital Follow-up',
           'Content-Type': 'application/json',
         },
         timeout: 15000,
@@ -130,6 +130,11 @@ async function tryFollowup(lead, type) {
 export function startFollowupScheduler() {
   cron.schedule('*/2 * * * *', async () => {
     try {
+      if (!(await isBotActive())) {
+        console.log('[FOLLOWUP] Robô desativado no painel — follow-ups pausados')
+        return
+      }
+
       const retomados = await resumeExpiredPauses()
       if (retomados.length) {
         console.log(`[FOLLOWUP] Retomando ${retomados.length} leads pausados`)

@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Carrossel 01</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #08090A; }
+  body {
+    font-family: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+    display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 28px 0;
+  }
+
+  /* ─── Slide base ─────────────────────────────── */
+  .slide {
+    width: 1080px; height: 1350px; flex-shrink: 0;
+    background:
+      radial-gradient(720px 520px at 86% 6%, rgba(197,248,42,.13), transparent 70%),
+      radial-gradient(680px 600px at 6% 100%, rgba(197,248,42,.05), transparent 72%),
+      #08090A;
+    color: #fff; position: relative; overflow: hidden;
+    display: flex; flex-direction: column; justify-content: center; padding: 96px;
+  }
+  .slide::after {
+    content: ''; position: absolute; inset: 0;
+    border: 1px solid rgba(255,255,255,.05); pointer-events: none;
+  }
+
+  /* ─── Elementos comuns ───────────────────────── */
+  .eyebrow {
+    font-size: 23px; font-weight: 700; letter-spacing: .22em;
+    text-transform: uppercase; color: #C5F82A;
+  }
+  .foot {
+    position: absolute; left: 96px; right: 96px; bottom: 78px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 24px; color: #5b5f63; font-weight: 500;
+  }
+  .foot .pg { letter-spacing: .08em; }
+  .hl { color: #C5F82A; }
+  .watermark {
+    position: absolute; top: 70px; right: 90px;
+    font-size: 300px; font-weight: 900; line-height: .8;
+    color: rgba(197,248,42,.07); letter-spacing: -.04em;
+  }
+
+  /* ─── Capa ───────────────────────────────────── */
+  .cover { justify-content: center; }
+  .cover .eyebrow { margin-bottom: 40px; }
+  .cover h1 {
+    font-size: 92px; font-weight: 900; line-height: 1.04; letter-spacing: -.03em;
+  }
+  .cover .sub {
+    margin-top: 44px; font-size: 33px; color: #9aa0a6; font-weight: 500; line-height: 1.45;
+  }
+  .cover .arrasta {
+    margin-top: 70px; display: inline-flex; align-items: center; gap: 14px;
+    font-size: 26px; font-weight: 700; color: #08090A;
+    background: #C5F82A; padding: 20px 32px; border-radius: 100px; width: fit-content;
+  }
+
+  /* ─── Slides de conteúdo ─────────────────────── */
+  .tag {
+    font-size: 26px; font-weight: 800; color: #C5F82A;
+    letter-spacing: .14em; text-transform: uppercase; margin-bottom: 26px;
+  }
+  .slide h2 {
+    font-size: 68px; font-weight: 800; line-height: 1.08; letter-spacing: -.025em;
+    margin-bottom: 60px;
+  }
+  .card {
+    border-radius: 22px; padding: 38px 40px; margin-bottom: 26px;
+    background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.07);
+  }
+  .card .lbl {
+    font-size: 21px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
+    display: block; margin-bottom: 16px;
+  }
+  .card p { font-size: 33px; line-height: 1.5; color: #d4d7da; font-weight: 500; }
+  .card.hoje { border-left: 5px solid #6b7075; }
+  .card.hoje .lbl { color: #8b9096; }
+  .card.ia { border-left: 5px solid #C5F82A; background: rgba(197,248,42,.06); }
+  .card.ia .lbl { color: #C5F82A; }
+  .card.ia p { color: #fff; }
+
+  /* ─── Resultado ──────────────────────────────── */
+  .result { justify-content: center; }
+  .result .big {
+    font-size: 200px; font-weight: 900; color: #C5F82A; line-height: .9; letter-spacing: -.04em;
+  }
+  .result h2 { font-size: 70px; margin-top: 24px; margin-bottom: 28px; }
+  .result p { font-size: 34px; color: #9aa0a6; font-weight: 500; line-height: 1.5; }
+
+  /* ─── CTA ────────────────────────────────────── */
+  .cta { justify-content: center; }
+  .cta h2 { font-size: 78px; margin-bottom: 36px; }
+  .cta p { font-size: 34px; color: #9aa0a6; font-weight: 500; line-height: 1.5; margin-bottom: 56px; }
+  .cta .handle {
+    display: inline-flex; align-items: center; gap: 16px;
+    font-size: 38px; font-weight: 800; color: #08090A;
+    background: #C5F82A; padding: 28px 44px; border-radius: 100px; width: fit-content;
+  }
+</style>
+</head>
+<body>
+
+<!-- 1 — CAPA -->
+<div class="slide cover" data-s="1">
+  <div class="eyebrow">Automação &amp; IA para negócios</div>
+  <h1>Sua equipe perde <span class="hl">15 horas por semana</span> com tarefas que a IA já faz sozinha.</h1>
+  <div class="sub">São 5 tarefas que sugam o seu tempo todo dia — e dá pra resolver hoje.</div>
+  <div class="arrasta">Arrasta e confere &nbsp;→</div>
+  <div class="foot"><span>@lm.aisolutions</span><span class="pg">01 / 08</span></div>
+</div>
+
+<!-- 2 -->
+<div class="slide" data-s="2">
+  <div class="watermark">01</div>
+  <div class="tag">Tarefa 01</div>
+  <h2>Responder cada cliente no WhatsApp</h2>
+  <div class="card hoje">
+    <span class="lbl">Hoje</span>
+    <p>O lead manda mensagem e espera horas. Quando você responde, ele já comprou em outro lugar.</p>
+  </div>
+  <div class="card ia">
+    <span class="lbl">Com IA</span>
+    <p>Resposta na hora, 24 horas por dia — sem deixar ninguém no vácuo.</p>
+  </div>
+  <div class="foot"><span>@lm.aisolutions</span><span class="pg">02 / 08</span></div>
+</div>
+
+<!-- 3 -->
+<div class="slide" data-s="3">
+  <div class="watermark">02</div>
+  <div class="tag">Tarefa 02</div>
+  <h2>Descobrir quem é cliente de verdade</h2>
+  <div class="card hoje">
+    <span class="lbl">Hoje</span>
+    <p>Você gasta tempo com quem só está curioso — e quem quer comprar acaba mal atendido.</p>
+  </div>
+  <div class="card ia">
+    <span class="lbl">Com IA</span>
+    <p>As perguntas certas, na ordem certa. Os leads quentes chegam prontos pra você.</p>
+  </div>
+  <div class="foot"><span>@lm.aisolutions</span><span class="pg">03 / 08</span></div>
+</div>
+
+<!-- 4 -->
+<div class="slide" data-s="4">
+  <div class="watermark">03</div>
+  <div class="tag">Tarefa 03</div>
+  <h2>Marcar reuniões e horários</h2>
+  <div class="card hoje">
+    <span class="lbl">Hoje</span>
+    <p>Aquele vai-e-volta sem fim: "que horas pode?"... "esse não dá"... "e amanhã?".</p>
+  </div>
+  <div class="card ia">
+    <span class="lbl">Com IA</span>
+    <p>A IA olha a sua agenda e fecha o melhor horário sozinha.</p>
+  </div>
+  <div class="foot"><span>@lm.aisolutions</span><span class="pg">04 / 08</span></div>
+</div>
+
+<!-- 5 -->
+<div class="slide" data-s="5">
+  <div class="watermark">04</div>
+  <div class="tag">Tarefa 04</div>
+  <h2>Lembrar de quem sumiu</h2>
+  <div class="card hoje">
+    <span class="lbl">Hoje</span>
+    <p>A maioria das vendas só acontece depois do follow-up. E quase ninguém faz.</p>
+  </div>
+  <div class="card ia">
+    <span class="lbl">Com IA</span>
+    <p>Ela acompanha cada lead e reaquece a conversa sem esquecer de ninguém.</p>
+  </div>
+  <div class="foot"><span>@lm.aisolutions</span><span class="pg">05 / 08</span></div>
+</div>
+
+<!-- 6 -->
+<div class="slide" data-s="6">
+  <div class="watermark">05</div>
+  <div class="tag">Tarefa 05</div>
+  <h2>Manter tudo organizado</h2>
+  <div class="card hoje">
+    <span class="lbl">Hoje</span>
+    <p>Planilha aqui, caderninho ali, print do WhatsApp lá — e cliente caindo no esquecimento.</p>
+  </div>
+  <div class="card ia">
+    <span class="lbl">Com IA</span>
+    <p>Um CRM inteligente junta tudo num lugar só — e ainda te diz o próximo passo.</p>
+  </div>
+  <div class="foot"><span>@lm.aisolutions</span><span class="pg">06 / 08</span></div>
+</div>
+
+<!-- 7 — RESULTADO -->
+<div class="slide result" data-s="7">
+  <div class="eyebrow">O resultado</div>
+  <div class="big" style="margin-top:30px">+15h</div>
+  <h2>por semana de volta pra você</h2>
+  <p>Mais tempo pra vender, atender bem e fazer o negócio crescer.<br>Menos correria, menos cliente perdido.</p>
+  <div class="foot"><span>@lm.aisolutions</span><span class="pg">07 / 08</span></div>
+</div>
+
+<!-- 8 — CTA -->
+<div class="slide cta" data-s="8">
+  <div class="eyebrow">Bora colocar a IA pra trabalhar?</div>
+  <h2 style="margin-top:34px">Quer ver isso rodando no seu negócio?</h2>
+  <p>A gente faz um diagnóstico gratuito e te mostra exatamente onde dá pra automatizar primeiro — sem compromisso.</p>
+  <div class="handle">Manda um "oi" 👉 @lm.aisolutions</div>
+  <div class="foot"><span>Automação &amp; IA para negócios</span><span class="pg">08 / 08</span></div>
+</div>
+
+<script>
+  const s = new URLSearchParams(location.search).get('s')
+  document.querySelectorAll('.slide').forEach((el) => {
+    el.style.display = (!s || el.dataset.s === s) ? 'flex' : 'none'
+  })
+  if (s) {
+    document.body.style.padding = '0'
+    document.body.style.gap = '0'
+    document.documentElement.style.overflow = 'hidden'
+    document.body.style.overflow = 'hidden'
+  }
+</script>
+</body>
+</html>

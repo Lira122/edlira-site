@@ -1,2 +1,20 @@
 .env
+.env.*
 node_modules/
+
+# Build outputs
+crm/dist/
+
+# Local tooling / agent state
+.claude/
+.agents/
+skills_repo/
+skills-lock.json
+
+# Supabase CLI state
+supabase/.temp/
+
+# Bot runtime
+bot/amostras-voz/
+bot/tunnel_url.txt
+*.log

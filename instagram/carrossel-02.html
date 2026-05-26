@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Carrossel 02</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #08090A; }
+  body {
+    font-family: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+    display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 28px 0;
+  }
+  .slide {
+    width: 1080px; height: 1350px; flex-shrink: 0;
+    background:
+      radial-gradient(720px 520px at 86% 6%, rgba(197,248,42,.13), transparent 70%),
+      radial-gradient(680px 600px at 6% 100%, rgba(197,248,42,.05), transparent 72%),
+      #08090A;
+    color: #fff; position: relative; overflow: hidden;
+    display: flex; flex-direction: column; justify-content: center; padding: 96px;
+  }
+  .slide::after {
+    content: ''; position: absolute; inset: 0;
+    border: 1px solid rgba(255,255,255,.05); pointer-events: none;
+  }
+  .eyebrow {
+    font-size: 23px; font-weight: 700; letter-spacing: .22em;
+    text-transform: uppercase; color: #C5F82A;
+  }
+  .foot {
+    position: absolute; left: 96px; right: 96px; bottom: 78px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 24px; color: #5b5f63; font-weight: 500;
+  }
+  .foot .pg { letter-spacing: .08em; }
+  .hl { color: #C5F82A; }
+  .watermark {
+    position: absolute; top: 70px; right: 90px;
+    font-size: 300px; font-weight: 900; line-height: .8;
+    color: rgba(197,248,42,.07); letter-spacing: -.04em;
+  }
+  .cover { justify-content: center; }
+  .cover .eyebrow { margin-bottom: 40px; }
+  .cover h1 { font-size: 92px; font-weight: 900; line-height: 1.04; letter-spacing: -.03em; }
+  .cover .sub { margin-top: 44px; font-size: 33px; color: #9aa0a6; font-weight: 500; line-height: 1.45; }
+  .cover .arrasta {
+    margin-top: 70px; display: inline-flex; align-items: center; gap: 14px;
+    font-size: 26px; font-weight: 700; color: #08090A;
+    background: #C5F82A; padding: 20px 32px; border-radius: 100px; width: fit-content;
+  }
+  .tag {
+    font-size: 26px; font-weight: 800; color: #C5F82A;
+    letter-spacing: .14em; text-transform: uppercase; margin-bottom: 26px;
+  }
+  .slide h2 {
+    font-size: 70px; font-weight: 800; line-height: 1.08; letter-spacing: -.025em;
+    margin-bottom: 54px;
+  }
+  .card {
+    border-radius: 22px; padding: 44px 44px;
+    background: rgba(197,248,42,.06); border: 1px solid rgba(255,255,255,.07);
+    border-left: 5px solid #C5F82A;
+  }
+  .card p { font-size: 35px; line-height: 1.5; color: #fff; font-weight: 500; }
+  .result { justify-content: center; }
+  .result .big {
+    font-size: 188px; font-weight: 900; color: #C5F82A; line-height: .9; letter-spacing: -.04em;
+  }
+  .result h2 { font-size: 66px; margin-top: 24px; margin-bottom: 28px; }
+  .result p { font-size: 34px; color: #9aa0a6; font-weight: 500; line-height: 1.5; }
+  .cta { justify-content: center; }
+  .cta h2 { font-size: 74px; margin-bottom: 36px; }
+  .cta p { font-size: 34px; color: #9aa0a6; font-weight: 500; line-height: 1.5; margin-bottom: 56px; }
+  .cta .handle {
+    display: inline-flex; align-items: center; gap: 16px;
+    font-size: 38px; font-weight: 800; color: #08090A;
+    background: #C5F82A; padding: 28px 44px; border-radius: 100px; width: fit-content;
+  }
+</style>
+</head>
+<body>
+
+<div class="slide cover" data-s="1">
+  <div class="eyebrow">Atendimento que vende</div>
+  <h1>5 sinais de que seu atendimento está <span class="hl">perdendo vendas</span> — sem você perceber.</h1>
+  <div class="sub">Vai contando quantos acontecem no seu negócio. 👇</div>
+  <div class="arrasta">Arrasta e confere &nbsp;→</div>
+  <div class="foot"><span>@lm.aisolutions</span><span class="pg">01 / 08</span></div>
+</div>
+
+<div class="slide" data-s="2">
+  <div class="watermark">01</div>
+  <div class="tag">Sinal 01</div>
+  <h2>O cliente espera horas pra ser respondido</h2>
+  <div class="card"><p>A mensagem chega e ninguém vê na hora. Quando você responde, o cliente já resolveu com o concorrente. Quem responde primeiro é quem vende.</p></div>
+  <div class="foot"><span>@lm.aisolutions</span><span class="pg">02 / 08</span></div>
+</div>
+
+<div class="slide" data-s="3">
+  <div class="watermark">02</div>
+  <div class="tag">Sinal 02</div>
+  <h2>No fim de semana, ninguém atende</h2>
+  <div class="card"><p>Sábado e domingo o cliente também procura — e é quando ele tem tempo de decidir. Se o seu WhatsApp está mudo, a venda vai pra quem estava lá.</p></div>
+  <div class="foot"><span>@lm.aisolutions</span><span class="pg">03 / 08</span></div>
+</div>
+
+<div class="slide" data-s="4">
+  <div class="watermark">03</div>
+  <div class="tag">Sinal 03</div>
+  <h2>Cada atendimento sai de um jeito</h2>
+  <div class="card"><p>Sem um roteiro, cada dia e cada pessoa responde diferente. Uns fecham, outros afastam — e você não consegue saber por quê.</p></div>
+  <div class="foot"><span>@lm.aisolutions</span><span class="pg">04 / 08</span></div>
+</div>
+
+<div class="slide" data-s="5">
+  <div class="watermark">04</div>
+  <div class="tag">Sinal 04</div>
+  <h2>Quem pediu orçamento e sumiu, ficou pra trás</h2>
+  <div class="card"><p>A maioria das vendas só acontece depois de 2 a 5 contatos. Sem follow-up, todo lead que não respondeu na hora vira dinheiro perdido.</p></div>
+  <div class="foot"><span>@lm.aisolutions</span><span class="pg">05 / 08</span></div>
+</div>
+
+<div class="slide" data-s="6">
+  <div class="watermark">05</div>
+  <div class="tag">Sinal 05</div>
+  <h2>Você não sabe os seus números</h2>
+  <div class="card"><p>Quantos leads chegaram? Quantos viraram venda? Sem isso medido, você decide no escuro — e repete os mesmos erros todo mês.</p></div>
+  <div class="foot"><span>@lm.aisolutions</span><span class="pg">06 / 08</span></div>
+</div>
+
+<div class="slide result" data-s="7">
+  <div class="eyebrow">A boa notícia</div>
+  <div class="big" style="margin-top:26px">5 → 0</div>
+  <h2>Dá pra zerar esses sinais</h2>
+  <p>E não é contratando mais gente. É um processo + IA atendendo<br>no padrão certo, na hora, todos os dias.</p>
+  <div class="foot"><span>@lm.aisolutions</span><span class="pg">07 / 08</span></div>
+</div>
+
+<div class="slide cta" data-s="8">
+  <div class="eyebrow">Vamos ajustar isso?</div>
+  <h2 style="margin-top:34px">Quais desses sinais estão no seu negócio?</h2>
+  <p>A gente faz um diagnóstico gratuito, mapeia o seu atendimento e te mostra o que ajustar primeiro — sem compromisso.</p>
+  <div class="handle">Manda um "oi" 👉 @lm.aisolutions</div>
+  <div class="foot"><span>Automação &amp; IA para negócios</span><span class="pg">08 / 08</span></div>
+</div>
+
+<script>
+  const s = new URLSearchParams(location.search).get('s')
+  document.querySelectorAll('.slide').forEach((el) => {
+    el.style.display = (!s || el.dataset.s === s) ? 'flex' : 'none'
+  })
+  if (s) {
+    document.body.style.padding = '0'
+    document.body.style.gap = '0'
+    document.documentElement.style.overflow = 'hidden'
+    document.body.style.overflow = 'hidden'
+  }
+</script>
+</body>
+</html>

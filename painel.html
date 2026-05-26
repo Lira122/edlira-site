@@ -254,7 +254,7 @@ tbody tr:hover{background:rgba(255,255,255,0.025)}
 <!-- APP -->
 <div id="app" class="h">
   <aside class="sb">
-    <div class="sb-brand">Edlira<span>.</span></div>
+    <div class="sb-brand">Eleva <span>Digital</span></div>
     <nav class="sb-nav">
       <div class="ni" data-v="dashboard" onclick="go('dashboard')">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -1009,7 +1009,7 @@ const EQ_AGENTS = [
     model: 'anthropic/claude-3.5-sonnet',
     color: '#4A9EFF',
     // skill: social-content + video
-    system: `Você é o Roteirista da Equipe Edlira, especialista em short-form video scripting para Instagram Reels, TikTok e YouTube Shorts.
+    system: `Você é o Roteirista da Equipe Eleva Digital, especialista em short-form video scripting para Instagram Reels, TikTok e YouTube Shorts.
 
 ## Seu Framework de Roteiro
 
@@ -1049,7 +1049,7 @@ Adapte o tom para o nicho do cliente. Seja direto — palavras que não servem �
     model: 'perplexity/llama-3.1-sonar-large-128k-online',
     color: '#A78BFA',
     // skill: social-content (viral reverse engineering) + marketing-ideas
-    system: `Você é o Analista de Tendências da Equipe Edlira. Você tem acesso à internet em tempo real e pesquisa o que está em alta no marketing digital e redes sociais agora.
+    system: `Você é o Analista de Tendências da Equipe Eleva Digital. Você tem acesso à internet em tempo real e pesquisa o que está em alta no marketing digital e redes sociais agora.
 
 ## Sua metodologia de análise
 
@@ -1057,7 +1057,7 @@ Adapte o tom para o nicho do cliente. Seja direto — palavras que não servem �
 Quando analisar tendências, responda:
 1. O QUE está viralizando (formato, tema, estilo)
 2. POR QUE está funcionando (gatilho psicológico, timing, novidade)
-3. COMO aplicar para a Edlira e seus clientes
+3. COMO aplicar para a Eleva Digital e seus clientes
 4. QUANDO usar (urgência da tendência — dias ou semanas?)
 
 ### Categorias que você monitora
@@ -1087,7 +1087,7 @@ Sempre baseie em dados reais e cite fontes. Não invente tendências — pesquis
     model: 'anthropic/claude-3.5-sonnet',
     color: '#F5A623',
     // skill: social-content (carousels) + copywriting
-    system: `Você é o Criador de Carrossel da Equipe Edlira, especialista em montar carrosséis de alto engajamento para Instagram.
+    system: `Você é o Criador de Carrossel da Equipe Eleva Digital, especialista em montar carrosséis de alto engajamento para Instagram.
 
 ## Princípios de copywriting aplicados
 - Clareza > Criatividade: se tiver que escolher, escolha claro
@@ -1133,7 +1133,7 @@ Após todos os slides, entregue também:
     model: 'anthropic/claude-3.5-sonnet',
     color: '#34D399',
     // skill: content-strategy + marketing-ideas
-    system: `Você é o Estrategista de Conteúdo da Equipe Edlira. Você planeja conteúdo que é pesquisável, compartilhável ou ambos — priorizando nessa ordem.
+    system: `Você é o Estrategista de Conteúdo da Equipe Eleva Digital. Você planeja conteúdo que é pesquisável, compartilhável ou ambos — priorizando nessa ordem.
 
 ## Seu Framework de Estratégia
 
@@ -1292,7 +1292,7 @@ async function eqSend() {
         'Authorization': `Bearer ${OR_KEY}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': location.href,
-        'X-Title': 'Edlira CRM — Equipe de Conteúdo'
+        'X-Title': 'Eleva Digital CRM — Equipe de Conteúdo'
       },
       body: JSON.stringify({
         model: agent.model,

@@ -1,0 +1,14 @@
+{
+  "name": "eleva-digital-prospect",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Motor de prospecção — coleta empresas reais e pontua marketing fraco",
+  "scripts": {
+    "start": "node run.js",
+    "commit": "node run.js --commit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^17.4.2"
+  }
+}

@@ -12,7 +12,7 @@ const GROQ_API_KEY        = Deno.env.get('GROQ_API_KEY')!
 const CAL_API_KEY         = Deno.env.get('CAL_API_KEY')!
 const ELEVENLABS_API_KEY  = Deno.env.get('ELEVENLABS_API_KEY')!
 
-const ELEVENLABS_VOICE_ID = '33B4UnXyTNbgLmdEDh5P' // Keren — Young Brazilian Female
+const ELEVENLABS_VOICE_ID = 'hpp4J3VqNfWAUOO0d1Us' // Bella — Professional, Bright, Warm (premade, OK no plano Free)
 
 const CAL_EVENT_TYPE_ID  = 3266163          // Reunião de 60 min
 const CAL_TIMEZONE       = 'America/Sao_Paulo'
@@ -20,15 +20,17 @@ const LIRA_PHONE         = '5512981668507'   // Notificação de booking
 const LIRA_PERSONAL      = '5512981668507'   // Modo assistente pessoal
 
 const WELCOME_MSGS = [
-  `Oi! 👋 Aqui é a Sofia, assistente virtual do Lira, da *Edlira* — agência de marketing com IA e tráfego pago.`,
-  `Fico feliz que entrou em contato! Com quem tenho o prazer de falar? 😊`
+  `Oi! Aqui é o Lira, da Eleva Digital. Que bom que você chamou — com quem eu falo?`
 ]
 
-const SYSTEM_PROMPT = `Você é a Sofia, assistente virtual do Lira, da Edlira — agência especializada em IA aplicada ao marketing e tráfego pago.
+const SYSTEM_PROMPT = `Você é o Lira, fundador da Eleva Digital — agência especializada em IA aplicada ao marketing e tráfego pago. Você conversa pessoalmente com o lead pelo seu próprio WhatsApp, sempre na primeira pessoa.
 
-Seu único objetivo é qualificar o lead e agendar uma reunião de diagnóstico GRATUITA de 60 minutos com o Lira (fundador da agência).
+Seu único objetivo é qualificar o lead e agendar uma reunião de diagnóstico GRATUITA de 60 minutos com você.
 
-## SOBRE A EDLIRA
+## CONTEXTO DE ABERTURA
+Em alguns casos a conversa já foi iniciada por uma mensagem sua de prospecção. Se a conversa começar assim, apenas continue de onde o lead respondeu, de forma natural — sem se reapresentar nem repetir a empresa do zero. Nunca diga que é assistente, robô ou que fala em nome de outra pessoa: é você mesmo conversando.
+
+## SOBRE A ELEVA DIGITAL
 - Gerenciamos Meta Ads, TikTok Ads e Google Ads com IA
 - Rastreamento avançado: você sabe de onde vem cada cliente e cada real investido
 - IA para otimização de campanhas, criativos e análise de dados em tempo real
@@ -58,31 +60,40 @@ Exemplos: Se você tivesse rastreamento preciso e campanhas otimizadas por IA, c
 
 ### FASE 5 — PROPOSTA (apresente a solução com base nas dores relatadas)
 - Cite os problemas específicos que o lead mencionou
-- Mostre como a Edlira resolve cada um
+- Mostre como a Eleva Digital resolve cada um
 - Diga que a reunião é gratuita, dura 60 min e é sem compromisso
 - NÃO mencione preço em nenhum momento
 
 ### FASE 6 — FECHAMENTO (agendamento real)
-Quando o lead aceitar a reunião, você receberá no contexto uma lista de HORÁRIOS DISPONÍVEIS na agenda do Lira.
+Quando o lead aceitar a reunião, você receberá no contexto uma lista de HORÁRIOS DISPONÍVEIS na sua agenda.
 - Apresente 3 a 4 opções de horários de forma amigável (ex: "Tenho *segunda às 9h*, *terça às 14h* ou *quarta às 10h* — qual fica melhor?")
 - Quando o lead escolher um horário, retorne action "book" com o campo slot_iso preenchido com o ISO exato do slot escolhido
 - Confirme também o e-mail do lead (necessário para enviar o link da reunião)
 - Após confirmar, retorne action "book"
 
 ## REGRAS GERAIS
-1. Escreva como humano — quebre em 2 a 3 mensagens curtas separadas, como se estivesse digitando no WhatsApp
+1. Seja BREVE. Responda com 1 mensagem curta. Só use 2 se for realmente necessário — NUNCA mais que isso. As pessoas têm preguiça de ler e se irritam com excesso de mensagens
 2. UMA pergunta por vez, nunca duas seguidas
-3. Tom profissional mas descontraído — você é humana, não robô
-4. Não use listas com bullet points — escreva em texto corrido
-5. Não mencione o método SPIN em nenhum momento
-6. Se o lead não tiver interesse, agradeça com gentileza e encerre
-7. Capture sutilmente: nome, empresa, segmento, faturamento aproximado, se já investe em ads
-8. Nunca prometa resultado específico sem diagnóstico
+3. NUNCA use emojis
+4. Tom profissional mas descontraído e natural — escreva como você fala no dia a dia
+5. Não use listas com bullet points — escreva em texto corrido
+6. Não mencione o método SPIN em nenhum momento
+7. Se o lead não tiver interesse, agradeça com gentileza e encerre
+8. Capture sutilmente: nome, empresa, segmento, faturamento aproximado, se já investe em ads
+9. Nunca prometa resultado específico sem diagnóstico
+10. Não repita o que já foi dito antes na conversa nem mande mensagens só de "preenchimento"
+
+## SE O LEAD DESCONFIAR QUE É MENSAGEM AUTOMÁTICA
+Se o lead perguntar se você é um robô/IA/bot, ou disser que percebeu que é mensagem automática:
+- Nunca negue de forma robótica nem ignore a pergunta — isso só piora.
+- Assuma com leveza e honestidade: sim, esse primeiro atendimento é automatizado com IA pra agilizar, mas quem cuida de tudo de perto é você mesmo, o Lira.
+- Vire isso a favor: é justamente por dominar IA aplicada ao marketing que você ajuda os clientes a venderem mais — e na reunião a conversa é ao vivo, de verdade, com você.
+- Em seguida volte o foco pro negócio do lead, de forma natural e sem insistir no assunto.
 
 ## RETORNO
 Sempre retorne APENAS um JSON válido, sem markdown, sem \`\`\`json, apenas o objeto.
 {
-  "messages": ["primeira mensagem curta", "segunda mensagem", "pergunta final (se houver)"],
+  "messages": ["mensagem curta", "segunda mensagem curta (só se realmente precisar)"],
   "stage": "inicio|situacao|problema|implicacao|necessidade|proposta|fechamento|encerrado",
   "action": "none|book",
   "slot_iso": "",
@@ -214,11 +225,11 @@ function formatBookingConfirmation(slotIso: string, meetingUrl: string | null): 
   const hora = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: CAL_TIMEZONE })
   const dataFmt = dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: CAL_TIMEZONE })
 
-  let msg = `✅ *Reunião confirmada!*\n📅 ${dataFmt} (${diaNome}) às ${hora}h\n⏱ 60 minutos com o Lira`
+  let msg = `Reunião confirmada: ${dataFmt} (${diaNome}) às ${hora}h, 60 minutos comigo.`
   if (meetingUrl && meetingUrl !== 'confirmado') {
-    msg += `\n🔗 Link: ${meetingUrl}`
+    msg += `\nLink: ${meetingUrl}`
   }
-  msg += `\n\nVocê vai receber um e-mail de confirmação com os detalhes. Qualquer dúvida, é só chamar aqui! 😊`
+  msg += `\nVocê vai receber um e-mail com os detalhes. Qualquer dúvida, é só chamar.`
   return msg
 }
 
@@ -254,7 +265,7 @@ async function textToSpeech(text: string): Promise<string | null> {
         },
         body: JSON.stringify({
           text,
-          model_id: 'eleven_flash_v2_5',
+          model_id: 'eleven_multilingual_v2',
           output_format: 'mp3_44100_32',
           voice_settings: { stability: 0.5, similarity_boost: 0.75 }
         })
@@ -518,6 +529,21 @@ async function updateConversation(
   if (error) throw error
 }
 
+// Retorna false se o robô foi desativado no painel.
+// Considera: tem pelo menos UM agente ativo? Se sim, bot ligado.
+// Se TODOS os agentes estão inativos, bot desligado.
+// Sem agentes cadastrados, mantém ligado (default).
+// Em caso de erro de leitura, mantém ligado para não derrubar o bot por engano.
+async function isBotActive(): Promise<boolean> {
+  const { data, error } = await supabase.from('agentes').select('status')
+  if (error) {
+    console.error('[BOT] isBotActive erro de leitura:', error.message)
+    return true
+  }
+  if (!data || !data.length) return true
+  return data.some(a => a.status === 'ativo')
+}
+
 function spinToPipeline(stage: string, interesse: string): string {
   if (stage === 'encerrado') return interesse === 'baixo' ? 'perdido' : 'proposta'
   if (['proposta', 'fechamento'].includes(stage)) return 'proposta'
@@ -543,6 +569,13 @@ function detectPauseIntent(text: string): boolean {
     'volto depois', 'te chamo', 'deixa pra depois',
   ]
   return triggers.some(t => lower.includes(t))
+}
+
+// Pedido EXPLÍCITO de não receber mais contato (opt-out / LGPD).
+// Diferente da pausa: encerra de vez, não volta em 7 dias.
+function detectOptOut(text: string): boolean {
+  const t = text.toLowerCase()
+  return /(par[ae] de (me )?(mandar|enviar)|n[ãa]o me (mande|envie|manda) mais|me (tira|tire|remova|remove)\b.*\b(lista|daqui|disso)|descadastr|sair da lista|n[ãa]o quero receber|n[ãa]o autorizo|isso [ée] spam|vou denunciar|me deixa em paz|n[ãa]o me perturbe)/.test(t)
 }
 
 async function syncLeadCRM(
@@ -614,7 +647,7 @@ async function processMessage(
   if (stage === 'fechamento' || stage === 'proposta') {
     const slots = await getAvailableSlots()
     const formatted = formatSlotsForContext(slots)
-    slotsContext = `\n\nHORÁRIOS DISPONÍVEIS NA AGENDA DO LIRA (use esses para oferecer ao lead):\n${formatted}\n` +
+    slotsContext = `\n\nHORÁRIOS DISPONÍVEIS NA SUA AGENDA (use esses para oferecer ao lead):\n${formatted}\n` +
       `\nIMPORTANTE: Quando o lead confirmar um horário, retorne action "book" com o campo slot_iso preenchido com o datetime ISO completo do slot escolhido (ex: "2026-05-12T10:00:00-03:00"). Peça também o e-mail se ainda não tiver.`
   }
 
@@ -648,8 +681,8 @@ Retorne apenas JSON válido com os campos: messages (array), stage, action ("non
     headers: {
       'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://edlira.com.br',
-      'X-Title': 'Edlira Chatbot'
+      'HTTP-Referer': 'https://elevabrands.com.br',
+      'X-Title': 'Eleva Digital Chatbot'
     },
     body: JSON.stringify({
       model: 'anthropic/claude-sonnet-4.5',
@@ -718,7 +751,7 @@ Retorne apenas JSON válido com os campos: messages (array), stage, action ("non
 
 // ─── Assistente Pessoal ───────────────────────────────────────────────────────
 
-const PERSONAL_SYSTEM_PROMPT = `Você é a Sofia, assistente pessoal do Edmilson Lira, dono da Edlira — agência de marketing digital com IA e tráfego pago.
+const PERSONAL_SYSTEM_PROMPT = `Você é a Sofia, assistente pessoal do Edmilson Lira, dono da Eleva Digital — agência de marketing digital com IA e tráfego pago.
 
 Você tem acesso em tempo real ao CRM e à agenda do Lira. Sempre que ele perguntar sobre leads, pipeline ou reuniões, use os dados do CONTEXTO fornecido.
 
@@ -836,8 +869,8 @@ async function handlePersonalAssistant(phone: string, userMessage: string) {
     headers: {
       'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://edlira.com.br',
-      'X-Title': 'Edlira PA'
+      'HTTP-Referer': 'https://elevabrands.com.br',
+      'X-Title': 'Eleva Digital PA'
     },
     body: JSON.stringify({
       model: 'anthropic/claude-sonnet-4.5',
@@ -924,7 +957,7 @@ Deno.serve(async (req: Request) => {
       }
 
       if (!transcript) {
-        await sendTextDelayed(phone, 'Não consegui entender o áudio. Pode digitar sua mensagem? 😊')
+        await sendTextDelayed(phone, 'Não consegui entender o áudio. Pode digitar a mensagem?')
         return new Response('OK', { status: 200 })
       }
       messageText = `[Áudio transcrito]: ${transcript}`
@@ -935,6 +968,12 @@ Deno.serve(async (req: Request) => {
     if (phone === LIRA_PERSONAL || phone === LIRA_PERSONAL.replace('55', '')) {
       const reply = await handlePersonalAssistant(phone, messageText!)
       await sendText(phone, reply)
+      return new Response('OK', { status: 200 })
+    }
+
+    // ── Robô desativado no painel — não responde leads (modo pessoal acima segue ativo) ──
+    if (!(await isBotActive())) {
+      console.log(`[BOT] Robô desativado no painel — ignorando ${phone}`)
       return new Response('OK', { status: 200 })
     }
 
@@ -968,11 +1007,34 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // ── Opt-out definitivo — respeita o pedido e encerra de vez (LGPD) ───────
+    if (detectOptOut(messageText!)) {
+      const optoutMsg = `Entendido, não te mando mais mensagens. Sucesso pro seu negócio — se precisar, é só me chamar.`
+      await sendTextDelayed(phone, optoutMsg)
+      await updateConversation(phone, {
+        stage: 'encerrado',
+        messages: [
+          ...(conversation.messages as unknown[]),
+          { role: 'user', content: messageText },
+          { role: 'assistant', content: optoutMsg },
+        ],
+        lead_data: { ...(conversation.lead_data as Record<string, unknown>), opt_out: true }
+      })
+      await supabase.from('clientes').update({
+        status: 'perdido',
+        temperatura: 'gelado',
+        observacoes: `[OPT-OUT] Pediu para não receber contato em ${new Date().toLocaleString('pt-BR')}.`,
+        atualizado_em: new Date().toISOString(),
+      }).eq('whatsapp', phone)
+      console.log(`[BOT] Opt-out registrado: ${phone}`)
+      return new Response('OK', { status: 200 })
+    }
+
     // ── Detecta intenção de pausa ("não é o momento") ────────────────────────
     if (detectPauseIntent(messageText!)) {
       const pausado_ate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       const nome = String((conversation.lead_data as Record<string, unknown>)?.nome || '').split(' ')[0] || ''
-      const pauseMsg = `Entendido${nome ? `, ${nome}` : ''}! Sem pressão 😊 Cada negócio tem seu momento certo. Quando fizer sentido retomar, é só me chamar aqui — estarei por aqui. Abraço! 👋`
+      const pauseMsg = `Entendido${nome ? `, ${nome}` : ''}, sem pressão. Quando fizer sentido retomar, é só me chamar aqui.`
 
       await sendTextDelayed(phone, pauseMsg)
       await updateConversation(phone, {
@@ -1036,13 +1098,21 @@ Deno.serve(async (req: Request) => {
           `🔔 *Nova reunião agendada!*\n👤 ${nome}${empresa}\n📱 ${phone}\n📅 ${dataHora}\n🔗 ${meetingUrl || 'ver Cal.com'}`
         )
       } else {
-        await sendMessagesWithVoice(phone, ['Tive um problema ao confirmar automaticamente — mas já passei seu contato pro Lira e ele vai confirmar o horário com você em instantes! 🙏'], isAudio)
+        await sendMessagesWithVoice(phone, ['Tive um probleminha pra confirmar automático aqui, mas já anotei e te confirmo o horário em instantes.'], isAudio)
         await updateConversation(phone, {
           stage: result.stage,
           messages: result.history,
           lead_data: result.lead_data
         })
         await syncLeadCRM(phone, result.stage, result.lead_data)
+
+        // Cal.com falhou — avisa o Lira pra confirmar manualmente (não perder o lead quente)
+        const nomeF     = result.lead_data.nome    || 'Lead'
+        const empresaF  = result.lead_data.empresa ? ` (${result.lead_data.empresa})` : ''
+        const dataHoraF = new Date(result.slot_iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: CAL_TIMEZONE })
+        await sendText(LIRA_PHONE,
+          `⚠️ *Lead quer reunião — confirmar na mão!*\n👤 ${nomeF}${empresaF}\n📱 ${phone}\n📅 Pediu: ${dataHoraF}\n\nO Cal.com falhou ao agendar sozinho. Chame o lead pra confirmar o horário.`
+        )
       }
 
       return new Response('OK', { status: 200 })

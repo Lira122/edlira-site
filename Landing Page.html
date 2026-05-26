@@ -303,9 +303,10 @@ section.tight{padding:90px 0}
   pointer-events:none;
 }
 .orb{
+  display:none;
   position:absolute;width:620px;height:620px;border-radius:50%;
-  background:radial-gradient(circle at 30% 30%, rgba(193,255,42,.55), rgba(193,255,42,.08) 45%, transparent 70%);
-  filter:blur(80px);
+  background:radial-gradient(circle at 30% 30%, rgba(193,255,42,.10), rgba(193,255,42,.02) 45%, transparent 70%);
+  filter:blur(110px);
   top:-120px;left:50%;transform:translateX(-50%);
   animation:orbFloat 14s ease-in-out infinite;
   pointer-events:none;
@@ -313,9 +314,9 @@ section.tight{padding:90px 0}
 }
 .orb.sm{
   width:260px;height:260px;
-  background:radial-gradient(circle, rgba(193,255,42,.4), transparent 70%);
+  background:radial-gradient(circle, rgba(193,255,42,.07), transparent 70%);
   top:auto;bottom:10%;left:6%;transform:none;
-  filter:blur(60px);
+  filter:blur(80px);
   animation:orbFloat 18s ease-in-out infinite reverse;
 }
 @keyframes orbFloat{

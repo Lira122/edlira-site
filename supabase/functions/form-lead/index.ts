@@ -52,12 +52,11 @@ async function sendTextDelayed(phone: string, text: string) {
 
 function buildWelcomeMsgs(name: string, company: string): string[] {
   const firstName = name.trim().split(' ')[0]
-  const companyPart = company ? ` da *${company}*` : ''
+  const companyPart = company ? ` da ${company}` : ''
 
   return [
-    `Oi, ${firstName}! 👋 Aqui é a Sofia, assistente virtual do Lira, da *Edlira*.`,
-    `Vi que você${companyPart} pediu um diagnóstico gratuito — ótima decisão! 🚀`,
-    `Pra garantir o melhor horário com o Lira, você prefere a reunião de 30 min pela manhã ou à tarde? Qual dia da semana fica melhor pra você?`
+    `Oi, ${firstName}! Aqui é o Lira, da Eleva Digital. Vi que você${companyPart} pediu um diagnóstico gratuito.`,
+    `Pra eu reservar o melhor horário: prefere de manhã ou à tarde? E que dia da semana fica melhor?`
   ]
 }
 
