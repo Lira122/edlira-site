@@ -1,8 +1,8 @@
 import { db, selectAll } from '../db.js'
 import { toast } from '../utils.js'
 
-const SB_URL = 'https://flzpblpegoqjxaacjvhf.supabase.co'
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsenBibHBlZ29xanhhYWNqdmhmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODE4MzY0NSwiZXhwIjoyMDkzNzU5NjQ1fQ.7Faqa-D_TfflCgZ3Yq7yicZKYAfZ3WHBdSBKvLSDRY8'
+const SB_URL = import.meta.env.VITE_SB_URL
+const SB_KEY = import.meta.env.VITE_SB_KEY
 
 const TIPOS = [
   { value: 'ad',        label: '📣 Anúncio / Ad',       ratio: '1:1' },
