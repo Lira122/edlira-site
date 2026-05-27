@@ -12,38 +12,11 @@ import { render as renderAgentes }      from './views/agentes.js'
 import { render as renderCriativos }    from './views/criativos.js'
 import { render as renderEmpresa }      from './views/empresa.js'
 
-// ── Auth ─────────────────────────────────────────
-const _pw = ['X6vk','QW9Y','5mIG','l5W1'].join('')
-const AK  = 'e_auth_1'
-
-function authed() {
-  try {
-    const d = JSON.parse(localStorage.getItem(AK) || 'null')
-    return d && Date.now() < d.e
-  } catch { return false }
-}
-
-function doAuth() {
-  const val = document.getElementById('ain').value
-  if (val === _pw) {
-    localStorage.setItem(AK, JSON.stringify({ e: Date.now() + 30 * 24 * 60 * 60 * 1000 }))
-    showApp()
-  } else {
-    const el = document.getElementById('ain')
-    el.classList.add('err')
-    document.getElementById('aerr').textContent = 'Senha incorreta.'
-    setTimeout(() => { el.classList.remove('err'); document.getElementById('aerr').textContent = '' }, 2000)
-  }
-}
-
+// Auth removida — uso local
 function showApp() {
-  document.getElementById('auth').classList.add('h')
   document.getElementById('app').classList.remove('h')
   go('dashboard')
 }
-
-document.getElementById('auth-btn').addEventListener('click', doAuth)
-document.getElementById('ain').addEventListener('keydown', e => { if (e.key === 'Enter') doAuth() })
 
 // ── Router ───────────────────────────────────────
 const VIEWS = {
@@ -86,8 +59,4 @@ document.getElementById('ov').addEventListener('click', e => {
 })
 
 // ── Init ─────────────────────────────────────────
-if (authed()) {
-  showApp()
-} else {
-  document.getElementById('auth').style.display = 'flex'
-}
+showApp()

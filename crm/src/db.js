@@ -1,10 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 
 const SB_URL = import.meta.env.VITE_SB_URL
-const SB_KEY = import.meta.env.VITE_SB_KEY
+// IMPORTANTE: usa a chave PUBLISHABLE (browser-safe). A chave secret_ é bloqueada
+// pelo SDK do Supabase no browser por segurança.
+const SB_KEY = import.meta.env.VITE_SB_ANON_KEY
 
 if (!SB_URL || !SB_KEY) {
-  throw new Error('Defina VITE_SB_URL e VITE_SB_KEY em crm/.env (veja crm/.env.example).')
+  throw new Error('Defina VITE_SB_URL e VITE_SB_ANON_KEY (sb_publishable_...) em crm/.env.')
 }
 
 export const db = createClient(SB_URL, SB_KEY)
