@@ -250,5 +250,5 @@ Processo
 Cases
 FAQ
 Contato
-© 2026 Eleva Digital Marketing Digital · CNPJ 00.000.000/0001-00
+© 2026 Eleva Digital · CNPJ 65.375.742/0001-47
 Feito com obsessão por números — São Paulo, BR
