@@ -11,6 +11,7 @@ const SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const ALLOWED_EMAILS = new Set([
   'junior@elevabrands.com.br',
   'lira.mktdgt@gmail.com',
+  'edmilson_jr@icloud.com',
 ]);
 
 const app = express();
