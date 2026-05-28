@@ -3,8 +3,8 @@
 !.env.example
 node_modules/
 
-# Build outputs
-crm/dist/
+# Build outputs (crm/dist é versionado pra deploy estático puxar do git)
+
 
 # Local tooling / agent state
 .claude/

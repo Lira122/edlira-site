@@ -1,20 +1,28 @@
 import { createClient } from '@supabase/supabase-js'
 
-const SB_URL = import.meta.env.VITE_SB_URL
-// IMPORTANTE: usa a chave PUBLISHABLE (browser-safe). A chave secret_ é bloqueada
-// pelo SDK do Supabase no browser por segurança.
-const SB_KEY = import.meta.env.VITE_SB_ANON_KEY
+// `db` é um Proxy: até o login completar, qualquer acesso lança erro.
+// Depois que `setDb(url, key)` for chamado (com a service_role devolvida
+// pelo server depois de validar o Supabase Auth), todas as chamadas
+// passam a delegar pro client real.
+let _client = null
 
-if (!SB_URL || !SB_KEY) {
-  throw new Error('Defina VITE_SB_URL e VITE_SB_ANON_KEY (sb_publishable_...) em crm/.env.')
+export const db = new Proxy({}, {
+  get(_t, prop) {
+    if (!_client) throw new Error('DB client ainda não inicializado — faça login primeiro.')
+    return _client[prop]
+  },
+})
+
+export function setDb(url, key) {
+  _client = createClient(url, key)
 }
 
-export const db = createClient(SB_URL, SB_KEY)
+export function isDbReady() {
+  return _client !== null
+}
 
 // Busca TODAS as linhas de uma tabela, contornando o limite de linhas por
 // requisição da API do Supabase (estava cortando as listas em ~100 leads).
-// Pagina via .range() até a página vir vazia — funciona com qualquer valor
-// de "Max rows" do projeto. Retorna { data, error } igual ao client normal.
 export async function selectAll(table, { columns = '*', order } = {}) {
   const PAGE = 1000
   const all  = []

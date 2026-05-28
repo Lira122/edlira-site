@@ -75,6 +75,13 @@ app.post('/admin-config-auth', express.json(), async (req, res) => {
   }
 });
 
+// CRM Vite buildado fica em /crm/. SPA fallback pra qualquer rota interna.
+const CRM_DIST = path.join(__dirname, 'crm', 'dist');
+app.use('/crm', express.static(CRM_DIST));
+app.get('/crm/*', (_req, res) => {
+  res.sendFile(path.join(CRM_DIST, 'index.html'));
+});
+
 app.use(express.static(path.join(__dirname)));
 
 app.get('/', (req, res) => {

@@ -1,9 +1,6 @@
 import { db, selectAll } from '../db.js'
 import { toast } from '../utils.js'
 
-const SB_URL = import.meta.env.VITE_SB_URL
-const SB_KEY = import.meta.env.VITE_SB_KEY
-
 const TIPOS = [
   { value: 'ad',        label: '📣 Anúncio / Ad',       ratio: '1:1' },
   { value: 'carrossel', label: '🎠 Carrossel',           ratio: '4:5' },
@@ -210,16 +207,9 @@ async function gerarCriativo() {
   res.style.display = 'none'
 
   try {
-    const response = await fetch(`${SB_URL}/functions/v1/gerar-criativo`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SB_KEY}`,
-      },
-      body: JSON.stringify(payload),
-    })
-
-    const data = await response.json()
+    // Usa o client autenticado — leva o service_role como Authorization automaticamente
+    const { data, error: invokeErr } = await db.functions.invoke('gerar-criativo', { body: payload })
+    if (invokeErr) throw invokeErr
     if (!data.ok) throw new Error(data.error || 'Erro desconhecido')
 
     const url = data.url
