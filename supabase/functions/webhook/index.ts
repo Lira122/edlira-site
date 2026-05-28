@@ -413,36 +413,32 @@ function parseWebhook(body: unknown) {
 
 async function downloadAudioFromUazAPI(messageId: string): Promise<Uint8Array | null> {
   try {
-    // UazAPI endpoint para download de mídia (decripta automaticamente)
-    const res = await fetch(`${UAZAPI_URL}/download/media`, {
+    // UazAPI: POST /message/download { id } → { fileURL, mimetype }
+    // O fileURL é uma URL pública pro mp3 já descriptografado.
+    const res = await fetch(`${UAZAPI_URL}/message/download`, {
       method: 'POST',
       headers: { 'token': UAZAPI_TOKEN, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messageId })
+      body: JSON.stringify({ id: messageId })
     })
 
     if (!res.ok) {
-      console.error('[UazAPI] Download falhou:', res.status, await res.text())
+      console.error('[UazAPI] /message/download falhou:', res.status, await res.text())
       return null
     }
 
-    const contentType = res.headers.get('content-type') || ''
-
-    // Resposta pode ser JSON com base64 ou binário direto
-    if (contentType.includes('application/json')) {
-      const json = await res.json() as Record<string, unknown>
-      const b64  = (json.base64 || json.data || json.file) as string | undefined
-      if (b64) {
-        const binary = atob(b64)
-        const bytes  = new Uint8Array(binary.length)
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-        return bytes
-      }
-      console.error('[UazAPI] JSON sem base64:', JSON.stringify(json).slice(0, 200))
+    const json = await res.json() as { fileURL?: string; url?: string }
+    const fileURL = json.fileURL || json.url
+    if (!fileURL) {
+      console.error('[UazAPI] sem fileURL no retorno:', JSON.stringify(json).slice(0, 200))
       return null
     }
 
-    // Resposta binária direta
-    return new Uint8Array(await res.arrayBuffer())
+    const fileRes = await fetch(fileURL)
+    if (!fileRes.ok) {
+      console.error('[UazAPI] fileURL fetch falhou:', fileRes.status)
+      return null
+    }
+    return new Uint8Array(await fileRes.arrayBuffer())
   } catch (err) {
     console.error('[UazAPI] Erro no download:', err)
     return null
