@@ -24,7 +24,7 @@ function msg24h(nome: string, segmento: string) {
 }
 
 function msg48h(nome: string) {
-  return `Oi${nome ? `, ${nome}` : ''}! Faz um tempo que não falamos. Como está o negócio — ainda com os mesmos desafios ou mudou algo?`
+  return `Oi${nome ? `, ${nome}` : ''}! Faz um tempo que não falamos. Como está o negócio, ainda com os mesmos desafios ou mudou algo?`
 }
 
 function msgFim(nome: string) {

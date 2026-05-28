@@ -47,7 +47,7 @@ async function aguardarJob(jobId: string, tentativas = 30): Promise<Record<strin
 
 function buildPrompt(tipo: string, dados: Record<string, string>): string {
   const { cliente, segmento, servico, headline, cta, estilo } = dados
-  const agencia = 'Eleva Digital — agência de marketing digital com IA e tráfego pago'
+  const agencia = 'Eleva Digital, agência de marketing digital com IA e tráfego pago'
 
   const prompts: Record<string, string> = {
     ad: `Professional digital marketing advertisement for ${cliente || 'a business'}${segmento ? `, ${segmento} industry` : ''}. Service: ${servico || 'digital marketing with AI'}. Headline: "${headline || 'Scale your business with AI'}". CTA: "${cta || 'Talk to us'}". Style: ${estilo || 'modern, dark background, neon green accent (#C5F82A), clean typography, high-end agency aesthetic'}. Ultra realistic, 4K quality, professional ad layout.`,

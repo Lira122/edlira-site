@@ -49,6 +49,6 @@ export async function render() {
 
   c.addEventListener('click', e => {
     const card = e.target.closest('.kcard')
-    if (card) editCliente(card.dataset.id)
+    if (card) editCliente(card.dataset.id, () => render())
   })
 }

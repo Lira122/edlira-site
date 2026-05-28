@@ -148,9 +148,14 @@ function addCliente() {
   document.getElementById('m-save').addEventListener('click', () => saveCliente())
 }
 
-function editCliente(id) {
-  const x = _cl.find(c => c.id === id)
-  if (!x) return
+async function editCliente(id, onSaved) {
+  let x = _cl.find(c => c.id === id)
+  if (!x) {
+    // Não estava no cache desta view (veio do pipeline, meus clientes etc.) — busca no DB
+    const { data } = await db.from('clientes').select('*').eq('id', id).maybeSingle()
+    x = data
+  }
+  if (!x) { toast('Cliente não encontrado.', 'er'); return }
   openModal(
     'Editar cliente',
     clForm(x),
@@ -158,10 +163,10 @@ function editCliente(id) {
      <button class="btn bp" id="m-save">Salvar</button>`
   )
   document.getElementById('m-cancel').addEventListener('click', closeModal)
-  document.getElementById('m-save').addEventListener('click', () => saveCliente(id))
+  document.getElementById('m-save').addEventListener('click', () => saveCliente(id, onSaved))
 }
 
-async function saveCliente(id) {
+async function saveCliente(id, onSaved) {
   const d = getFormData()
   if (!d.nome) { toast('Nome obrigatório.', 'er'); return }
   const { error } = id
@@ -170,7 +175,8 @@ async function saveCliente(id) {
   if (error) { toast('Erro ao salvar.', 'er'); console.error(error); return }
   toast(id ? 'Cliente atualizado.' : 'Cliente adicionado.')
   closeModal()
-  render()
+  if (onSaved) onSaved()
+  else render()
 }
 
 async function delCliente(id) {

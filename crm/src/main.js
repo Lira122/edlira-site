@@ -1,6 +1,7 @@
 import './style.css'
 import { closeModal } from './utils.js'
 import { render as renderDash }         from './views/dashboard.js'
+import { render as renderMeus }         from './views/meus.js'
 import { render as renderClientes }     from './views/clientes.js'
 import { render as renderProspeccao }   from './views/prospeccao.js'
 import { render as renderPipeline }     from './views/pipeline.js'
@@ -11,6 +12,7 @@ import { render as renderFat }          from './views/faturamento.js'
 import { render as renderAgentes }      from './views/agentes.js'
 import { render as renderCriativos }    from './views/criativos.js'
 import { render as renderEmpresa }      from './views/empresa.js'
+import { render as renderOnboarding }   from './views/onboarding.js'
 
 // Auth removida — uso local
 function showApp() {
@@ -21,6 +23,7 @@ function showApp() {
 // ── Router ───────────────────────────────────────
 const VIEWS = {
   dashboard:    { title: 'Dashboard',    render: renderDash },
+  meus:         { title: 'Meus Clientes', render: renderMeus },
   clientes:     { title: 'Clientes',     render: renderClientes },
   prospeccao:   { title: 'Prospecção',   render: renderProspeccao },
   pipeline:     { title: 'Pipeline',     render: renderPipeline },
@@ -31,6 +34,7 @@ const VIEWS = {
   agentes:      { title: 'Agentes IA',   render: renderAgentes },
   criativos:    { title: 'Criativos IA', render: renderCriativos },
   empresa:      { title: 'Empresa',      render: renderEmpresa },
+  onboarding:   { title: 'Onboarding',   render: renderOnboarding },
 }
 
 export function go(v) {

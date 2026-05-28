@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Bem-vindo · Eleva Digital</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0A0F0A;--surface:#1A2516;--surface-2:#131C0E;--accent:#C1FF2A;--accent-hover:#7DD13F;--text:#E8F5D8;--muted:#9AA890;--line:rgba(193,255,42,.12);--line-strong:rgba(193,255,42,.22);--danger:#FF5C5C}
+html,body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,'Segoe UI',sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased}
+body{padding:24px 16px 80px}
+.wrap{max-width:680px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:18px;letter-spacing:-.02em;margin-bottom:32px}
+.brand .dot{width:24px;height:24px;border-radius:7px;border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--accent);font-weight:800}
+.brand span{color:var(--accent)}
+.loading{text-align:center;padding:80px 20px;color:var(--muted)}
+.loading .spin{width:32px;height:32px;border:3px solid rgba(193,255,42,.15);border-top-color:var(--accent);border-radius:50%;margin:0 auto 16px;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.greet{margin-bottom:28px}
+.greet h1{font-size:clamp(26px,5vw,34px);font-weight:700;line-height:1.15;letter-spacing:-.025em;margin-bottom:10px}
+.greet h1 .hl{color:var(--accent)}
+.greet p{color:var(--muted);font-size:15px;line-height:1.5}
+.progress{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:24px}
+.bar{height:6px;background:rgba(193,255,42,.08);border-radius:20px;overflow:hidden;margin-bottom:12px}
+.bar-fill{height:100%;background:var(--accent);border-radius:20px;transition:width .35s ease;width:33%}
+.steps{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.step{color:var(--muted);transition:color .25s}
+.step.on{color:var(--accent)}
+.step.done{color:var(--text)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:28px;margin-bottom:18px}
+.card h2{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:6px}
+.card .sub{color:var(--muted);font-size:14px;line-height:1.5;margin-bottom:24px}
+.fg{margin-bottom:18px}
+.fl{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px}
+.fl .opt{color:var(--muted);font-weight:400;font-size:12px;margin-left:6px}
+.fi,.fta,.fsel{width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;color:var(--text);font:inherit;font-size:15px;outline:none;transition:border-color .2s}
+.fi:focus,.fta:focus,.fsel:focus{border-color:var(--accent)}
+.fta{resize:vertical;min-height:88px;line-height:1.5}
+.fsel{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239AA890' stroke-width='2.5' stroke-linecap='round'><polyline points='6 9 12 15 18 9'/></svg>");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+.security-notice{background:rgba(193,255,42,.07);border:1px solid var(--line-strong);border-left:3px solid var(--accent);border-radius:10px;padding:14px 16px;margin-bottom:22px;font-size:13.5px;line-height:1.55;color:var(--text)}
+.security-notice .ico{display:inline-block;margin-right:6px}
+.actions{display:flex;gap:10px;margin-top:8px}
+.btn{flex:1;padding:14px 18px;border-radius:10px;border:none;font:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:opacity .2s,transform .15s}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--accent);color:#0A0F0A}
+.btn-primary:hover{background:var(--accent-hover);color:#0A0F0A}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--line-strong)}
+.btn-ghost:hover{background:rgba(193,255,42,.05)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.err{color:var(--danger);font-size:12px;margin-top:4px;display:none}
+.err.show{display:block}
+.fi.invalid,.fta.invalid,.fsel.invalid{border-color:var(--danger)}
+.hidden{display:none !important}
+.success,.error-box{text-align:center;padding:60px 28px;background:var(--surface);border:1px solid var(--line);border-radius:18px}
+.success .check{width:72px;height:72px;border-radius:50%;background:rgba(193,255,42,.12);color:var(--accent);display:flex;align-items:center;justify-content:center;margin:0 auto 22px;font-size:36px;font-weight:800}
+.error-box .mark{width:56px;height:56px;border-radius:14px;background:rgba(193,255,42,.08);color:var(--accent);display:flex;align-items:center;justify-content:center;margin:0 auto 22px;font-size:30px;font-weight:700}
+.success h2,.error-box h2{font-size:26px;font-weight:700;margin-bottom:12px;letter-spacing:-.02em}
+.success p,.error-box p{color:var(--muted);font-size:15px;line-height:1.55;max-width:440px;margin:0 auto}
+@media(max-width:480px){
+  body{padding:20px 14px 60px}
+  .card{padding:22px 20px}
+  .greet h1{font-size:26px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><span class="dot">↑</span><span>Eleva <span style="color:var(--accent)">Digital</span></span></div>
+
+  <div id="loading-zone" class="loading">
+    <div class="spin"></div>
+    <p>Carregando…</p>
+  </div>
+
+  <div id="error-zone" class="error-box hidden">
+    <div class="mark">!</div>
+    <h2 id="err-title">Link inválido</h2>
+    <p id="err-msg">Esse link não está completo.</p>
+  </div>
+
+  <div id="form-zone" class="hidden">
+    <div class="greet">
+      <h1>Bem-vindo, <span class="hl" id="cliente-nome">Cliente</span>!</h1>
+      <p>Vou precisar de algumas informações pra começar a montar tudo. Leva uns 5 minutos.</p>
+    </div>
+
+    <div class="progress">
+      <div class="bar"><div class="bar-fill" id="bar"></div></div>
+      <div class="steps">
+        <span class="step on" data-s="1">1. Negócio</span>
+        <span class="step" data-s="2">2. Acessos</span>
+        <span class="step" data-s="3">3. Bot</span>
+      </div>
+    </div>
+
+    <form id="form" novalidate>
+      <div class="card step-content" data-step="1">
+        <h2>Sobre o seu negócio</h2>
+        <p class="sub">Pra eu calibrar a estratégia certo desde o início.</p>
+
+        <div class="fg">
+          <label class="fl" for="ramo">Ramo de atuação *</label>
+          <input class="fi" id="ramo" name="ramo" placeholder="Ex.: Clínica odontológica, e-commerce de moda…" required>
+          <div class="err">Esse campo é obrigatório.</div>
+        </div>
+
+        <div class="fg">
+          <label class="fl" for="ticket_medio">Ticket médio <span class="opt">(R$, opcional)</span></label>
+          <input class="fi" id="ticket_medio" name="ticket_medio" type="number" inputmode="decimal" placeholder="Ex.: 350">
+        </div>
+
+        <div class="fg">
+          <label class="fl" for="objetivo_90d">Objetivo nos próximos 90 dias *</label>
+          <textarea class="fta" id="objetivo_90d" name="objetivo_90d" placeholder="Ex.: dobrar a receita do delivery, abrir nova unidade, lançar um produto…" required></textarea>
+          <div class="err">Conta um pouco do seu objetivo.</div>
+        </div>
+
+        <div class="fg">
+          <label class="fl" for="site">Site <span class="opt">(se já tiver)</span></label>
+          <input class="fi" id="site" name="site" type="url" placeholder="https://…">
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn btn-primary" data-next="2">Próximo →</button>
+        </div>
+      </div>
+
+      <div class="card step-content hidden" data-step="2">
+        <h2>Acessos das suas contas</h2>
+        <p class="sub">Pode preencher só o que quiser me dar agora. O resto a gente alinha depois.</p>
+
+        <div class="security-notice">
+          <span class="ico">🔒</span>
+          <strong>Seus dados são transmitidos com criptografia HTTPS</strong> e armazenados criptografados (AES-256). Só eu tenho acesso, com registro de auditoria de cada visualização.
+        </div>
+
+        <div class="fg">
+          <label class="fl" for="insta_handle">@ do Instagram <span class="opt">(sem o @)</span></label>
+          <input class="fi" id="insta_handle" name="insta_handle" placeholder="suaempresa">
+        </div>
+        <div class="fg">
+          <label class="fl" for="insta_pass">Senha do Instagram <span class="opt">(opcional)</span></label>
+          <input class="fi" id="insta_pass" name="insta_pass" type="password" autocomplete="new-password">
+        </div>
+
+        <div class="fg">
+          <label class="fl" for="meta_bm_id">ID do Business Manager / Meta <span class="opt">(opcional)</span></label>
+          <input class="fi" id="meta_bm_id" name="meta_bm_id" placeholder="Ex.: 123456789012345">
+        </div>
+        <div class="fg">
+          <label class="fl" for="meta_pass">Senha do Facebook / Meta <span class="opt">(opcional)</span></label>
+          <input class="fi" id="meta_pass" name="meta_pass" type="password" autocomplete="new-password">
+        </div>
+
+        <div class="fg">
+          <label class="fl" for="google_ads_id">ID da conta Google Ads <span class="opt">(opcional)</span></label>
+          <input class="fi" id="google_ads_id" name="google_ads_id" placeholder="Ex.: 123-456-7890">
+        </div>
+        <div class="fg">
+          <label class="fl" for="google_pass">Senha do Google <span class="opt">(opcional)</span></label>
+          <input class="fi" id="google_pass" name="google_pass" type="password" autocomplete="new-password">
+        </div>
+
+        <div class="fg">
+          <label class="fl" for="whatsapp_com">WhatsApp comercial</label>
+          <input class="fi" id="whatsapp_com" name="whatsapp_com" placeholder="(12) 9XXXX-XXXX">
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn btn-ghost" data-back="1">← Voltar</button>
+          <button type="button" class="btn btn-primary" data-next="3">Próximo →</button>
+        </div>
+      </div>
+
+      <div class="card step-content hidden" data-step="3">
+        <h2>Como o atendimento por IA deve responder</h2>
+        <p class="sub">Quanto mais detalhe aqui, mais natural fica o atendimento.</p>
+
+        <div class="fg">
+          <label class="fl" for="produtos">Produtos / serviços e preços *</label>
+          <textarea class="fta" id="produtos" name="produtos" placeholder="Liste o que você vende, com preços ou faixas…" required></textarea>
+          <div class="err">Preciso saber o que vocês oferecem.</div>
+        </div>
+
+        <div class="fg">
+          <label class="fl" for="faqs">Perguntas frequentes <span class="opt">(opcional, mas ajuda muito)</span></label>
+          <textarea class="fta" id="faqs" name="faqs" placeholder="Ex.: 'Atendem aos sábados?' → 'Sim, das 9h às 13h.'"></textarea>
+        </div>
+
+        <div class="fg">
+          <label class="fl" for="horario_atend">Horário de atendimento *</label>
+          <input class="fi" id="horario_atend" name="horario_atend" placeholder="Ex.: Seg-Sex 9h-18h, Sáb 9h-13h" required>
+          <div class="err">Esse campo é obrigatório.</div>
+        </div>
+
+        <div class="fg">
+          <label class="fl" for="tom_de_voz">Tom de voz da marca *</label>
+          <select class="fsel" id="tom_de_voz" name="tom_de_voz" required>
+            <option value="">Selecione…</option>
+            <option value="formal">Formal — corporativo, respeitoso</option>
+            <option value="descontraido">Descontraído — próximo, simpático</option>
+            <option value="tecnico">Técnico — direto, especialista</option>
+            <option value="outro">Outro / misto</option>
+          </select>
+          <div class="err">Escolha um tom.</div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn btn-ghost" data-back="2">← Voltar</button>
+          <button type="submit" class="btn btn-primary" id="submitBtn">Concluir onboarding</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div id="success-zone" class="success hidden">
+    <div class="check">✓</div>
+    <h2>Recebido!</h2>
+    <p>Já anotei tudo aqui. Vou começar a montar a estratégia e seus acessos. Em até <strong>2 dias úteis</strong> a gente conversa pra te passar o próximo passo.</p>
+  </div>
+</div>
+
+<script>
+(function(){
+  const API = 'https://flzpblpegoqjxaacjvhf.supabase.co/functions/v1/onboarding'
+  const TOKEN = new URLSearchParams(location.search).get('t') || ''
+  let step = 1
+
+  const $ = (s) => document.querySelector(s)
+  const $$ = (s) => document.querySelectorAll(s)
+
+  function showError(title, msg) {
+    $('#loading-zone').classList.add('hidden')
+    $('#form-zone').classList.add('hidden')
+    $('#err-title').textContent = title
+    $('#err-msg').textContent = msg
+    $('#error-zone').classList.remove('hidden')
+  }
+
+  function showForm(nome) {
+    $('#loading-zone').classList.add('hidden')
+    $('#cliente-nome').textContent = nome || 'Cliente'
+    $('#form-zone').classList.remove('hidden')
+  }
+
+  function showStep(n) {
+    $$('.step-content').forEach(el => el.classList.toggle('hidden', +el.dataset.step !== n))
+    $$('.steps .step').forEach(el => {
+      const sn = +el.dataset.s
+      el.classList.toggle('on', sn === n)
+      el.classList.toggle('done', sn < n)
+    })
+    $('#bar').style.width = (n / 3 * 100) + '%'
+    step = n
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function validateStep(n) {
+    let ok = true
+    $$('.step-content[data-step="' + n + '"] [required]').forEach(el => {
+      const valid = el.value.trim().length > 0
+      el.classList.toggle('invalid', !valid)
+      const errEl = el.parentElement.querySelector('.err')
+      if (errEl) errEl.classList.toggle('show', !valid)
+      if (!valid) ok = false
+    })
+    return ok
+  }
+
+  document.addEventListener('click', (e) => {
+    const nx = e.target.closest('[data-next]')
+    if (nx) {
+      if (!validateStep(step)) return
+      showStep(+nx.dataset.next)
+      return
+    }
+    const bk = e.target.closest('[data-back]')
+    if (bk) {
+      showStep(+bk.dataset.back)
+      return
+    }
+  })
+
+  document.addEventListener('input', (e) => {
+    if (e.target.matches('.fi, .fta, .fsel')) {
+      e.target.classList.remove('invalid')
+      const err = e.target.parentElement.querySelector('.err')
+      if (err) err.classList.remove('show')
+    }
+  })
+
+  async function init() {
+    if (!TOKEN) {
+      showError('Link inválido', 'Esse link não está completo. Verifique se você copiou o link inteiro.')
+      return
+    }
+    try {
+      const r = await fetch(API + '?t=' + encodeURIComponent(TOKEN))
+      const j = await r.json()
+      if (!j.ok) {
+        if (j.reason === 'usado') return showError('Onboarding já preenchido', 'Esse link já foi usado. Se precisar atualizar alguma informação, fale comigo no WhatsApp.')
+        if (j.reason === 'expirado') return showError('Link expirado', 'Esse link já passou do prazo. Me chama no WhatsApp que eu te mando um novo.')
+        return showError('Link inválido', 'Não encontramos esse link. Confira se copiou ele inteiro.')
+      }
+      showForm(j.cliente_nome)
+    } catch (e) {
+      showError('Erro ao carregar', 'Não consegui validar o link agora. Tenta de novo em alguns segundos.')
+    }
+  }
+
+  document.getElementById('form').addEventListener('submit', async (e) => {
+    e.preventDefault()
+    if (!validateStep(3)) return
+    const btn = $('#submitBtn')
+    btn.disabled = true
+    btn.textContent = 'Enviando…'
+
+    const fd = new FormData(e.target)
+    const body = {}
+    fd.forEach((v, k) => { body[k] = String(v).trim() })
+
+    try {
+      const res = await fetch(API + '?t=' + encodeURIComponent(TOKEN), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const j = await res.json()
+      if (!res.ok || !j.ok) throw new Error(j.error || 'Erro ao enviar')
+      $('#form-zone').classList.add('hidden')
+      $('#success-zone').classList.remove('hidden')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch (err) {
+      btn.disabled = false
+      btn.textContent = 'Concluir onboarding'
+      alert('Ops, deu um erro: ' + err.message + '. Tenta de novo, ou me chama no WhatsApp.')
+    }
+  })
+
+  init()
+})()
+</script>
+</body>
+</html>

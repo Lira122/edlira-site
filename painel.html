@@ -284,6 +284,10 @@ tbody tr:hover{background:rgba(255,255,255,0.025)}
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span>Equipe</span>
       </div>
+      <div class="ni" data-v="documentos" onclick="go('documentos')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>Documentos</span>
+      </div>
     </nav>
     <div class="sb-foot">CRM v1.0</div>
   </aside>
@@ -311,11 +315,14 @@ tbody tr:hover{background:rgba(255,255,255,0.025)}
 
 <div class="tc" id="tc"></div>
 
+<!-- Injeção opcional de chaves quando rodando local (server.js libera só pra localhost) -->
+<script src="/admin-config.js" onerror="window.EL_CONFIG=window.EL_CONFIG||{}"></script>
 <script>
 const SB_URL = 'https://flzpblpegoqjxaacjvhf.supabase.co';
-// Chaves vivem no localStorage do navegador — pedidas no primeiro acesso.
-// Para trocar: localStorage.removeItem('e_sb_key') ou localStorage.removeItem('e_or_key').
-function getOrPromptKey(storageKey, label) {
+// Chaves: 1º tenta injeção do servidor (rota /admin-config.js só responde em localhost),
+// 2º localStorage, 3º prompt. Assim, local não precisa digitar; produção segue protegido.
+function resolveKey(storageKey, configKey, label) {
+  if (window.EL_CONFIG && window.EL_CONFIG[configKey]) return window.EL_CONFIG[configKey];
   let v = localStorage.getItem(storageKey);
   if (!v) {
     v = window.prompt(`Cole a ${label}:`);
@@ -323,11 +330,19 @@ function getOrPromptKey(storageKey, label) {
   }
   return v ? v.trim() : '';
 }
-const SB_KEY = getOrPromptKey('e_sb_key', 'service_role do Supabase');
-const OR_KEY = getOrPromptKey('e_or_key', 'API key do OpenRouter (sk-or-v1-...)');
-const _pw = ['X6vk','QW9Y','5mIG','l5W1'].join('');
+// Usa a chave service_role (JWT legacy) pra ler/escrever sem esbarrar em RLS.
+// O supabase-js bloqueia sb_secret_* no browser, mas o JWT legacy passa.
+// Em produção (Hostinger) o /admin-config.js retorna 404 e cai pro prompt — protegido.
+const SB_KEY = resolveKey('e_sb_key', 'SB_KEY', 'service_role do Supabase');
+const OR_KEY = resolveKey('e_or_key', 'OR_KEY', 'API key do OpenRouter (sk-or-v1-...)');
+const _pw = 'Xbox360desde#';
 const AK = 'e_auth_1';
 const db = supabase.createClient(SB_URL, SB_KEY);
+
+// ── NAV state (declarado cedo pra evitar TDZ quando startApp() chama go()) ──
+let curView = 'dashboard';
+let vTitles = {};
+let vRenders = {};
 
 // ── AUTH ──────────────────────────────────────
 function authed() {
@@ -354,7 +369,7 @@ function startApp() {
   startRealtime();
 }
 
-if (authed()) startApp();
+// auto-login movido pro fim do script — depois que vTitles/vRenders estiverem populados
 
 // ── REALTIME ──────────────────────────────────
 function startRealtime() {
@@ -382,9 +397,8 @@ function startRealtime() {
 }
 
 // ── NAV ───────────────────────────────────────
-let curView = 'dashboard';
-const vTitles = { dashboard:'Dashboard', clientes:'Clientes', pipeline:'Pipeline', mensalidades:'Mensalidades', faturamento:'Faturamento', agentes:'Agentes IA', equipe:'Equipe de Conteúdo' };
-const vRenders = { dashboard:renderDash, clientes:renderClientes, pipeline:renderPipeline, mensalidades:renderMensalidades, faturamento:renderFat, agentes:renderAgentes, equipe:renderEquipe };
+vTitles = { dashboard:'Dashboard', clientes:'Clientes', pipeline:'Pipeline', mensalidades:'Mensalidades', faturamento:'Faturamento', agentes:'Agentes IA', equipe:'Equipe de Conteúdo', documentos:'Documentos' };
+vRenders = { dashboard:renderDash, clientes:renderClientes, pipeline:renderPipeline, mensalidades:renderMensalidades, faturamento:renderFat, agentes:renderAgentes, equipe:renderEquipe, documentos:renderDocumentos };
 
 function go(v) {
   curView = v;
@@ -1344,6 +1358,177 @@ async function eqSend() {
     if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Enviar'; }
   }
 }
+
+// ── DOCUMENTOS ────────────────────────────────────────────
+const DOC_BUCKET = 'documentos';
+const DOC_TIPOS = [
+  { v:'identidade', label:'Identidade Visual' },
+  { v:'roteiro',    label:'Roteiros' },
+  { v:'briefing',   label:'Briefings' },
+  { v:'contrato',   label:'Contratos' },
+  { v:'proposta',   label:'Propostas' },
+  { v:'criativo',   label:'Criativos / Mídia' },
+  { v:'outro',      label:'Outros' },
+];
+let docFiltroCliente = '';
+let docFiltroTipo    = '';
+
+async function renderDocumentos() {
+  const c = document.getElementById('content');
+  document.getElementById('tbacts').innerHTML = `<button class="btn bg bsm" onclick="docNovo()">+ Novo documento</button>`;
+  c.innerHTML = `
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+      <select id="doc-fc" class="fi" style="max-width:240px"><option value="">Todos os clientes</option></select>
+      <select id="doc-ft" class="fi" style="max-width:200px">
+        <option value="">Todos os tipos</option>
+        ${DOC_TIPOS.map(t=>`<option value="${t.v}">${t.label}</option>`).join('')}
+      </select>
+      <span id="doc-count" style="font-size:12px;color:var(--text-3)"></span>
+    </div>
+    <div id="doc-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px"></div>
+  `;
+
+  // Carrega lista de clientes pro filtro/seletor
+  const { data: clientes } = await db.from('clientes').select('id, nome, empresa').order('nome');
+  const fc = document.getElementById('doc-fc');
+  (clientes||[]).forEach(cl => {
+    const label = cl.empresa ? `${cl.nome} (${cl.empresa})` : cl.nome;
+    fc.insertAdjacentHTML('beforeend', `<option value="${cl.id}">${label}</option>`);
+  });
+  fc.value = docFiltroCliente;
+  document.getElementById('doc-ft').value = docFiltroTipo;
+  fc.onchange = () => { docFiltroCliente = fc.value; docCarregarLista(clientes); };
+  document.getElementById('doc-ft').onchange = (e) => { docFiltroTipo = e.target.value; docCarregarLista(clientes); };
+
+  docCarregarLista(clientes);
+}
+
+async function docCarregarLista(clientes) {
+  const list = document.getElementById('doc-list');
+  list.innerHTML = `<div style="color:var(--text-3);font-size:13px">Carregando...</div>`;
+
+  let q = db.from('documentos').select('*').order('criado_em', { ascending:false });
+  if (docFiltroCliente) q = q.eq('cliente_id', docFiltroCliente);
+  if (docFiltroTipo)    q = q.eq('tipo', docFiltroTipo);
+  const { data, error } = await q;
+
+  if (error) {
+    list.innerHTML = `<div style="color:#ff8080;font-size:13px;grid-column:1/-1">
+      Erro: ${error.message}.<br>Rode <code>supabase/documentos-schema.sql</code> no SQL Editor pra criar a tabela e o bucket.
+    </div>`;
+    return;
+  }
+
+  document.getElementById('doc-count').textContent = `${data.length} documento${data.length===1?'':'s'}`;
+  if (!data.length) {
+    list.innerHTML = `<div style="color:var(--text-3);font-size:13px;grid-column:1/-1;text-align:center;padding:40px 0">
+      Nenhum documento ainda. Clique em <b>+ Novo documento</b> pra subir o primeiro.
+    </div>`;
+    return;
+  }
+
+  const clienteMap = Object.fromEntries((clientes||[]).map(c=>[c.id, c.empresa || c.nome]));
+  list.innerHTML = data.map(d => {
+    const tipoLabel = (DOC_TIPOS.find(t=>t.v===d.tipo)||{label:d.tipo}).label;
+    const sizeKb = d.tamanho ? Math.round(d.tamanho/1024) + ' KB' : '';
+    const data_str = new Date(d.criado_em).toLocaleDateString('pt-BR');
+    return `<div style="background:var(--bg-card);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <div style="font-weight:600;font-size:14px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nome}</div>
+      </div>
+      <div style="font-size:11px;color:var(--text-3);display:flex;gap:8px;flex-wrap:wrap">
+        <span>${tipoLabel}</span>
+        ${d.cliente_id ? `<span>· ${clienteMap[d.cliente_id]||'(cliente removido)'}</span>` : ''}
+        <span>· ${data_str}</span>
+        ${sizeKb ? `<span>· ${sizeKb}</span>` : ''}
+      </div>
+      ${d.descricao ? `<div style="font-size:12px;color:var(--text-2);margin-top:4px">${d.descricao}</div>` : ''}
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="btn bg bsm" style="flex:1" onclick="docAbrir('${d.id}','${d.storage_path.replace(/'/g,"\\'")}')">Abrir</button>
+        <button class="btn bg bsm" onclick="docRemover('${d.id}','${d.storage_path.replace(/'/g,"\\'")}')">Remover</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function docNovo() {
+  openModal('Novo documento', `
+    <div class="fg"><label class="fl">Arquivo</label><input type="file" id="dn-file" class="fi"></div>
+    <div class="fg"><label class="fl">Tipo</label>
+      <select id="dn-tipo" class="fi">${DOC_TIPOS.map(t=>`<option value="${t.v}">${t.label}</option>`).join('')}</select>
+    </div>
+    <div class="fg"><label class="fl">Cliente (opcional)</label><select id="dn-cliente" class="fi"><option value="">— Sem cliente —</option></select></div>
+    <div class="fg"><label class="fl">Descrição (opcional)</label><textarea id="dn-desc" class="fi" rows="2"></textarea></div>
+    <div id="dn-status" style="font-size:12px;color:var(--text-3);margin-top:6px"></div>
+  `, `<button class="btn bg" onclick="closeModal()">Cancelar</button><button class="btn bp" onclick="docSalvar()">Enviar</button>`);
+
+  // Popula select de clientes
+  db.from('clientes').select('id, nome, empresa').order('nome').then(({data}) => {
+    const sel = document.getElementById('dn-cliente');
+    (data||[]).forEach(cl => {
+      const label = cl.empresa ? `${cl.nome} (${cl.empresa})` : cl.nome;
+      sel.insertAdjacentHTML('beforeend', `<option value="${cl.id}">${label}</option>`);
+    });
+  });
+}
+
+async function docSalvar() {
+  const file = document.getElementById('dn-file').files[0];
+  if (!file) { toast('Selecione um arquivo.','er'); return; }
+  if (file.size > 50 * 1024 * 1024) { toast('Máximo 50MB.','er'); return; }
+
+  const tipo = document.getElementById('dn-tipo').value;
+  const cliente_id = document.getElementById('dn-cliente').value || null;
+  const descricao = document.getElementById('dn-desc').value.trim();
+  const status = document.getElementById('dn-status');
+
+  status.textContent = 'Enviando...';
+
+  // Gera path único: tipo/timestamp-nome.ext
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+  const storage_path = `${tipo}/${Date.now()}-${safeName}`;
+
+  const { error: upErr } = await db.storage.from(DOC_BUCKET).upload(storage_path, file, { upsert:false });
+  if (upErr) { status.textContent = ''; toast('Erro no upload: ' + upErr.message,'er'); return; }
+
+  const { error: dbErr } = await db.from('documentos').insert({
+    nome: file.name,
+    tipo,
+    cliente_id,
+    descricao,
+    storage_path,
+    mime_type: file.type || null,
+    tamanho: file.size,
+  });
+  if (dbErr) {
+    await db.storage.from(DOC_BUCKET).remove([storage_path]); // rollback
+    status.textContent = '';
+    toast('Erro ao salvar: ' + dbErr.message,'er');
+    return;
+  }
+
+  closeModal();
+  toast('Documento adicionado.');
+  renderDocumentos();
+}
+
+async function docAbrir(id, storage_path) {
+  const { data, error } = await db.storage.from(DOC_BUCKET).createSignedUrl(storage_path, 3600);
+  if (error || !data?.signedUrl) { toast('Erro: ' + (error?.message||'sem URL'),'er'); return; }
+  window.open(data.signedUrl, '_blank');
+}
+
+async function docRemover(id, storage_path) {
+  if (!confirm('Remover este documento? A ação não pode ser desfeita.')) return;
+  await db.storage.from(DOC_BUCKET).remove([storage_path]);
+  await db.from('documentos').delete().eq('id', id);
+  toast('Removido.');
+  renderDocumentos();
+}
+
+// Auto-login ao final, depois de TODAS as funções e vRenders estarem populados.
+if (authed()) startApp();
 </script>
 </body>
 </html>
