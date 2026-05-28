@@ -2083,12 +2083,9 @@ body::before{
   const hero  = document.querySelector('.hero');
   if (!hero) return;
 
-  // Quando o JS estiver pronto, desliga autoplay/loop e passa pro scrub.
-  // Se o JS quebrar antes daqui, o video continua rodando em loop como fallback.
-  try { video.pause(); } catch(_) {}
-  video.removeAttribute('autoplay');
-  video.removeAttribute('loop');
-  console.log('[hero-video] scroll-scrub ativo');
+  // DEBUG: scroll-scrub desligado temporariamente — deixa o video em autoplay loop puro
+  console.log('[hero-video] modo debug: autoplay loop ativo, scroll-scrub OFF');
+  return;
 
   let duration = 0;
   let raf = null;
