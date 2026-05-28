@@ -12,7 +12,7 @@ const GROQ_API_KEY        = Deno.env.get('GROQ_API_KEY')!
 const CAL_API_KEY         = Deno.env.get('CAL_API_KEY')!
 const ELEVENLABS_API_KEY  = Deno.env.get('ELEVENLABS_API_KEY')!
 
-const ELEVENLABS_VOICE_ID = 'hpp4J3VqNfWAUOO0d1Us' // Bella — Professional, Bright, Warm (premade, OK no plano Free)
+const ELEVENLABS_VOICE_ID = 'ErXwobaYiN019PkySvjV' // Antoni — voz masculina, warm e natural em pt-BR (premade, OK no plano Free)
 
 const CAL_EVENT_TYPE_ID  = 3266163          // Reunião de 60 min
 const CAL_TIMEZONE       = 'America/Sao_Paulo'
