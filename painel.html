@@ -245,8 +245,9 @@ tbody tr:hover{background:rgba(255,255,255,0.025)}
 <div id="auth">
   <div class="auth-box">
     <div class="auth-dot"></div>
-    <input type="password" class="auth-in" id="ain" placeholder="••••••••••••••••" autocomplete="off">
-    <button class="auth-btn" onclick="doAuth()">Entrar</button>
+    <input type="email" class="auth-in" id="aemail" placeholder="seu@email.com" autocomplete="username" style="margin-bottom:8px">
+    <input type="password" class="auth-in" id="ain" placeholder="••••••••••••••••" autocomplete="current-password">
+    <button class="auth-btn" id="abtn" onclick="doAuth()">Entrar</button>
     <div class="auth-err" id="aerr"></div>
   </div>
 </div>
@@ -289,7 +290,7 @@ tbody tr:hover{background:rgba(255,255,255,0.025)}
         <span>Documentos</span>
       </div>
     </nav>
-    <div class="sb-foot">CRM v1.0</div>
+    <div class="sb-foot">CRM v1.0 · <a href="#" onclick="event.preventDefault();doLogout()" style="color:var(--text-3);text-decoration:underline">Sair</a></div>
   </aside>
 
   <main class="main">
@@ -315,29 +316,20 @@ tbody tr:hover{background:rgba(255,255,255,0.025)}
 
 <div class="tc" id="tc"></div>
 
-<!-- Injeção opcional de chaves quando rodando local (server.js libera só pra localhost) -->
-<script src="/admin-config.js" onerror="window.EL_CONFIG=window.EL_CONFIG||{}"></script>
+<!-- Config público (URL + anon key) — anon key é safe expor -->
+<script src="/public-config.js" onerror="window.EL_PUBLIC={SB_URL:'https://flzpblpegoqjxaacjvhf.supabase.co',SB_ANON_KEY:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsenBibHBlZ29xanhhYWNqdmhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxODM2NDUsImV4cCI6MjA5Mzc1OTY0NX0.U_JPnFs2ZJ-E5PQqqrUR-KZewysszgMCwWpi82zTy10'}"></script>
 <script>
-const SB_URL = 'https://flzpblpegoqjxaacjvhf.supabase.co';
-// Chaves: 1º tenta injeção do servidor (rota /admin-config.js só responde em localhost),
-// 2º localStorage, 3º prompt. Assim, local não precisa digitar; produção segue protegido.
-function resolveKey(storageKey, configKey, label) {
-  if (window.EL_CONFIG && window.EL_CONFIG[configKey]) return window.EL_CONFIG[configKey];
-  let v = localStorage.getItem(storageKey);
-  if (!v) {
-    v = window.prompt(`Cole a ${label}:`);
-    if (v) localStorage.setItem(storageKey, v.trim());
-  }
-  return v ? v.trim() : '';
-}
-// Usa a chave service_role (JWT legacy) pra ler/escrever sem esbarrar em RLS.
-// O supabase-js bloqueia sb_secret_* no browser, mas o JWT legacy passa.
-// Em produção (Hostinger) o /admin-config.js retorna 404 e cai pro prompt — protegido.
-const SB_KEY = resolveKey('e_sb_key', 'SB_KEY', 'service_role do Supabase');
-const OR_KEY = resolveKey('e_or_key', 'OR_KEY', 'API key do OpenRouter (sk-or-v1-...)');
-const _pw = 'Xbox360desde#';
-const AK = 'e_auth_1';
-const db = supabase.createClient(SB_URL, SB_KEY);
+const SB_URL = window.EL_PUBLIC?.SB_URL || 'https://flzpblpegoqjxaacjvhf.supabase.co';
+const SB_ANON_KEY = window.EL_PUBLIC?.SB_ANON_KEY;
+
+// Cliente Auth (anon) — usado só pra login/logout. Depois de logar, criamos o admin client.
+const sbAuth = supabase.createClient(SB_URL, SB_ANON_KEY, {
+  auth: { persistSession: true, storageKey: 'eleva_auth' },
+});
+
+// `db` e `OR_KEY` são definidos depois do login bem-sucedido (ver bootstrapAdmin).
+let db = null;
+let OR_KEY = '';
 
 // ── NAV state (declarado cedo pra evitar TDZ quando startApp() chama go()) ──
 let curView = 'dashboard';
@@ -345,23 +337,56 @@ let vTitles = {};
 let vRenders = {};
 
 // ── AUTH ──────────────────────────────────────
-function authed() {
-  try { const d = JSON.parse(localStorage.getItem(AK)||'null'); return d && Date.now() < d.e; } catch { return false; }
+function setErr(msg) {
+  document.getElementById('aerr').textContent = msg || '';
+  if (msg) setTimeout(() => { document.getElementById('aerr').textContent=''; }, 4000);
 }
-function doAuth() {
-  const v = document.getElementById('ain').value;
-  if (v === _pw) {
-    localStorage.setItem(AK, JSON.stringify({ e: Date.now() + 30*24*60*60*1000 }));
-    document.getElementById('auth').classList.add('h');
-    document.getElementById('app').classList.remove('h');
-    go('dashboard');
-  } else {
-    const el = document.getElementById('ain'); el.classList.add('err');
-    document.getElementById('aerr').textContent = 'Senha incorreta.';
-    setTimeout(() => { el.classList.remove('err'); document.getElementById('aerr').textContent=''; }, 2000);
+
+async function bootstrapAdmin(session) {
+  // Troca o JWT do user pelas chaves admin via server.js.
+  const r = await fetch('/admin-config-auth', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (!r.ok) {
+    if (r.status === 403) throw new Error('Email não autorizado.');
+    if (r.status === 401) throw new Error('Sessão inválida.');
+    throw new Error('Server respondeu ' + r.status);
+  }
+  const cfg = await r.json();
+  if (!cfg.ok || !cfg.SB_KEY) throw new Error('Server não devolveu as chaves.');
+  db = supabase.createClient(SB_URL, cfg.SB_KEY);
+  OR_KEY = cfg.OR_KEY || '';
+  window.db = db; // expõe pra views já carregadas
+}
+
+async function doAuth() {
+  const email = document.getElementById('aemail').value.trim();
+  const password = document.getElementById('ain').value;
+  const btn = document.getElementById('abtn');
+  if (!email || !password) return setErr('Preenche email e senha.');
+  btn.disabled = true; btn.textContent = 'Entrando…';
+  try {
+    const { data, error } = await sbAuth.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    await bootstrapAdmin(data.session);
+    startApp();
+  } catch (e) {
+    setErr(e.message || 'Erro ao entrar.');
+    btn.disabled = false; btn.textContent = 'Entrar';
   }
 }
+
+async function doLogout() {
+  try { await sbAuth.auth.signOut(); } catch (_) {}
+  location.reload();
+}
+window.doLogout = doLogout;
+
 document.getElementById('ain').addEventListener('keydown', e => { if(e.key==='Enter') doAuth(); });
+document.getElementById('aemail').addEventListener('keydown', e => { if(e.key==='Enter') doAuth(); });
+
 function startApp() {
   document.getElementById('auth').classList.add('h');
   document.getElementById('app').classList.remove('h');
@@ -369,7 +394,18 @@ function startApp() {
   startRealtime();
 }
 
-// auto-login movido pro fim do script — depois que vTitles/vRenders estiverem populados
+// Auto-login: se já tem sessão Supabase válida, tenta bootstrap direto.
+async function tryAutoLogin() {
+  const { data } = await sbAuth.auth.getSession();
+  if (!data?.session) return;
+  try {
+    await bootstrapAdmin(data.session);
+    startApp();
+  } catch (e) {
+    // sessão existe mas o server rejeitou (email não autorizado, etc) — força login manual
+    await sbAuth.auth.signOut();
+  }
+}
 
 // ── REALTIME ──────────────────────────────────
 function startRealtime() {
@@ -1528,7 +1564,7 @@ async function docRemover(id, storage_path) {
 }
 
 // Auto-login ao final, depois de TODAS as funções e vRenders estarem populados.
-if (authed()) startApp();
+tryAutoLogin();
 </script>
 </body>
 </html>
