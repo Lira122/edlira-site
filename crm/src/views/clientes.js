@@ -1,5 +1,6 @@
 import { db, selectAll } from '../db.js'
 import { brl, fmtd, badge, tempBadge, toast, openModal, closeModal, STATS, TEMPS, STATUS_LABEL } from '../utils.js'
+import { gerarContrato } from './contrato.js'
 
 let _cl = []
 let cFil  = 'todos'
@@ -160,9 +161,11 @@ async function editCliente(id, onSaved) {
     'Editar cliente',
     clForm(x),
     `<button class="btn bg" id="m-cancel">Cancelar</button>
+     <button class="btn bg" id="m-contrato">Gerar contrato</button>
      <button class="btn bp" id="m-save">Salvar</button>`
   )
   document.getElementById('m-cancel').addEventListener('click', closeModal)
+  document.getElementById('m-contrato').addEventListener('click', () => { closeModal(); gerarContrato(x) })
   document.getElementById('m-save').addEventListener('click', () => saveCliente(id, onSaved))
 }
 

@@ -4,6 +4,7 @@
 import { selectAll } from '../db.js'
 import { brl, fmtd, tempBadge } from '../utils.js'
 import { editCliente } from './clientes.js'
+import { gerarContrato } from './contrato.js'
 
 let _meus = []
 let mSrch = ''
@@ -42,7 +43,8 @@ function renderTable() {
         ? `<a href="https://wa.me/${x.whatsapp.replace(/\D/g, '')}" target="_blank" class="wa-link" onclick="event.stopPropagation()">${x.whatsapp}</a>`
         : '—'}</td>
       <td class="tm">${fmtd(x.criado_em)}</td>
-    </tr>`).join('') : `<tr><td colspan="7"><div class="empty">Nenhum cliente ativo ainda.<br>Quando um lead virar contrato, mude o status pra "Ativo" na ficha dele e ele aparece aqui.</div></td></tr>`
+      <td><button class="btn bg bsm gen-contrato" data-id="${x.id}" title="Gerar contrato">Contrato</button></td>
+    </tr>`).join('') : `<tr><td colspan="8"><div class="empty">Nenhum cliente ativo ainda.<br>Quando um lead virar contrato, mude o status pra "Ativo" na ficha dele e ele aparece aqui.</div></td></tr>`
 
   document.getElementById('content').innerHTML = `
     <div class="sg" style="grid-template-columns:repeat(3,1fr);margin-bottom:22px">
@@ -71,7 +73,7 @@ function renderTable() {
       <table>
         <thead><tr>
           <th>Nome</th><th>Empresa</th><th>Serviço</th>
-          <th>Valor/mês</th><th>Temp.</th><th>WhatsApp</th><th>Cliente desde</th>
+          <th>Valor/mês</th><th>Temp.</th><th>WhatsApp</th><th>Cliente desde</th><th></th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -79,6 +81,13 @@ function renderTable() {
 
   document.getElementById('meu-search').addEventListener('input', e => { mSrch = e.target.value; renderTable() })
   document.getElementById('content').addEventListener('click', e => {
+    const btnContrato = e.target.closest('.gen-contrato')
+    if (btnContrato) {
+      e.stopPropagation()
+      const cliente = _meus.find(x => x.id === btnContrato.dataset.id)
+      if (cliente) gerarContrato(cliente)
+      return
+    }
     const row = e.target.closest('.meu-row')
     if (row) editCliente(row.dataset.id, () => render())
   })
