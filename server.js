@@ -82,9 +82,17 @@ app.get('/crm/*', (_req, res) => {
   res.sendFile(path.join(CRM_DIST, 'index.html'));
 });
 
-app.use(express.static(path.join(__dirname)));
+// HTML não cacheia (pra mudanças aparecerem na hora). Outros assets cacheiam normal.
+app.use(express.static(path.join(__dirname), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  },
+}));
 
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 

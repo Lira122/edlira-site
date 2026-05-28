@@ -926,7 +926,9 @@ body::before{
 
 <!-- ============================ HERO ============================ -->
 <header class="hero" id="top" data-screen-label="01 Hero">
-  <video id="heroVideo" class="hero-video" muted playsinline preload="auto" aria-hidden="true">
+  <video id="heroVideo" class="hero-video" muted autoplay loop playsinline preload="auto" aria-hidden="true"
+         onerror="console.error('[hero-video] load error', event)"
+         onloadeddata="console.log('[hero-video] loaded, duration=', this.duration)">
     <source src="assets/hero-bg.mp4" type="video/mp4">
   </video>
   <div class="hero-video-overlay" aria-hidden="true"></div>
@@ -2083,9 +2085,12 @@ body::before{
   const hero  = document.querySelector('.hero');
   if (!hero) return;
 
-  // Garante que o user agent não vai tentar tocar (Safari às vezes força)
+  // Quando o JS estiver pronto, desliga autoplay/loop e passa pro scrub.
+  // Se o JS quebrar antes daqui, o video continua rodando em loop como fallback.
   try { video.pause(); } catch(_) {}
   video.removeAttribute('autoplay');
+  video.removeAttribute('loop');
+  console.log('[hero-video] scroll-scrub ativo');
 
   let duration = 0;
   let raf = null;
