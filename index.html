@@ -308,19 +308,19 @@ section.tight{padding:90px 0}
   pointer-events:none;
   z-index:1;
 }
-/* Background video — loop mudo, fica atrás de tudo com overlay escuro pra texto ler */
+/* Background video — frame avança conforme a pessoa rola (scroll-scrub) */
 .hero-video{
   position:absolute;inset:0;width:100%;height:100%;
   object-fit:cover;
   z-index:0;
-  opacity:.35;
+  opacity:.6;
   pointer-events:none;
 }
 .hero-video-overlay{
   position:absolute;inset:0;
   background:
-    radial-gradient(ellipse at 50% 50%, transparent 0%, rgba(10,15,10,.55) 70%, rgba(10,15,10,.85) 100%),
-    linear-gradient(180deg, rgba(10,15,10,.4) 0%, transparent 30%, transparent 70%, rgba(10,15,10,.6) 100%);
+    radial-gradient(ellipse at 50% 50%, transparent 0%, rgba(10,15,10,.45) 70%, rgba(10,15,10,.75) 100%),
+    linear-gradient(180deg, rgba(10,15,10,.25) 0%, transparent 35%, transparent 65%, rgba(10,15,10,.55) 100%);
   z-index:1;
   pointer-events:none;
 }
@@ -926,7 +926,7 @@ body::before{
 
 <!-- ============================ HERO ============================ -->
 <header class="hero" id="top" data-screen-label="01 Hero">
-  <video class="hero-video" autoplay muted loop playsinline preload="metadata" aria-hidden="true">
+  <video id="heroVideo" class="hero-video" muted playsinline preload="auto" aria-hidden="true">
     <source src="assets/hero-bg.mp4" type="video/mp4">
   </video>
   <div class="hero-video-overlay" aria-hidden="true"></div>
@@ -2072,6 +2072,61 @@ body::before{
       window.scrollTo({top: y, behavior: 'smooth'});
     });
   });
+})();
+</script>
+
+<!-- Scroll-scrub: avança o frame do video do hero conforme a pessoa rola -->
+<script>
+(function(){
+  const video = document.getElementById('heroVideo');
+  if (!video) return;
+  const hero  = document.querySelector('.hero');
+  if (!hero) return;
+
+  // Garante que o user agent não vai tentar tocar (Safari às vezes força)
+  try { video.pause(); } catch(_) {}
+  video.removeAttribute('autoplay');
+
+  let duration = 0;
+  let raf = null;
+  let target = 0;
+  let current = 0;
+
+  function onMeta() { duration = video.duration || 0; tick(); }
+  if (video.readyState >= 1) onMeta();
+  else video.addEventListener('loadedmetadata', onMeta, { once: true });
+
+  function tick() {
+    // Lerp suave entre currentTime atual e target
+    current += (target - current) * 0.12;
+    if (Math.abs(target - current) < 0.005) current = target;
+    if (duration > 0 && !isNaN(current)) {
+      try { video.currentTime = Math.max(0, Math.min(duration - 0.05, current)); } catch(_) {}
+    }
+    if (Math.abs(target - current) > 0.001) {
+      raf = requestAnimationFrame(tick);
+    } else {
+      raf = null;
+    }
+  }
+
+  function update() {
+    if (duration <= 0) return;
+    // Progresso 0..1 dentro do hero. Vai começando ao topo da página e
+    // termina quando o hero sai da tela.
+    const rect = hero.getBoundingClientRect();
+    const total = rect.height + window.innerHeight; // distância total da entrada à saída
+    const traveled = window.innerHeight - rect.top; // quanto já rolou
+    let p = traveled / total;
+    if (p < 0) p = 0; else if (p > 1) p = 1;
+    target = p * duration;
+    if (!raf) raf = requestAnimationFrame(tick);
+  }
+
+  // Listener leve, passivo
+  window.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update);
+  update();
 })();
 </script>
 
