@@ -306,6 +306,26 @@ section.tight{padding:90px 0}
   -webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 35%,#000 30%,transparent 80%);
   mask-image:radial-gradient(ellipse 70% 60% at 50% 35%,#000 30%,transparent 80%);
   pointer-events:none;
+  z-index:1;
+}
+/* Background video — loop mudo, fica atrás de tudo com overlay escuro pra texto ler */
+.hero-video{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;
+  z-index:0;
+  opacity:.35;
+  pointer-events:none;
+}
+.hero-video-overlay{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse at 50% 50%, transparent 0%, rgba(10,15,10,.55) 70%, rgba(10,15,10,.85) 100%),
+    linear-gradient(180deg, rgba(10,15,10,.4) 0%, transparent 30%, transparent 70%, rgba(10,15,10,.6) 100%);
+  z-index:1;
+  pointer-events:none;
+}
+@media (prefers-reduced-motion: reduce){
+  .hero-video{display:none}
 }
 .orb{
   display:none;
@@ -906,6 +926,10 @@ body::before{
 
 <!-- ============================ HERO ============================ -->
 <header class="hero" id="top" data-screen-label="01 Hero">
+  <video class="hero-video" autoplay muted loop playsinline preload="metadata" aria-hidden="true">
+    <source src="assets/hero-bg.mp4" type="video/mp4">
+  </video>
+  <div class="hero-video-overlay" aria-hidden="true"></div>
   <div class="hero-grid" aria-hidden="true"></div>
   <div class="orb" aria-hidden="true"></div>
   <div class="orb sm" aria-hidden="true"></div>
