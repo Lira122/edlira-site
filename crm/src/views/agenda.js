@@ -23,12 +23,16 @@ const STATUS_LABEL = Object.fromEntries(STATUS_OPTS.map(o => [o.v, o.l]))
 const STATUS_COR   = Object.fromEntries(STATUS_OPTS.map(o => [o.v, o.cor]))
 
 const DIAS_SEMANA  = ['domingo','segunda','terça','quarta','quinta','sexta','sábado']
+const DIAS_ABREV   = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 const MES_ABREV    = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
+const MES_NOME     = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 
 let _eventos     = []
 let _clientes    = []
 let _filtroStatus = 'pendente'  // pendente (agendado), realizado, cancelado, todos
 let _filtroBusca  = ''
+let _viewMode    = 'lista'      // 'lista' | 'mes'
+let _mesView     = null         // Date apontando pro 1º dia do mês mostrado no calendário
 
 function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -68,6 +72,10 @@ export async function render() {
   }
   _eventos  = ev.data || []
   _clientes = cl.data || []
+  if (!_mesView) {
+    const h = hojeStr().split('-').map(Number)
+    _mesView = new Date(h[0], h[1] - 1, 1)
+  }
   renderPage()
 }
 
@@ -123,23 +131,30 @@ function renderPage() {
     { k: 'todos',     l: 'Todos' },
   ].map(f => `<div class="fc${_filtroStatus === f.k ? ' on' : ''}" data-fil="${f.k}">${f.l}</div>`).join('')
 
+  const corpo = _viewMode === 'mes'
+    ? renderCalendarioMes(lista)
+    : `<div id="ag-lista" style="padding:8px 0 12px">
+         ${secao('Hoje',          buckets.hoje,    'var(--accent)')}
+         ${secao('Amanhã',        buckets.amanha,  'var(--ok)')}
+         ${secao('Próximos dias', buckets.semana,  'var(--text-2)')}
+         ${secao('Mais à frente', buckets.futuro,  'var(--text-3)')}
+         ${secao('Passados',      buckets.passado, 'var(--text-3)', true)}
+         ${lista.length === 0 ? '<div class="empty" style="padding:40px 20px">Nada agendado por aqui. Clique em "+ Novo evento" pra começar.</div>' : ''}
+       </div>`
+
   const c = document.getElementById('content')
   c.innerHTML = `
     <div class="tw">
       <div class="th" style="flex-wrap:wrap;gap:10px">
         <h3>Agenda</h3>
+        <div style="display:flex;gap:6px">
+          <button class="btn ${_viewMode === 'lista' ? 'bp' : 'bg'} bsm" data-view="lista">Lista</button>
+          <button class="btn ${_viewMode === 'mes' ? 'bp' : 'bg'} bsm" data-view="mes">Calendário</button>
+        </div>
         <input class="si" id="ag-search" placeholder="Buscar por título, cliente ou nota..." value="${esc(_filtroBusca)}">
       </div>
       <div class="fr" id="ag-filters">${filtros}</div>
-
-      <div id="ag-lista" style="padding:8px 0 12px">
-        ${secao('Hoje',          buckets.hoje,    'var(--accent)')}
-        ${secao('Amanhã',        buckets.amanha,  'var(--ok)')}
-        ${secao('Próximos dias', buckets.semana,  'var(--text-2)')}
-        ${secao('Mais à frente', buckets.futuro,  'var(--text-3)')}
-        ${secao('Passados',      buckets.passado, 'var(--text-3)', true)}
-        ${lista.length === 0 ? '<div class="empty" style="padding:40px 20px">Nada agendado por aqui. Clique em "+ Novo evento" pra começar.</div>' : ''}
-      </div>
+      ${corpo}
     </div>`
 
   document.getElementById('ag-search').addEventListener('input', e => { _filtroBusca = e.target.value; renderPage() })
@@ -147,9 +162,114 @@ function renderPage() {
     const fil = e.target.closest('.fc')
     if (fil) { _filtroStatus = fil.dataset.fil; renderPage() }
   })
+  c.querySelectorAll('[data-view]').forEach(btn =>
+    btn.addEventListener('click', () => { _viewMode = btn.dataset.view; renderPage() })
+  )
   c.querySelectorAll('.ev-card').forEach(card =>
     card.addEventListener('click', () => abrirEdicao(card.dataset.id))
   )
+  // Calendário: nav + clicks
+  const navPrev  = document.getElementById('cal-prev')
+  const navNext  = document.getElementById('cal-next')
+  const navHoje  = document.getElementById('cal-hoje')
+  if (navPrev) navPrev.addEventListener('click', () => { _mesView = new Date(_mesView.getFullYear(), _mesView.getMonth() - 1, 1); renderPage() })
+  if (navNext) navNext.addEventListener('click', () => { _mesView = new Date(_mesView.getFullYear(), _mesView.getMonth() + 1, 1); renderPage() })
+  if (navHoje) navHoje.addEventListener('click', () => {
+    const h = hojeStr().split('-').map(Number)
+    _mesView = new Date(h[0], h[1] - 1, 1); renderPage()
+  })
+  c.querySelectorAll('.cal-chip').forEach(chip =>
+    chip.addEventListener('click', e => { e.stopPropagation(); abrirEdicao(chip.dataset.id) })
+  )
+  c.querySelectorAll('.cal-cell[data-data]').forEach(cell =>
+    cell.addEventListener('click', () => abrirNovo(cell.dataset.data))
+  )
+}
+
+// ── Calendário (grade do mês) ────────────────────────────────────────────────
+
+function renderCalendarioMes(eventos) {
+  const ano   = _mesView.getFullYear()
+  const mes   = _mesView.getMonth()   // 0-11
+  const hoje  = hojeStr()
+
+  // Agrupa eventos por data (YYYY-MM-DD) — só os do mês visualizado e adjacentes
+  const porData = {}
+  for (const ev of eventos) {
+    const d = String(ev.data || '').slice(0, 10)
+    if (!d) continue
+    if (!porData[d]) porData[d] = []
+    porData[d].push(ev)
+  }
+
+  // 1º dia do mês e quantos dias tem
+  const primeiro = new Date(ano, mes, 1)
+  const ultimoDia = new Date(ano, mes + 1, 0).getDate()
+  // Quantos dias do mês anterior aparecem (Domingo = 0)
+  const padInicio = primeiro.getDay()
+  // Total de células: múltiplo de 7 que cubra padInicio + ultimoDia
+  const totalCelulas = Math.ceil((padInicio + ultimoDia) / 7) * 7
+
+  const celulas = []
+  for (let i = 0; i < totalCelulas; i++) {
+    const offset = i - padInicio
+    const dt = new Date(ano, mes, offset + 1)
+    const dStr = ymd(dt)
+    const inMes = dt.getMonth() === mes
+    const isHoje = dStr === hoje
+    const evs = (porData[dStr] || []).sort((a, b) =>
+      (a.hora_inicio || '99:99').localeCompare(b.hora_inicio || '99:99')
+    )
+
+    const chips = evs.slice(0, 3).map(ev => {
+      const cor = STATUS_COR[ev.status] || 'var(--accent)'
+      const h = formataHora(ev.hora_inicio)
+      const label = (h ? h + ' ' : '') + (ev.titulo || '')
+      return `<div class="cal-chip" data-id="${ev.id}" style="background:${cor}22;color:${cor};border-left:2px solid ${cor};padding:2px 5px;border-radius:3px;font-size:10px;line-height:1.3;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer" title="${esc(ev.titulo)}">${esc(label)}</div>`
+    }).join('')
+    const overflow = evs.length > 3 ? `<div style="font-size:9px;color:var(--text-3);padding:0 5px">+${evs.length - 3} mais</div>` : ''
+
+    celulas.push(`
+      <div class="cal-cell" ${inMes ? `data-data="${dStr}"` : ''} style="
+        background:${isHoje ? 'rgba(193,255,42,.08)' : 'var(--bg-card)'};
+        min-height:96px;padding:5px 5px 4px;cursor:${inMes ? 'pointer' : 'default'};
+        ${isHoje ? 'box-shadow:inset 2px 0 0 var(--accent);' : ''}
+        ${!inMes ? 'opacity:.32;' : ''}
+        display:flex;flex-direction:column;gap:2px;overflow:hidden;
+      ">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:${isHoje ? 'var(--accent)' : 'var(--text-3)'};font-weight:${isHoje ? '700' : '500'};margin-bottom:3px">
+          <span>${dt.getDate()}</span>
+          ${evs.length ? `<span style="font-size:9px;color:var(--text-3)">${evs.length}</span>` : ''}
+        </div>
+        ${chips}${overflow}
+      </div>`)
+  }
+
+  const hdr = DIAS_ABREV.map(d =>
+    `<div style="background:var(--bg-card);padding:8px 5px;font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.1em;text-align:center;font-weight:600">${d}</div>`
+  ).join('')
+
+  return `
+    <div style="padding:14px 18px 6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <h3 style="margin:0;font-size:16px">${MES_NOME[mes]} ${ano}</h3>
+      <div style="display:flex;gap:4px;margin-left:auto">
+        <button class="btn bg bsm" id="cal-hoje">Hoje</button>
+        <button class="btn bg bsm" id="cal-prev" style="padding:4px 10px">‹</button>
+        <button class="btn bg bsm" id="cal-next" style="padding:4px 10px">›</button>
+      </div>
+    </div>
+    <div style="padding:0 14px 16px">
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden">
+        ${hdr}
+        ${celulas.join('')}
+      </div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:8px">Clique numa célula vazia pra criar um evento naquela data, ou num evento pra editar.</div>
+    </div>`
+}
+
+function ymd(dt) {
+  const pad = n => String(n).padStart(2, '0')
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
 }
 
 function secao(titulo, eventos, cor, isPassado = false) {
@@ -236,8 +356,8 @@ function eventoForm(ev = {}) {
     </div>`
 }
 
-function abrirNovo() {
-  openModal('Novo evento', eventoForm(),
+function abrirNovo(dataPreFill) {
+  openModal('Novo evento', eventoForm(dataPreFill ? { data: dataPreFill } : {}),
     `<button class="btn bg" id="ev-cancel">Cancelar</button>
      <button class="btn bp" id="ev-save">Salvar</button>`)
   document.getElementById('ev-cancel').addEventListener('click', closeModal)
