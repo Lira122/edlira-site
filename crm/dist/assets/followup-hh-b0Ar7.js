@@ -1,4 +1,4 @@
-import{s as A,d as h,a as I,t as q,h as v,T as O,o as j,g as E}from"./index-CZXLnLwK.js";const i={f1:"Oi, tudo chegou aí? 😅",f2:"Sei que o dia a dia é corrido. Me diz uma coisa rápida: o maior desafio do seu negócio hoje é captar mais leads ou converter os que já chegam?",f3:"Oi {nome}, passando pra não sumir. Se ainda fizer sentido conversar, ótimo. Se não for o momento certo, sem problema também — é só me falar e a gente retoma quando você quiser. O que você prefere?",reng:"Oi {nome}! Faz um tempo que não conversamos. Tava aqui e lembrei de você. Como tá o negócio? Ainda com os mesmos desafios ou mudou algo?",fim:"Oi {nome}, vou deixar você à vontade por aqui. Se quiser conversar sobre como escalar seu negócio, pode me chamar quando quiser. Abraço! 👋"};function u(e){return e?(Date.now()-new Date(e).getTime())/(1e3*60*60):9999}function T(e){const r=u(e);if(r<1)return`${Math.round(r*60)} min atrás`;if(r<24)return`${Math.round(r)}h atrás`;const c=Math.floor(r/24);return`${c} dia${c>1?"s":""} atrás`}function C(e){return e<1?"var(--ok)":e<24?"var(--warn)":"var(--danger)"}function R(e){return e<.083?{label:"Aguardar 5 min",urgencia:"ok"}:e<1?{label:"Follow-up 1 — enviar",urgencia:"warn"}:e<24?{label:"Follow-up 2 — enviar",urgencia:"warn"}:e<48?{label:"Follow-up 3 — urgente",urgencia:"danger"}:{label:"Reengajar agora",urgencia:"danger"}}async function x(){const e=document.getElementById("content");e.innerHTML='<div class="empty">Carregando...</div>';try{let _=function(t){const a=u(t.atualizado_em),n=t.temperatura;return a<1?i.f1:a<24?i.f2:a<48?i.f3:i.reng},D=function(t){return{quente:{txt:"Feche a reunião agora — está engajado",cor:"#ff6b35"},morno:{txt:"Entregue valor, não pressione",cor:"#F5A623"},frio:{txt:"Follow-up leve, reabra o diálogo",cor:"#4A9EFF"},gelado:{txt:"Reengajamento — mude o ângulo de abordagem",cor:"#64748b"}}[t]||{txt:"Defina a temperatura para ver sugestão",cor:"var(--text-3)"}},L=function(t){const a=u(t.atualizado_em),n=C(a),m=R(a),p=t.whatsapp?t.whatsapp.replace(/\D/g,""):null,b=D(t.temperatura),w=_(t);return`
+import{s as A,d as h,a as I,g as q,t as v,T as O,o as j,f as E}from"./index-my2fy3xs.js";const i={f1:"Oi, tudo chegou aí? 😅",f2:"Sei que o dia a dia é corrido. Me diz uma coisa rápida: o maior desafio do seu negócio hoje é captar mais leads ou converter os que já chegam?",f3:"Oi {nome}, passando pra não sumir. Se ainda fizer sentido conversar, ótimo. Se não for o momento certo, sem problema também — é só me falar e a gente retoma quando você quiser. O que você prefere?",reng:"Oi {nome}! Faz um tempo que não conversamos. Tava aqui e lembrei de você. Como tá o negócio? Ainda com os mesmos desafios ou mudou algo?",fim:"Oi {nome}, vou deixar você à vontade por aqui. Se quiser conversar sobre como escalar seu negócio, pode me chamar quando quiser. Abraço! 👋"};function u(e){return e?(Date.now()-new Date(e).getTime())/(1e3*60*60):9999}function T(e){const r=u(e);if(r<1)return`${Math.round(r*60)} min atrás`;if(r<24)return`${Math.round(r)}h atrás`;const c=Math.floor(r/24);return`${c} dia${c>1?"s":""} atrás`}function C(e){return e<1?"var(--ok)":e<24?"var(--warn)":"var(--danger)"}function R(e){return e<.083?{label:"Aguardar 5 min",urgencia:"ok"}:e<1?{label:"Follow-up 1 — enviar",urgencia:"warn"}:e<24?{label:"Follow-up 2 — enviar",urgencia:"warn"}:e<48?{label:"Follow-up 3 — urgente",urgencia:"danger"}:{label:"Reengajar agora",urgencia:"danger"}}async function x(){const e=document.getElementById("content");e.innerHTML='<div class="empty">Carregando...</div>';try{let _=function(t){const a=u(t.atualizado_em),n=t.temperatura;return a<1?i.f1:a<24?i.f2:a<48?i.f3:i.reng},D=function(t){return{quente:{txt:"Feche a reunião agora — está engajado",cor:"#ff6b35"},morno:{txt:"Entregue valor, não pressione",cor:"#F5A623"},frio:{txt:"Follow-up leve, reabra o diálogo",cor:"#4A9EFF"},gelado:{txt:"Reengajamento — mude o ângulo de abordagem",cor:"#64748b"}}[t]||{txt:"Defina a temperatura para ver sugestão",cor:"var(--text-3)"}},L=function(t){const a=u(t.atualizado_em),n=C(a),m=R(a),p=t.whatsapp?t.whatsapp.replace(/\D/g,""):null,b=D(t.temperatura),w=_(t);return`
         <tr data-id="${t.id}">
           <td>
             <div style="font-weight:500">${t.nome}</div>
@@ -51,7 +51,7 @@ import{s as A,d as h,a as I,t as q,h as v,T as O,o as j,g as E}from"./index-CZXL
                 </tr>`).join("")}
             </tbody>
           </table>
-        </div>`:""};const{data:r,error:c}=await A("clientes",{order:{column:"atualizado_em",ascending:!0}});if(c)throw new Error(c.message);const o=r||[],d=new Date,y=o.filter(t=>t.status==="em_pausa"&&t.pausado_ate&&new Date(t.pausado_ate)<=d);for(const t of y)await h.from("clientes").update({status:"qualificado",pausado_ate:null,temperatura:"frio",atualizado_em:d.toISOString()}).eq("id",t.id),t.status="qualificado",t.temperatura="frio";const s=o.filter(t=>["novo","qualificado","proposta"].includes(t.status)),l=o.filter(t=>t.status==="em_pausa"&&t.pausado_ate&&new Date(t.pausado_ate)>d),g=s.filter(t=>u(t.atualizado_em)>=24),f=s.filter(t=>u(t.atualizado_em)>=1&&u(t.atualizado_em)<24),S=s.filter(t=>u(t.atualizado_em)<1),z=`
+        </div>`:""};const{data:r,error:c}=await A("clientes",{order:{column:"atualizado_em",ascending:!0}});if(c)throw new Error(c.message);const o=r||[],d=new Date,y=o.filter(t=>t.status==="em_pausa"&&t.pausado_ate&&new Date(t.pausado_ate)<=d);for(const t of y)await h.from("clientes").update({status:"qualificado",pausado_ate:null,temperatura:"frio",atualizado_em:d.toISOString()}).eq("id",t.id),t.status="qualificado",t.temperatura="frio";const s=o.filter(t=>["novo","qualificado","proposta"].includes(t.status)),l=o.filter(t=>t.status==="em_pausa"&&t.pausado_ate&&new Date(t.pausado_ate)>d),f=s.filter(t=>u(t.atualizado_em)>=24),g=s.filter(t=>u(t.atualizado_em)>=1&&u(t.atualizado_em)<24),S=s.filter(t=>u(t.atualizado_em)<1),z=`
       <div class="sg" style="grid-template-columns:repeat(4,1fr);margin-bottom:22px">
         <div class="sc">
           <div class="sl">Em negociação</div>
@@ -60,12 +60,12 @@ import{s as A,d as h,a as I,t as q,h as v,T as O,o as j,g as E}from"./index-CZXL
         </div>
         <div class="sc">
           <div class="sl" style="color:var(--danger)">Urgente</div>
-          <div class="sv" style="color:var(--danger)">${g.length}</div>
+          <div class="sv" style="color:var(--danger)">${f.length}</div>
           <div class="ss">Sem resposta +24h</div>
         </div>
         <div class="sc">
           <div class="sl" style="color:var(--warn)">Atenção</div>
-          <div class="sv" style="color:var(--warn)">${f.length}</div>
+          <div class="sv" style="color:var(--warn)">${g.length}</div>
           <div class="ss">Sem resposta 1h–24h</div>
         </div>
         <div class="sc">
@@ -88,8 +88,8 @@ import{s as A,d as h,a as I,t as q,h as v,T as O,o as j,g as E}from"./index-CZXL
         </div>
       </div>`;e.innerHTML=`
       ${z}
-      ${$("🔴 Urgente — follow-up imediato",g,"danger")}
-      ${$("🟡 Atenção — verificar em breve",f,"warn")}
+      ${$("🔴 Urgente — follow-up imediato",f,"danger")}
+      ${$("🟡 Atenção — verificar em breve",g,"warn")}
       ${$("🟢 Em dia",S,"ok")}
       ${k()}
       ${!s.length&&!l.length?'<div class="empty">Nenhum lead em negociação.</div>':""}
@@ -109,4 +109,4 @@ import{s as A,d as h,a as I,t as q,h as v,T as O,o as j,g as E}from"./index-CZXL
       <label class="fl">Motivo / observação</label>
       <textarea class="fta" id="pause-obs" placeholder="Ex: Disse que volta em julho após fechar o trimestre">${(o==null?void 0:o.observacoes)||""}</textarea>
     </div>`,`<button class="btn bg" id="m-cancel">Cancelar</button>
-     <button class="btn bp" id="m-save">Pausar lead</button>`),document.getElementById("m-cancel").addEventListener("click",E),document.getElementById("m-save").addEventListener("click",async()=>{const s=new Date(document.getElementById("pause-date").value).toISOString(),l=document.getElementById("pause-temp").value||(o==null?void 0:o.temperatura),g=document.getElementById("pause-obs").value.trim(),{error:f}=await h.from("clientes").update({status:"em_pausa",pausado_ate:s,temperatura:l,observacoes:g,atualizado_em:new Date().toISOString()}).eq("id",e);if(f){v("Erro.","er");return}v(`${r} pausado — retoma em ${new Date(s).toLocaleDateString("pt-BR")}`),E(),x()})}export{x as render};
+     <button class="btn bp" id="m-save">Pausar lead</button>`),document.getElementById("m-cancel").addEventListener("click",E),document.getElementById("m-save").addEventListener("click",async()=>{const s=new Date(document.getElementById("pause-date").value).toISOString(),l=document.getElementById("pause-temp").value||(o==null?void 0:o.temperatura),f=document.getElementById("pause-obs").value.trim(),{error:g}=await h.from("clientes").update({status:"em_pausa",pausado_ate:s,temperatura:l,observacoes:f,atualizado_em:new Date().toISOString()}).eq("id",e);if(g){v("Erro.","er");return}v(`${r} pausado — retoma em ${new Date(s).toLocaleDateString("pt-BR")}`),E(),x()})}export{x as render};

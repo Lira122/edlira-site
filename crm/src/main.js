@@ -8,6 +8,7 @@ async function loadViews() {
   if (VIEWS) return VIEWS
   const [
     { render: renderDash },
+    { render: renderAgenda },
     { render: renderMeus },
     { render: renderClientes },
     { render: renderProspeccao },
@@ -22,6 +23,7 @@ async function loadViews() {
     { render: renderOnboarding },
   ] = await Promise.all([
     import('./views/dashboard.js'),
+    import('./views/agenda.js'),
     import('./views/meus.js'),
     import('./views/clientes.js'),
     import('./views/prospeccao.js'),
@@ -37,6 +39,7 @@ async function loadViews() {
   ])
   VIEWS = {
     dashboard:    { title: 'Dashboard',    render: renderDash },
+    agenda:       { title: 'Agenda',       render: renderAgenda },
     meus:         { title: 'Meus Clientes', render: renderMeus },
     clientes:     { title: 'Clientes',     render: renderClientes },
     prospeccao:   { title: 'Prospecção',   render: renderProspeccao },
