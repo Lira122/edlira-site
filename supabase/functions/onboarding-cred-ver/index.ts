@@ -13,7 +13,7 @@ const AES_KEY_HEX = Deno.env.get('ONBOARDING_AES_KEY')!
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
+  'Access-Control-Allow-Headers': 'authorization, content-type, apikey, x-client-info, x-supabase-api-version',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
