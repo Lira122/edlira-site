@@ -2,6 +2,20 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 
+// ─── Hardening: app NUNCA pode morrer por erro inesperado ─────────────────
+// Em produção (Hostinger Node Hosting) um uncaughtException mata o processo
+// e a Hostinger nem sempre auto-reinicia. Capturamos e logamos.
+process.on('uncaughtException', (err) => {
+  console.error('[UNCAUGHT EXCEPTION]', err && err.stack || err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[UNHANDLED REJECTION]', reason && reason.stack || reason);
+});
+process.on('SIGTERM', () => {
+  console.log('[SIGTERM] encerrando graceful');
+  process.exit(0);
+});
+
 // Lê env locais (gitignored). Em produção (Hostinger sem esses arquivos) ignora.
 try { require('dotenv').config({ path: path.join(__dirname, 'bot', '.env') }); } catch (_) {}
 
@@ -17,7 +31,13 @@ const ALLOWED_EMAILS = new Set([
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.set('trust proxy', false);
+app.set('trust proxy', true);
+
+// Healthcheck — Hostinger e UptimeRobot batem nele pra saber se app tá vivo.
+// Resposta ínfima e sem dependência (sem fetch, sem fs, sem db).
+app.get('/health', (_req, res) => {
+  res.json({ ok: true, uptime: Math.floor(process.uptime()) });
+});
 
 // Endpoint legacy (localhost) — mantido pra dev rápido. Em produção responde 404.
 app.get('/admin-config.js', (req, res) => {
@@ -96,6 +116,17 @@ app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+// Error middleware do Express — pega exceptions de rota e não derruba o processo.
+app.use((err, _req, res, _next) => {
+  console.error('[EXPRESS ERROR]', err && err.stack || err);
+  if (res.headersSent) return;
+  res.status(500).json({ ok: false, error: 'internal' });
 });
+
+const server = app.listen(PORT, () => {
+  console.log(`[${new Date().toISOString()}] Servidor rodando na porta ${PORT} (node ${process.version})`);
+});
+
+// Keep-alive longo pra não fechar conexões cedo (alguns proxies da Hostinger têm idle).
+server.keepAliveTimeout = 65_000;
+server.headersTimeout   = 70_000;
