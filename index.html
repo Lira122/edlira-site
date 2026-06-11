@@ -140,7 +140,11 @@
     transform: translateY(56px) scale(0.96);
   }
   [data-reveal].is-revealing {
-    animation: eleva-reveal-anim .95s cubic-bezier(.16,.84,.3,1) forwards;
+    animation: eleva-reveal-anim .95s cubic-bezier(.16,.84,.3,1) forwards !important;
+  }
+  /* Garantia extra: data-reveal nunca tem animation matada */
+  [data-reveal], [data-reveal].is-hidden, [data-reveal].is-revealing {
+    animation-fill-mode: forwards;
   }
 
   /* ── Form success: bounce + glow + pulse rings + checkmark draw ────── */
@@ -363,8 +367,10 @@
 
       <!-- Mask sutil pra dar profundidade nas bordas -->
       <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(12,13,10,0.4) 0%,transparent 15%,transparent 80%,rgba(12,13,10,0.6) 100%);z-index:2"></div>
-      <!-- Bloqueia watermark do Spline (zona opaca cobre, fade radial pras bordas) -->
-      <div id="hero-watermark-block" style="position:absolute;bottom:0;right:0;width:260px;height:100px;background:radial-gradient(ellipse 80% 80% at 100% 100%,#0C0D0A 0%,#0C0D0A 38%,rgba(12,13,10,0.7) 55%,rgba(12,13,10,0.25) 75%,transparent 95%);z-index:5;cursor:default;border-bottom-right-radius:24px;-webkit-mask-image:radial-gradient(ellipse 90% 90% at 100% 100%,#000 0%,#000 55%,transparent 95%);mask-image:radial-gradient(ellipse 90% 90% at 100% 100%,#000 0%,#000 55%,transparent 95%)" aria-hidden="true"></div>
+      <!-- Bloco 1: COBERTURA TOTAL do canto da watermark (opaco sólido, sem fade na zona crítica) -->
+      <div style="position:absolute;bottom:0;right:0;width:200px;height:80px;background:#0C0D0A;z-index:100;cursor:default;border-bottom-right-radius:24px" aria-hidden="true"></div>
+      <!-- Bloco 2: fade radial pras bordas pra disfarçar a transição -->
+      <div style="position:absolute;bottom:0;right:0;width:320px;height:130px;background:radial-gradient(ellipse 70% 80% at 100% 100%,#0C0D0A 0%,rgba(12,13,10,0.7) 30%,rgba(12,13,10,0.25) 60%,transparent 90%);z-index:99;pointer-events:none" aria-hidden="true"></div>
     </div>
   </div>
 </header>
