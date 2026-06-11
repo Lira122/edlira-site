@@ -284,7 +284,7 @@
 <!-- ============ HERO ============ -->
 <header id="top" style="position:relative;overflow:hidden;background-image:linear-gradient(rgba(255,255,255,0.022) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.022) 1px,transparent 1px);background-size:72px 72px;background-color:#0A0A0A">
   <!-- Dotted surface (Three.js, malha de pontos onda 3D em verde neon) -->
-  <div id="dotted-surface" data-essential-anim style="position:absolute;inset:0;pointer-events:none;z-index:0;opacity:0;transition:opacity 1.2s ease"></div>
+  <div id="dotted-surface" data-essential-anim style="position:absolute;inset:0;pointer-events:none;z-index:0"></div>
   <!-- Glow radial pra dar foco nas letras — fade gradual e mais sutil -->
   <div style="position:absolute;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 55% 50% at 30% 45%,rgba(10,10,10,0.7),rgba(10,10,10,0.25) 55%,transparent 85%)"></div>
 
@@ -1466,7 +1466,9 @@
       io.observe(container);
     }
 
-    requestAnimationFrame(function() { container.style.opacity = '1'; });
+    /* Garante dimensões antes do primeiro frame + retry se ainda 0 */
+    setTimeout(resize, 50);
+    setTimeout(resize, 300);
     frame();
   })();
 
