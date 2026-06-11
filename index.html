@@ -934,13 +934,13 @@
     }
   })();
 
-  /* ── Reveal on scroll (fail-safe: CSS default = visível) ─ */
+  /* ── Reveal on scroll (essencial — ignora reduced motion, igual ticker/dotted) ─ */
   (function() {
     var els = Array.prototype.slice.call(document.querySelectorAll('[data-reveal]'));
     if (!els.length) return;
 
-    /* Reduced motion ou sem IO: deixa visível direto (CSS default já é visível) */
-    if (reduced || !('IntersectionObserver' in window)) return;
+    /* Sem IO: deixa visível direto (CSS default já é visível) */
+    if (!('IntersectionObserver' in window)) return;
 
     function reveal(el) {
       el.classList.remove('is-hidden');
@@ -1538,11 +1538,10 @@
   })();
 
 
-  /* ── Shader WebGL ──────────────────────────────────────────── */
+  /* ── Shader WebGL (raios da seção "O Sistema") — essencial identidade ── */
   (function() {
     var canvas = document.getElementById('eleva-shader');
     if (!canvas) return;
-    if (reduced) { canvas.style.display = 'none'; return; }
     var gl = canvas.getContext('webgl', { antialias: false, alpha: false });
     if (!gl) { canvas.style.display = 'none'; return; }
     var DPR = Math.min(window.devicePixelRatio || 1, 1.5);
