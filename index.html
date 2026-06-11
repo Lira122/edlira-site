@@ -285,8 +285,8 @@
 <header id="top" style="position:relative;overflow:hidden;background-image:linear-gradient(rgba(255,255,255,0.022) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.022) 1px,transparent 1px);background-size:72px 72px;background-color:#0A0A0A">
   <!-- Dotted surface (Three.js, malha de pontos onda 3D em verde neon) -->
   <div id="dotted-surface" data-essential-anim style="position:absolute;inset:0;pointer-events:none;z-index:0;opacity:0;transition:opacity 1.2s ease"></div>
-  <!-- Glow radial sutil pra dar foco no conteúdo -->
-  <div style="position:absolute;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 60% 50% at 30% 40%,rgba(10,10,10,0.65),transparent 70%)"></div>
+  <!-- Glow radial pra dar foco no conteúdo e suavizar os pontos por cima -->
+  <div style="position:absolute;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 75% 60% at 35% 45%,rgba(10,10,10,0.85),rgba(10,10,10,0.45) 50%,transparent 80%)"></div>
 
   <div class="hero-grid" style="max-width:1240px;margin:0 auto;padding:160px 32px 88px;display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:56px;align-items:center;position:relative;z-index:1">
     <div>
@@ -1390,15 +1390,18 @@
     input.addEventListener('keydown', function(e) { if (e.key === 'Enter') sendMsg(); });
   })();
 
-  /* ── Hero dotted surface (Canvas 2D puro — sem Three.js, sem conflito) ── */
+  /* ── Hero dotted surface (Canvas 2D — versão SUAVE pra mobile) ───── */
   (function() {
     if (reduced) return;
     var container = document.getElementById('dotted-surface');
     if (!container) return;
 
     var isMobile = window.innerWidth < 768;
-    var AMOUNTX = isMobile ? 28 : 50;
-    var AMOUNTY = isMobile ? 20 : 32;
+    /* Versão suave: menos pontos, menores, mais transparentes, velocidade baixa */
+    var AMOUNTX = isMobile ? 20 : 36;
+    var AMOUNTY = isMobile ? 14 : 24;
+    var BASE_ALPHA = isMobile ? 0.10 : 0.16; /* bem mais sutil em mobile */
+    var SPEED = 0.04;
 
     var canvas = document.createElement('canvas');
     canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block';
@@ -1424,39 +1427,36 @@
     var raf = 0;
     var visible = true;
 
-    /* Projeção pseudo-3D: cada ponto (ix, iy) → tela com perspectiva de chão */
     function frame() {
       raf = requestAnimationFrame(frame);
       if (!visible || document.hidden || !W) return;
       ctx.clearRect(0, 0, W, H);
 
       var stepX = W / (AMOUNTX - 1);
-      var horizonY = H * 0.18;       /* horizonte (linha do "fundo") */
-      var groundY  = H * 1.05;       /* chão (linha mais próxima — fora da tela) */
+      var horizonY = H * 0.22;
+      var groundY  = H * 1.05;
 
       for (var iy = AMOUNTY - 1; iy >= 0; iy--) {
-        var depthRatio = iy / (AMOUNTY - 1); /* 0 = frente, 1 = fundo */
-        var persp = 1 - depthRatio * 0.62;   /* ponto distante = menor escala */
+        var depthRatio = iy / (AMOUNTY - 1);
+        var persp = 1 - depthRatio * 0.65;
         var rowY  = horizonY + (groundY - horizonY) * (1 - depthRatio);
-        var rowAlpha = 0.18 + (1 - depthRatio) * 0.55;
-        var dotR = Math.max(0.6, 2.8 * persp);
-        var rowStepX = stepX * (1 - depthRatio * 0.45); /* converge pro centro */
+        var rowAlpha = BASE_ALPHA * (0.4 + (1 - depthRatio) * 0.7);
+        var dotR = Math.max(0.5, (isMobile ? 1.6 : 2.2) * persp);
+        var rowStepX = stepX * (1 - depthRatio * 0.5);
         var startX = W / 2 - rowStepX * (AMOUNTX - 1) / 2;
 
         for (var ix = 0; ix < AMOUNTX; ix++) {
           var x = startX + ix * rowStepX;
-          /* Wave em 2 dimensões (sin/sin) — eixo Y vertical na tela */
-          var wave = Math.sin((ix + count) * 0.28) * 26 * persp
-                   + Math.sin((iy + count) * 0.50) * 26 * persp;
+          var wave = Math.sin((ix + count) * 0.28) * 18 * persp
+                   + Math.sin((iy + count) * 0.46) * 18 * persp;
           var y = rowY + wave;
-
           ctx.beginPath();
           ctx.arc(x, y, dotR, 0, Math.PI * 2);
           ctx.fillStyle = 'rgba(200, 245, 66, ' + rowAlpha + ')';
           ctx.fill();
         }
       }
-      count += 0.06;
+      count += SPEED;
     }
 
     if ('IntersectionObserver' in window) {
