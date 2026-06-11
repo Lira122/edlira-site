@@ -118,19 +118,19 @@
   @keyframes eleva-glow { 0%, 100% { box-shadow: 0 0 18px rgba(200,245,66,.30); } 50% { box-shadow: 0 0 42px rgba(200,245,66,.55); } }
   @keyframes eleva-spin { to { transform: rotate(360deg); } }
 
-  /* ── Reveal animation (animation-play-state — definitivo, não conflita com nada) ── */
+  /* ── Reveal animation (fail-safe: CSS default = visível; JS esconde + revela) ── */
   @keyframes eleva-reveal-anim {
     from { opacity: 0; transform: translateY(56px) scale(0.96); }
     to   { opacity: 1; transform: translateY(0)   scale(1); }
   }
-  [data-reveal] {
+  /* SÓ esconde se o JS adicionou .is-hidden — assim, se JS quebra, tudo visível */
+  [data-reveal].is-hidden {
     opacity: 0;
-    animation: eleva-reveal-anim .95s cubic-bezier(.16,.84,.3,1) forwards;
-    animation-play-state: paused;
+    transform: translateY(56px) scale(0.96);
   }
-  [data-reveal].in { animation-play-state: running; }
-  /* Se JS desabilitado: mostra tudo (fallback no-script) */
-  .no-js [data-reveal] { opacity: 1; animation: none; }
+  [data-reveal].is-revealing {
+    animation: eleva-reveal-anim .95s cubic-bezier(.16,.84,.3,1) forwards;
+  }
 
   /* ── Form success: bounce + glow + pulse rings + checkmark draw ────── */
   @keyframes eleva-bounce-in {
@@ -923,42 +923,42 @@
     }
   })();
 
-  /* ── Reveal on scroll (animation-play-state, simples e robusto) ─ */
+  /* ── Reveal on scroll (fail-safe: CSS default = visível) ─ */
   (function() {
     var els = Array.prototype.slice.call(document.querySelectorAll('[data-reveal]'));
     if (!els.length) return;
 
-    /* Reduced motion ou sem IO: mostra tudo direto */
-    if (reduced || !('IntersectionObserver' in window)) {
-      els.forEach(function(el) { el.classList.add('in'); });
-      return;
+    /* Reduced motion ou sem IO: deixa visível direto (CSS default já é visível) */
+    if (reduced || !('IntersectionObserver' in window)) return;
+
+    function reveal(el) {
+      el.classList.remove('is-hidden');
+      el.classList.add('is-revealing');
     }
 
     var io = new IntersectionObserver(function(entries) {
       entries.forEach(function(en) {
         if (en.isIntersecting) {
-          en.target.classList.add('in');
+          reveal(en.target);
           io.unobserve(en.target);
         }
       });
     }, { threshold: 0.05, rootMargin: '0px 0px 80px 0px' });
 
     els.forEach(function(el) {
-      /* Stagger via animation-delay */
+      var r = el.getBoundingClientRect();
+      /* Já visível na 1ª renderização: deixa visível direto, sem esconder/animar */
+      if (r.top < window.innerHeight && r.bottom > 0) return;
+
+      /* Esconde + observa */
+      el.classList.add('is-hidden');
       var d = parseInt(el.getAttribute('data-reveal') || '0', 10);
       if (d > 0) el.style.animationDelay = d + 'ms';
-
-      var r = el.getBoundingClientRect();
-      /* Já visível na 1ª renderização: dispara imediatamente */
-      if (r.top < window.innerHeight && r.bottom > 0) {
-        el.classList.add('in');
-        return;
-      }
       io.observe(el);
 
-      /* Fallback 4s */
+      /* Fallback 4s: se algum erro impedir o observer, força mostrar */
       setTimeout(function() {
-        if (!el.classList.contains('in')) el.classList.add('in');
+        if (el.classList.contains('is-hidden')) reveal(el);
       }, 4000);
     });
   })();
