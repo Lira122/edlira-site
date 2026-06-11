@@ -166,9 +166,10 @@
   .success-ring    { position: absolute; top: 50%; left: 50%; width: 100px; height: 100px; border-radius: 50%; border: 2px solid #C8F542; animation: eleva-ring .9s ease-out forwards; pointer-events: none; }
   .success-check   { stroke-dasharray: 30; stroke-dashoffset: 30; animation: eleva-check-draw .45s ease-out .25s forwards; }
 
-  /* Reduced motion: mata animações decorativas, MAS preserva essenciais ([data-essential-anim]) */
+  /* Reduced motion: mata animações decorativas, MAS preserva essenciais
+     ([data-essential-anim] = ticker | [data-reveal] = cards entrada | canvas/spline-viewer = identidade) */
   @media (prefers-reduced-motion: reduce) {
-    *:not([data-essential-anim]):not([data-essential-anim] *), *::before, *::after {
+    *:not([data-essential-anim]):not([data-essential-anim] *):not([data-reveal]):not(canvas):not(spline-viewer), *::before, *::after {
       animation: none !important;
       transition: none !important;
     }
