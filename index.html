@@ -78,6 +78,9 @@
 <!-- Spline viewer (runtime web — não precisa de React) -->
 <script type="module" src="https://unpkg.com/@splinetool/viewer@1.10.71/build/spline-viewer.js"></script>
 
+<!-- Three.js (UMD) pro dotted surface da hero -->
+<script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+
 <style>
   html {
     scroll-behavior: smooth;
@@ -137,6 +140,49 @@
   .btn-primary-lg { padding: 17px 30px; font-size: 16px; animation: eleva-glow 3.2s ease-in-out infinite; }
   .btn-ghost { display: inline-flex; align-items: center; gap: 10px; background: transparent; color: #F2F2EC; font-weight: 600; font-size: 16px; padding: 16px 28px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.18); text-decoration: none; transition: border-color .2s, background .2s; }
   .btn-ghost:hover { border-color: #C8F542; background: rgba(200,245,66,0.06); }
+
+  /* ── Botão neon (gradient line top/bottom no hover) ─────────────── */
+  .btn-neon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: rgba(200,245,66,0.04);
+    color: #F2F2EC;
+    border: 1px solid rgba(200,245,66,0.22);
+    border-radius: 999px;
+    padding: 14px 28px;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 15px;
+    text-decoration: none;
+    cursor: pointer;
+    overflow: visible;
+    transition: background .25s ease, border-color .25s ease, color .25s ease;
+  }
+  .btn-neon::before, .btn-neon::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    height: 1px;
+    width: 75%;
+    margin: 0 auto;
+    background: linear-gradient(90deg, transparent, #C8F542, transparent);
+    opacity: 0;
+    transition: opacity .5s ease-in-out;
+  }
+  .btn-neon::before { top: 0; }
+  .btn-neon::after  { bottom: -1px; }
+  .btn-neon:hover {
+    background: rgba(200,245,66,0.10);
+    border-color: rgba(200,245,66,0.45);
+    color: #C8F542;
+  }
+  .btn-neon:hover::before { opacity: 1; }
+  .btn-neon:hover::after  { opacity: 0.35; }
+  .btn-neon.btn-neon-sm { padding: 8px 18px; font-size: 13px; }
+  .btn-neon.btn-neon-lg { padding: 18px 36px; font-size: 17px; }
   .card-hover { transition: border-color .25s, box-shadow .25s; }
   .card-hover:hover { border-color: rgba(200,245,66,0.45); box-shadow: 0 18px 50px rgba(0,0,0,0.45); }
   .card-soft:hover { border-color: rgba(200,245,66,0.4); }
@@ -182,8 +228,13 @@
 </nav>
 
 <!-- ============ HERO ============ -->
-<header id="top" style="position:relative;overflow:hidden;background-image:linear-gradient(rgba(255,255,255,0.022) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.022) 1px,transparent 1px);background-size:72px 72px">
-  <div style="max-width:1240px;margin:0 auto;padding:160px 32px 88px;display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:56px;align-items:center">
+<header id="top" style="position:relative;overflow:hidden;background-image:linear-gradient(rgba(255,255,255,0.022) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.022) 1px,transparent 1px);background-size:72px 72px;background-color:#0A0A0A">
+  <!-- Dotted surface (Three.js, malha de pontos onda 3D em verde neon) -->
+  <div id="dotted-surface" data-essential-anim style="position:absolute;inset:0;pointer-events:none;z-index:0;opacity:0;transition:opacity 1.2s ease"></div>
+  <!-- Glow radial sutil pra dar foco no conteúdo -->
+  <div style="position:absolute;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 60% 50% at 30% 40%,rgba(10,10,10,0.65),transparent 70%)"></div>
+
+  <div style="max-width:1240px;margin:0 auto;padding:160px 32px 88px;display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:56px;align-items:center;position:relative;z-index:1">
     <div>
       <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);border-radius:999px;padding:8px 16px;margin-bottom:32px">
         <span style="position:relative;width:8px;height:8px;display:inline-block">
@@ -196,7 +247,7 @@
       <p style="margin:0 0 40px;font-size:18px;line-height:1.65;color:#9A9B92;max-width:520px;text-wrap:pretty">Você não precisa de mais um post bonito. Precisa de um motor de aquisição que atrai, qualifica e converte — no automático.</p>
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:64px">
         <a data-magnetic href="#contato" class="btn-primary btn-primary-lg">Quero meu diagnóstico gratuito <span>→</span></a>
-        <a href="#servicos" class="btn-ghost">Ver como funciona</a>
+        <a href="#servicos" class="btn-neon btn-neon-lg">Ver como funciona</a>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid rgba(255,255,255,0.08)">
         <div style="padding:24px 24px 0 0">
@@ -805,35 +856,51 @@
     }
   })();
 
-  /* ── Reveal on scroll (animação cinemática: slide + scale + blur) ─ */
+  /* ── Reveal on scroll (animação cinemática: slide + scale) ─ */
   (function() {
     if (reduced) return;
+    if (!('IntersectionObserver' in window)) return; /* sem IO, deixa visível */
+
     var els = Array.prototype.slice.call(document.querySelectorAll('[data-reveal]'));
+    if (!els.length) return;
+
+    /* Curve expressiva: lenta no início, acelera, termina suave */
+    var curve = 'cubic-bezier(.16,.84,.3,1)';
+
+    function show(el) {
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0) scale(1)';
+    }
+
     var io = new IntersectionObserver(function(entries) {
       entries.forEach(function(en) {
         if (en.isIntersecting) {
-          en.target.style.opacity = '1';
-          en.target.style.transform = 'translateY(0) scale(1)';
-          en.target.style.filter = 'blur(0)';
+          show(en.target);
           io.unobserve(en.target);
         }
       });
-    }, { threshold: 0.12, rootMargin: '0px 0px -80px 0px' });
+    }, { threshold: 0.05, rootMargin: '0px 0px 80px 0px' }); /* dispara cedo */
+
     els.forEach(function(el) {
       var r = el.getBoundingClientRect();
-      if (r.top < window.innerHeight * 0.92) return;
+      /* Se já está na viewport quando a página carrega, deixa visível direto */
+      if (r.top < window.innerHeight * 0.95 && r.bottom > 0) {
+        show(el);
+        return;
+      }
       var d = el.getAttribute('data-reveal') || '0';
       el.style.opacity = '0';
-      el.style.transform = 'translateY(58px) scale(0.96)';
-      el.style.filter = 'blur(6px)';
-      el.style.willChange = 'opacity, transform, filter';
-      /* Curve expressiva: vai lento no início, acelera, e termina suave */
-      var curve = 'cubic-bezier(.16,.84,.3,1)';
+      el.style.transform = 'translateY(48px) scale(0.97)';
       el.style.transition =
-        'opacity .95s ' + curve + ' ' + d + 'ms, ' +
-        'transform .95s ' + curve + ' ' + d + 'ms, ' +
-        'filter .8s ' + curve + ' ' + d + 'ms';
+        'opacity .85s ' + curve + ' ' + d + 'ms, ' +
+        'transform .85s ' + curve + ' ' + d + 'ms';
       io.observe(el);
+
+      /* Fallback: se 5s depois o elemento ainda está oculto (bug de IO ou tab muda), força mostrar */
+      setTimeout(function() {
+        var cs = getComputedStyle(el);
+        if (parseFloat(cs.opacity) < 0.9) show(el);
+      }, 5000);
     });
   })();
 
@@ -1183,6 +1250,107 @@
     }
     send.addEventListener('click', sendMsg);
     input.addEventListener('keydown', function(e) { if (e.key === 'Enter') sendMsg(); });
+  })();
+
+  /* ── Hero dotted surface (Three.js — malha de pontos onda 3D) ── */
+  (function() {
+    if (reduced) return;
+    if (typeof THREE === 'undefined') return;
+    var container = document.getElementById('dotted-surface');
+    if (!container) return;
+
+    var isMobile = window.innerWidth < 768;
+    var SEPARATION = 150;
+    var AMOUNTX = isMobile ? 22 : 40;
+    var AMOUNTY = isMobile ? 28 : 50;
+
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(
+      60,
+      Math.max(1, container.clientWidth) / Math.max(1, container.clientHeight),
+      1, 10000
+    );
+    camera.position.set(0, 355, 1220);
+
+    var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: !isMobile });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2));
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setClearColor(0x000000, 0);
+    container.appendChild(renderer.domElement);
+
+    var geometry = new THREE.BufferGeometry();
+    var positions = [];
+    var colors = [];
+    for (var ix = 0; ix < AMOUNTX; ix++) {
+      for (var iy = 0; iy < AMOUNTY; iy++) {
+        positions.push(
+          ix * SEPARATION - (AMOUNTX * SEPARATION) / 2,
+          0,
+          iy * SEPARATION - (AMOUNTY * SEPARATION) / 2
+        );
+        /* Verde neon #C8F542 (200,245,66) com leve variação por linha */
+        var depth = iy / AMOUNTY;
+        colors.push(0.78, 0.96, 0.26 * (1 - depth * 0.4));
+      }
+    }
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+    var material = new THREE.PointsMaterial({
+      size: 6,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.55,
+      sizeAttenuation: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+
+    var points = new THREE.Points(geometry, material);
+    scene.add(points);
+
+    var count = 0;
+    var raf = 0;
+    var visible = true;
+    var posArr = geometry.attributes.position.array;
+
+    function animate() {
+      raf = requestAnimationFrame(animate);
+      if (!visible || document.hidden) return;
+      var i = 0;
+      for (var ix = 0; ix < AMOUNTX; ix++) {
+        for (var iy = 0; iy < AMOUNTY; iy++) {
+          posArr[i * 3 + 1] =
+            Math.sin((ix + count) * 0.3) * 50 +
+            Math.sin((iy + count) * 0.5) * 50;
+          i++;
+        }
+      }
+      geometry.attributes.position.needsUpdate = true;
+      renderer.render(scene, camera);
+      count += 0.1;
+    }
+
+    function onResize() {
+      var w = container.clientWidth, h = container.clientHeight;
+      if (!w || !h) return;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }
+    window.addEventListener('resize', onResize);
+
+    /* Pausa quando hero sai do viewport (economia de bateria) */
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function(es) { visible = es[0].isIntersecting; }, { threshold: 0 });
+      io.observe(container);
+    }
+
+    /* Fade in suave depois que init completou */
+    requestAnimationFrame(function() {
+      container.style.opacity = '1';
+    });
+    animate();
   })();
 
   /* ── Hero 3D: spotlight que segue o mouse + esconder loading ── */
