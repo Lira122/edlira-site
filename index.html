@@ -121,6 +121,14 @@
   @keyframes eleva-glow { 0%, 100% { box-shadow: 0 0 18px rgba(200,245,66,.30); } 50% { box-shadow: 0 0 42px rgba(200,245,66,.55); } }
   @keyframes eleva-spin { to { transform: rotate(360deg); } }
 
+  /* ── Reveal animation (keyframes — mais robusto que inline transition) ── */
+  @keyframes eleva-reveal {
+    from { opacity: 0; transform: translateY(48px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  [data-reveal].reveal-pending { opacity: 0; transform: translateY(48px) scale(0.97); }
+  [data-reveal].reveal-show    { animation: eleva-reveal .85s cubic-bezier(.16,.84,.3,1) forwards; }
+
   /* Reduced motion: mata animações decorativas, MAS preserva essenciais ([data-essential-anim]) */
   @media (prefers-reduced-motion: reduce) {
     *:not([data-essential-anim]):not([data-essential-anim] *), *::before, *::after {
@@ -856,20 +864,17 @@
     }
   })();
 
-  /* ── Reveal on scroll (animação cinemática: slide + scale) ─ */
+  /* ── Reveal on scroll (CSS keyframes — não conflita com tilt/hover transform) ── */
   (function() {
     if (reduced) return;
-    if (!('IntersectionObserver' in window)) return; /* sem IO, deixa visível */
+    if (!('IntersectionObserver' in window)) return;
 
     var els = Array.prototype.slice.call(document.querySelectorAll('[data-reveal]'));
     if (!els.length) return;
 
-    /* Curve expressiva: lenta no início, acelera, termina suave */
-    var curve = 'cubic-bezier(.16,.84,.3,1)';
-
     function show(el) {
-      el.style.opacity = '1';
-      el.style.transform = 'translateY(0) scale(1)';
+      el.classList.remove('reveal-pending');
+      el.classList.add('reveal-show');
     }
 
     var io = new IntersectionObserver(function(entries) {
@@ -879,27 +884,25 @@
           io.unobserve(en.target);
         }
       });
-    }, { threshold: 0.05, rootMargin: '0px 0px 80px 0px' }); /* dispara cedo */
+    }, { threshold: 0.05, rootMargin: '0px 0px 100px 0px' });
 
     els.forEach(function(el) {
       var r = el.getBoundingClientRect();
-      /* Se já está na viewport quando a página carrega, deixa visível direto */
+      /* Já visível ao carregar a página: mostra direto, sem animar */
       if (r.top < window.innerHeight * 0.95 && r.bottom > 0) {
-        show(el);
         return;
       }
-      var d = el.getAttribute('data-reveal') || '0';
-      el.style.opacity = '0';
-      el.style.transform = 'translateY(48px) scale(0.97)';
-      el.style.transition =
-        'opacity .85s ' + curve + ' ' + d + 'ms, ' +
-        'transform .85s ' + curve + ' ' + d + 'ms';
+      /* Esconde inicialmente via classe (não via inline transform que conflita com tilt) */
+      el.classList.add('reveal-pending');
+      var d = parseInt(el.getAttribute('data-reveal') || '0', 10);
+      if (d > 0) el.style.animationDelay = d + 'ms';
       io.observe(el);
 
-      /* Fallback: se 5s depois o elemento ainda está oculto (bug de IO ou tab muda), força mostrar */
+      /* Fallback de 5s — força mostrar se o IO não disparar */
       setTimeout(function() {
-        var cs = getComputedStyle(el);
-        if (parseFloat(cs.opacity) < 0.9) show(el);
+        if (el.classList.contains('reveal-pending') && !el.classList.contains('reveal-show')) {
+          show(el);
+        }
       }, 5000);
     });
   })();
