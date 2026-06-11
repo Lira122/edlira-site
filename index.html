@@ -1402,10 +1402,13 @@
   })();
 
   /* ── Hero dotted surface (Canvas 2D — versão SUAVE pra mobile) ───── */
+  console.warn('[dotted] script reached IIFE');
   (function() {
-    if (reduced) return;
+    console.warn('[dotted] iife started, reduced=', reduced);
+    if (reduced) { console.warn('[dotted] STOP: reduced motion'); return; }
     var container = document.getElementById('dotted-surface');
-    if (!container) return;
+    console.warn('[dotted] container=', container);
+    if (!container) { console.warn('[dotted] STOP: no container'); return; }
 
     var isMobile = window.innerWidth < 768;
     /* Versão suave: menos pontos, menores, mais transparentes, velocidade baixa */
