@@ -296,8 +296,8 @@
 <header id="top" style="position:relative;overflow:hidden;background-image:linear-gradient(rgba(255,255,255,0.022) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.022) 1px,transparent 1px);background-size:72px 72px;background-color:#0A0A0A">
   <!-- Dotted surface (Three.js, malha de pontos onda 3D em verde neon) -->
   <div id="dotted-surface" data-essential-anim style="position:absolute;inset:0;pointer-events:none;z-index:0"></div>
-  <!-- Glow radial só atrás das letras (lado esquerdo) — bem sutil, deixa pontos respirarem -->
-  <div style="position:absolute;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 40% 45% at 28% 50%,rgba(10,10,10,0.55),rgba(10,10,10,0.15) 60%,transparent 90%)"></div>
+  <!-- Glow radial MUITO leve — só pra não destacar pontos atrás do texto -->
+  <div style="position:absolute;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 35% 40% at 25% 50%,rgba(10,10,10,0.35),transparent 70%)"></div>
 
   <div class="hero-grid" style="max-width:1240px;margin:0 auto;padding:160px 32px 88px;display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:56px;align-items:center;position:relative;z-index:1">
     <div>
@@ -1411,7 +1411,8 @@
     /* Versão suave: menos pontos, menores, mais transparentes, velocidade baixa */
     var AMOUNTX = isMobile ? 20 : 36;
     var AMOUNTY = isMobile ? 14 : 24;
-    var BASE_ALPHA = isMobile ? 0.18 : 0.40; /* desktop precisa mais opacity pq tela maior */
+    /* Desktop tem o robo + texto cobrindo muita area, entao pontos precisam ser BEM visiveis nas margens */
+    var BASE_ALPHA = isMobile ? 0.22 : 0.55;
     var SPEED = 0.04;
 
     var canvas = document.createElement('canvas');
@@ -1470,7 +1471,7 @@
         var persp = 1 - depthRatio * 0.65;
         var rowY  = horizonY + (groundY - horizonY) * (1 - depthRatio);
         var rowAlpha = BASE_ALPHA * (0.4 + (1 - depthRatio) * 0.7);
-        var dotR = Math.max(0.5, (isMobile ? 1.6 : 2.2) * persp);
+        var dotR = Math.max(0.7, (isMobile ? 1.8 : 3.2) * persp);
         var rowStepX = stepX * (1 - depthRatio * 0.5);
         var startX = W / 2 - rowStepX * (AMOUNTX - 1) / 2;
 
@@ -1494,6 +1495,9 @@
       }, { threshold: 0 });
       io.observe(container);
     }
+
+    /* DEBUG log temporário pra confirmar que init aconteceu */
+    try { console.log('[dotted] init', { W: W, H: H, AMOUNTX: AMOUNTX, AMOUNTY: AMOUNTY, mobile: isMobile }); } catch(_) {}
 
     /* Garante dimensões antes do primeiro frame + múltiplos retries */
     setTimeout(resize, 50);
