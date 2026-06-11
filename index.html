@@ -1412,8 +1412,8 @@
     var AMOUNTY = isMobile ? 14 : 24;
     /* Desktop tem o robo + texto cobrindo muita area, entao pontos precisam ser BEM visiveis nas margens */
     var BASE_ALPHA = isMobile ? 0.22 : 0.55;
-    /* Reduced motion: ainda anima mas bem devagar (movimento sutil, não desliga) */
-    var SPEED = reduced ? 0.008 : 0.04;
+    /* Identidade visual essencial — anima na velocidade normal mesmo com reduced motion */
+    var SPEED = 0.04;
 
     var canvas = document.createElement('canvas');
     canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block';
