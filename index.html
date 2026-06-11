@@ -75,6 +75,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+<!-- Spline viewer (runtime web — não precisa de React) -->
+<script type="module" src="https://unpkg.com/@splinetool/viewer@1.10.71/build/spline-viewer.js"></script>
+
 <style>
   html { scroll-behavior: smooth; }
   body {
@@ -98,7 +101,18 @@
   @keyframes eleva-ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
   @keyframes eleva-ping { 0% { transform: scale(1); opacity: .7; } 70%, 100% { transform: scale(2.8); opacity: 0; } }
   @keyframes eleva-glow { 0%, 100% { box-shadow: 0 0 18px rgba(200,245,66,.30); } 50% { box-shadow: 0 0 42px rgba(200,245,66,.55); } }
-  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } html { scroll-behavior: auto; } }
+  @keyframes eleva-spin { to { transform: rotate(360deg); } }
+
+  /* Reduced motion: mata animações decorativas, MAS preserva essenciais ([data-essential-anim]) */
+  @media (prefers-reduced-motion: reduce) {
+    *:not([data-essential-anim]):not([data-essential-anim] *), *::before, *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+    html { scroll-behavior: auto; }
+    /* Ticker fica mais lento em vez de parar (essencial pra identidade visual) */
+    #ticker-track { animation-duration: 60s !important; }
+  }
 
   /* Hover utilities (substituem style-hover do design) */
   .nav-link { color: #B9BAB1; text-decoration: none; font-size: 15px; font-weight: 500; transition: color .2s; }
@@ -184,15 +198,39 @@
         </div>
       </div>
     </div>
-    <div id="eleva-map-wrap" style="position:relative;height:clamp(440px,44vw,580px);border:1px solid rgba(255,255,255,0.08);border-radius:24px;overflow:hidden;background:radial-gradient(ellipse 80% 60% at 50% 40%,rgba(200,245,66,0.05),transparent 70%),#0C0D0A">
-      <canvas id="eleva-map" style="position:absolute;inset:0;display:block"></canvas>
-      <div style="position:absolute;top:16px;right:16px;display:inline-flex;align-items:center;gap:8px;background:rgba(10,10,10,0.65);border:1px solid rgba(255,255,255,0.10);border-radius:999px;padding:6px 13px;backdrop-filter:blur(8px)">
+    <div id="hero-3d-wrap" style="position:relative;height:clamp(440px,44vw,580px);border:1px solid rgba(255,255,255,0.08);border-radius:24px;overflow:hidden;background:radial-gradient(ellipse 80% 60% at 50% 40%,rgba(200,245,66,0.08),transparent 70%),#0C0D0A">
+      <!-- Spotlight (segue o mouse) -->
+      <div id="hero-spotlight" style="position:absolute;pointer-events:none;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle at center,rgba(200,245,66,0.18),transparent 70%);filter:blur(16px);opacity:0;transition:opacity .3s;left:-9999px;top:-9999px;z-index:1"></div>
+
+      <!-- Spline 3D viewer -->
+      <spline-viewer
+        id="hero-spline"
+        url="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"
+        loading-anim-type="spinner-small-light"
+        events-target="global"
+        style="position:absolute;inset:0;width:100%;height:100%;display:block"
+      ></spline-viewer>
+
+      <!-- Loading fallback (some quando Spline carrega) -->
+      <div id="hero-3d-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#0C0D0A;z-index:2;transition:opacity .6s">
+        <div style="text-align:center">
+          <div style="display:inline-block;width:36px;height:36px;border:2.5px solid rgba(200,245,66,0.18);border-top-color:#C8F542;border-radius:50%;animation:eleva-spin 0.9s linear infinite;margin-bottom:14px"></div>
+          <div style="font-size:12px;color:#8E8F86;letter-spacing:0.1em;text-transform:uppercase">Carregando IA</div>
+        </div>
+      </div>
+
+      <!-- Badge "Operando agora" -->
+      <div style="position:absolute;top:16px;right:16px;display:inline-flex;align-items:center;gap:8px;background:rgba(10,10,10,0.65);border:1px solid rgba(255,255,255,0.10);border-radius:999px;padding:6px 13px;backdrop-filter:blur(8px);z-index:3">
         <span style="position:relative;width:7px;height:7px;display:inline-block">
           <span style="position:absolute;inset:0;border-radius:50%;background:#C8F542;animation:eleva-ping 2.2s cubic-bezier(0,0,.2,1) infinite"></span>
           <span style="position:absolute;inset:0;border-radius:50%;background:#C8F542"></span>
         </span>
-        <span style="font-size:11.5px;color:#C9CABF;font-weight:500">Operando agora</span>
+        <span style="font-size:11.5px;color:#C9CABF;font-weight:500">Sofia · IA ao vivo</span>
       </div>
+
+      <!-- Mask sutil pra dar profundidade nas bordas + esconder watermark Spline canto inferior direito -->
+      <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(12,13,10,0.4) 0%,transparent 15%,transparent 80%,rgba(12,13,10,0.6) 100%);z-index:2"></div>
+      <div style="position:absolute;bottom:0;right:0;width:160px;height:48px;background:#0C0D0A;z-index:4"></div>
     </div>
   </div>
 </header>
@@ -201,7 +239,7 @@
 <section style="border-top:1px solid rgba(255,255,255,0.07);border-bottom:1px solid rgba(255,255,255,0.07);padding:30px 0;background:#0B0C09">
   <div style="text-align:center;font-size:11.5px;letter-spacing:0.22em;color:#6F7068;text-transform:uppercase;font-weight:500;margin-bottom:22px">Plataformas que dominamos</div>
   <div id="ticker-wrap" style="position:relative;overflow:hidden">
-    <div id="ticker-track" style="display:inline-flex;align-items:center;gap:0;white-space:nowrap;width:max-content;will-change:transform">
+    <div id="ticker-track" data-essential-anim style="display:inline-flex;align-items:center;gap:0;white-space:nowrap;width:max-content;will-change:transform;animation:eleva-ticker 32s linear infinite">
       <!-- 2 cópias do conteúdo pra fazer loop -->
     </div>
     <div style="position:absolute;inset:0 auto 0 0;width:120px;background:linear-gradient(90deg,#0B0C09,transparent);pointer-events:none"></div>
@@ -344,7 +382,7 @@
         </div>
         <a href="#contato" class="link-arrow">Quero criativos novos <span>→</span></a>
       </div>
-      <div data-tilt data-reveal="120" class="card-hover" style="grid-column:1 / -1;position:relative;background:linear-gradient(135deg,rgba(200,245,66,0.06),transparent 45%),#101110;border:1px solid rgba(200,245,66,0.22);border-radius:22px;padding:38px;will-change:transform">
+      <div data-tilt data-reveal="280" class="card-hover" style="grid-column:1 / -1;position:relative;background:linear-gradient(135deg,rgba(200,245,66,0.06),transparent 45%),#101110;border:1px solid rgba(200,245,66,0.22);border-radius:22px;padding:38px;will-change:transform">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:36px;align-items:start">
           <div>
             <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:22px">
@@ -742,7 +780,7 @@
       html += '</span>';
     }
     track.innerHTML = html;
-    if (!reduced) track.style.animation = 'eleva-ticker 32s linear infinite';
+    /* animação fica no CSS inline do track (eleva-ticker 32s) — não dependemos de JS pra ligar */
     var wrap = document.getElementById('ticker-wrap');
     if (wrap) {
       wrap.addEventListener('mouseenter', function() { track.style.animationPlayState = 'paused'; });
@@ -750,7 +788,7 @@
     }
   })();
 
-  /* ── Reveal on scroll ──────────────────────────────────────── */
+  /* ── Reveal on scroll (animação cinemática: slide + scale + blur) ─ */
   (function() {
     if (reduced) return;
     var els = Array.prototype.slice.call(document.querySelectorAll('[data-reveal]'));
@@ -758,18 +796,26 @@
       entries.forEach(function(en) {
         if (en.isIntersecting) {
           en.target.style.opacity = '1';
-          en.target.style.transform = 'none';
+          en.target.style.transform = 'translateY(0) scale(1)';
+          en.target.style.filter = 'blur(0)';
           io.unobserve(en.target);
         }
       });
-    }, { threshold: 0.12 });
+    }, { threshold: 0.12, rootMargin: '0px 0px -80px 0px' });
     els.forEach(function(el) {
       var r = el.getBoundingClientRect();
       if (r.top < window.innerHeight * 0.92) return;
       var d = el.getAttribute('data-reveal') || '0';
       el.style.opacity = '0';
-      el.style.transform = 'translateY(26px)';
-      el.style.transition = 'opacity .7s cubic-bezier(.2,.7,.2,1) ' + d + 'ms, transform .7s cubic-bezier(.2,.7,.2,1) ' + d + 'ms';
+      el.style.transform = 'translateY(58px) scale(0.96)';
+      el.style.filter = 'blur(6px)';
+      el.style.willChange = 'opacity, transform, filter';
+      /* Curve expressiva: vai lento no início, acelera, e termina suave */
+      var curve = 'cubic-bezier(.16,.84,.3,1)';
+      el.style.transition =
+        'opacity .95s ' + curve + ' ' + d + 'ms, ' +
+        'transform .95s ' + curve + ' ' + d + 'ms, ' +
+        'filter .8s ' + curve + ' ' + d + 'ms';
       io.observe(el);
     });
   })();
@@ -1122,185 +1168,39 @@
     input.addEventListener('keydown', function(e) { if (e.key === 'Enter') sendMsg(); });
   })();
 
-  /* ── Mapa de rotas (Canvas) ────────────────────────────────── */
+  /* ── Hero 3D: spotlight que segue o mouse + esconder loading ── */
   (function() {
-    var canvas = document.getElementById('eleva-map');
-    var wrap = document.getElementById('eleva-map-wrap');
-    if (!canvas || !wrap || !canvas.getContext) return;
-    var DPR = Math.min(window.devicePixelRatio || 1, 1.5);
-    var CROP = { x0: -112, x1: 24, y0: -58, y1: 63 };
-    var CITIES = [
-      { n: 'São Paulo', lng: -46.63, lat: -23.55, hub: true, dx: 10, dy: 14 },
-      { n: 'Lisboa', lng: -9.14, lat: 38.72, dx: 10, dy: -8 },
-      { n: 'Miami', lng: -80.19, lat: 25.76, dx: -52, dy: -8 },
-      { n: 'Buenos Aires', lng: -58.38, lat: -34.6, dx: -96, dy: 6 },
-      { n: 'Interior SP', lng: -50.6, lat: -20.6, dx: -80, dy: -8 }
-    ];
-    var ROUTES = [
-      { a: 0, b: 1, off: 0.00 },
-      { a: 0, b: 2, off: 0.34 },
-      { a: 0, b: 3, off: 0.61 },
-      { a: 0, b: 4, off: 0.82 }
-    ];
-    var POLYS = [
-      [[-168,66],[-155,71],[-140,70],[-128,71],[-115,73],[-100,73],[-90,70],[-82,67],[-75,62],[-58,52],[-55,47],[-67,44],[-70,42],[-75,38],[-76,34],[-80,31],[-81,26],[-84,29],[-89,29],[-94,28],[-97,26],[-97,22],[-95,18],[-92,15],[-88,15],[-85,11],[-83,9],[-79,8],[-81,8],[-85,13],[-94,16],[-105,20],[-110,23],[-114,30],[-120,34],[-124,40],[-124,46],[-128,51],[-132,55],[-140,59],[-150,60],[-158,57],[-165,60]],
-      [[-45,60],[-40,65],[-30,68],[-22,70],[-20,76],[-30,82],[-45,82],[-55,80],[-60,76],[-68,76],[-58,72],[-52,65],[-48,61]],
-      [[-78,1],[-75,5],[-70,8],[-62,10],[-60,9],[-52,5],[-50,0],[-44,-3],[-37,-5],[-35,-8],[-39,-13],[-39,-18],[-41,-22],[-48,-25],[-48,-28],[-53,-34],[-58,-34],[-58,-39],[-65,-41],[-65,-47],[-68,-50],[-69,-52],[-71,-54],[-73,-50],[-73,-45],[-73,-37],[-71,-30],[-70,-18],[-75,-15],[-77,-10],[-81,-5],[-80,0]],
-      [[-17,15],[-17,21],[-10,31],[-6,35],[0,37],[10,37],[20,32],[32,31],[34,27],[37,21],[40,15],[43,11],[48,11],[51,12],[51,7],[46,2],[42,-2],[40,-10],[36,-18],[33,-26],[27,-34],[20,-35],[17,-30],[12,-18],[13,-12],[9,-2],[9,4],[4,6],[-5,5],[-8,4],[-13,8]],
-      [[-9,37],[-9,43],[-2,44],[-5,48],[0,50],[8,54],[6,58],[5,62],[12,66],[20,70],[28,71],[40,68],[45,68],[60,69],[75,72],[95,76],[110,76],[130,72],[145,72],[160,70],[170,67],[179,65],[170,60],[160,55],[152,52],[142,45],[140,38],[126,38],[122,30],[114,22],[108,12],[105,9],[103,3],[100,6],[98,10],[97,16],[94,17],[90,22],[88,21],[85,19],[80,15],[77,8],[73,15],[70,21],[66,25],[61,25],[57,26],[52,27],[56,24],[58,20],[55,17],[50,15],[45,13],[43,16],[39,21],[35,28],[35,33],[30,35],[27,37],[23,37],[20,40],[16,40],[12,44],[8,44],[4,43],[0,40],[-2,37],[-6,36]],
-      [[-5,50],[-3,53],[-4,56],[-2,58],[-5,58],[-7,55],[-5,52]],
-      [[130,32],[133,34],[137,35],[140,36],[141,40],[142,43],[144,44],[141,42],[140,37],[136,34],[131,31]],
-      [[109,-2],[110,2],[114,5],[118,4],[117,-1],[114,-4]],
-      [[96,4],[99,2],[103,-2],[106,-6],[103,-5],[98,1]],
-      [[131,-2],[136,-3],[141,-3],[147,-6],[145,-8],[138,-7],[133,-4]],
-      [[114,-22],[114,-26],[116,-32],[122,-34],[126,-32],[130,-32],[136,-35],[140,-38],[147,-38],[150,-37],[153,-32],[153,-26],[149,-20],[145,-15],[142,-11],[139,-17],[136,-12],[132,-11],[126,-14],[122,-17]],
-      [[44,-12],[47,-15],[49,-17],[47,-23],[45,-25],[43,-22],[44,-16]]
-    ];
-    var W = 0, H = 0, layer = null, pts = [];
-    var ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    var wrap = document.getElementById('hero-3d-wrap');
+    var spot = document.getElementById('hero-spotlight');
+    var loading = document.getElementById('hero-3d-loading');
+    var spline = document.getElementById('hero-spline');
+    if (!wrap || !spot) return;
 
-    function px(lng) { return (lng - CROP.x0) / (CROP.x1 - CROP.x0) * W; }
-    function py(lat) { return (CROP.y1 - lat) / (CROP.y1 - CROP.y0) * H; }
-
-    function build() {
-      W = wrap.clientWidth; H = wrap.clientHeight;
-      if (!W || !H) return;
-      canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
-      var m = document.createElement('canvas'); m.width = W; m.height = H;
-      var mc = m.getContext('2d');
-      mc.fillStyle = '#fff';
-      POLYS.forEach(function(poly) {
-        mc.beginPath();
-        poly.forEach(function(pt, i) { var x = px(pt[0]), y = py(pt[1]); if (i) mc.lineTo(x, y); else mc.moveTo(x, y); });
-        mc.closePath(); mc.fill();
-      });
-      var data = mc.getImageData(0, 0, W, H).data;
-      var step = Math.max(6, Math.round(W / 72));
-      layer = document.createElement('canvas');
-      layer.width = canvas.width; layer.height = canvas.height;
-      var lc = layer.getContext('2d');
-      lc.scale(DPR, DPR);
-      var rDot = Math.max(1.1, step * 0.17);
-      for (var y = step / 2, row = 0; y < H; y += step, row++) {
-        var ox = (row % 2) ? step / 2 : 0;
-        for (var x = step / 2 + ox; x < W; x += step) {
-          var xi = Math.min(W - 1, x | 0), yi = Math.min(H - 1, y | 0);
-          if (data[(yi * W + xi) * 4 + 3] > 120) {
-            lc.beginPath(); lc.arc(x, y, rDot, 0, 7);
-            lc.fillStyle = 'rgba(200,245,66,0.22)'; lc.fill();
-          }
-        }
-      }
-      pts = CITIES.map(function(c) { return Object.assign({}, c, { x: px(c.lng), y: py(c.lat) }); });
-    }
-
-    function qpt(a, c, b, t) {
-      return {
-        x: (1 - t) * (1 - t) * a.x + 2 * (1 - t) * t * c.x + t * t * b.x,
-        y: (1 - t) * (1 - t) * a.y + 2 * (1 - t) * t * c.y + t * t * b.y
-      };
-    }
-    function ctrl(a, b) {
-      var mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
-      var dx = b.x - a.x, dy = b.y - a.y;
-      var d = Math.sqrt(dx * dx + dy * dy);
-      var nx = -dy / (d || 1), ny = dx / (d || 1);
-      if (ny > 0) { nx = -nx; ny = -ny; }
-      return { x: mx + nx * d * 0.28, y: my + ny * d * 0.28 };
-    }
-    function easeIO(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
-
-    function drawStatic(c2) {
-      c2.drawImage(layer, 0, 0, W, H);
-      pts.forEach(function(c) {
-        c2.beginPath(); c2.arc(c.x, c.y, c.hub ? 4 : 2.6, 0, 7);
-        c2.fillStyle = '#C8F542';
-        c2.shadowColor = 'rgba(200,245,66,0.9)'; c2.shadowBlur = c.hub ? 14 : 8;
-        c2.fill(); c2.shadowBlur = 0;
-        if (W >= 480) {
-          c2.font = (c.hub ? '600 12px ' : '500 11px ') + "'Space Grotesk', sans-serif";
-          c2.fillStyle = c.hub ? '#C8F542' : 'rgba(242,242,236,0.72)';
-          c2.fillText(c.n, c.x + c.dx, c.y + c.dy);
-        }
+    /* Spotlight segue o mouse */
+    if (!reduced) {
+      wrap.addEventListener('mouseenter', function() { spot.style.opacity = '1'; });
+      wrap.addEventListener('mouseleave', function() { spot.style.opacity = '0'; });
+      wrap.addEventListener('mousemove', function(e) {
+        var r = wrap.getBoundingClientRect();
+        spot.style.left = (e.clientX - r.left - 170) + 'px';
+        spot.style.top = (e.clientY - r.top - 170) + 'px';
       });
     }
 
-    build();
-
-    if (reduced) {
-      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-      ctx.clearRect(0, 0, W, H);
-      if (layer) {
-        drawStatic(ctx);
-        ROUTES.forEach(function(r) {
-          var a = pts[r.a], b = pts[r.b], c = ctrl(a, b);
-          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(c.x, c.y, b.x, b.y);
-          ctx.strokeStyle = 'rgba(200,245,66,0.4)'; ctx.lineWidth = 1.2; ctx.stroke();
-        });
-      }
-      return;
+    /* Esconde loading quando Spline reportar load (ou após timeout de fallback) */
+    function hideLoading() {
+      if (!loading) return;
+      loading.style.opacity = '0';
+      setTimeout(function() { loading.style.display = 'none'; }, 700);
     }
-
-    var visible = false, raf = 0;
-    var CYCLE = 4400;
-
-    function frame(now) {
-      raf = 0;
-      if (!visible || document.hidden || !layer) return;
-      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-      ctx.clearRect(0, 0, W, H);
-      drawStatic(ctx);
-
-      ROUTES.forEach(function(r) {
-        var a0 = pts[r.a], b0 = pts[r.b];
-        var cyc = now / CYCLE + r.off;
-        var dir = (Math.floor(cyc) % 2 === 0);
-        var a = dir ? a0 : b0, b = dir ? b0 : a0;
-        var c = ctrl(a, b);
-        var p = cyc % 1;
-        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(c.x, c.y, b.x, b.y);
-        ctx.strokeStyle = 'rgba(200,245,66,0.10)'; ctx.lineWidth = 1; ctx.stroke();
-        var head = easeIO(Math.min(1, p / 0.6));
-        if (p < 0.72) {
-          var tail = Math.max(0, head - 0.32);
-          var N = 18;
-          for (var i = 0; i < N; i++) {
-            var t1 = tail + (head - tail) * (i / N);
-            var t2 = tail + (head - tail) * ((i + 1) / N);
-            var p1 = qpt(a, c, b, t1), p2 = qpt(a, c, b, t2);
-            ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
-            ctx.strokeStyle = 'rgba(200,245,66,' + (0.85 * (i + 1) / N) + ')';
-            ctx.lineWidth = 1.6; ctx.stroke();
-          }
-          var hp = qpt(a, c, b, head);
-          ctx.beginPath(); ctx.arc(hp.x, hp.y, 2.4, 0, 7);
-          ctx.fillStyle = '#E5FF8F';
-          ctx.shadowColor = '#C8F542'; ctx.shadowBlur = 10; ctx.fill(); ctx.shadowBlur = 0;
-        }
-        if (p >= 0.6 && p < 0.97) {
-          var k = (p - 0.6) / 0.37;
-          ctx.beginPath(); ctx.arc(b.x, b.y, 3 + k * 15, 0, 7);
-          ctx.strokeStyle = 'rgba(200,245,66,' + (0.55 * (1 - k)) + ')';
-          ctx.lineWidth = 1.4; ctx.stroke();
-        }
-      });
-      raf = requestAnimationFrame(frame);
+    if (spline) {
+      spline.addEventListener('load', hideLoading);
+      spline.addEventListener('load-complete', hideLoading);
     }
-
-    var io = new IntersectionObserver(function(es) {
-      visible = es[0].isIntersecting;
-      if (visible && !raf) raf = requestAnimationFrame(frame);
-    }, { threshold: 0.05 });
-    io.observe(wrap);
-
-    var rto = 0;
-    var ro = new ResizeObserver(function() { clearTimeout(rto); rto = setTimeout(build, 150); });
-    ro.observe(wrap);
-    document.addEventListener('visibilitychange', function() {
-      if (!document.hidden && visible && !raf) raf = requestAnimationFrame(frame);
-    });
+    /* Fallback: esconde após 8s mesmo se evento não disparar */
+    setTimeout(hideLoading, 8000);
   })();
+
 
   /* ── Shader WebGL ──────────────────────────────────────────── */
   (function() {
