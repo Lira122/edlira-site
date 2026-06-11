@@ -285,8 +285,8 @@
 <header id="top" style="position:relative;overflow:hidden;background-image:linear-gradient(rgba(255,255,255,0.022) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.022) 1px,transparent 1px);background-size:72px 72px;background-color:#0A0A0A">
   <!-- Dotted surface (Three.js, malha de pontos onda 3D em verde neon) -->
   <div id="dotted-surface" data-essential-anim style="position:absolute;inset:0;pointer-events:none;z-index:0;opacity:0;transition:opacity 1.2s ease"></div>
-  <!-- Glow radial pra dar foco no conteúdo e suavizar os pontos por cima -->
-  <div style="position:absolute;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 75% 60% at 35% 45%,rgba(10,10,10,0.85),rgba(10,10,10,0.45) 50%,transparent 80%)"></div>
+  <!-- Glow radial pra dar foco nas letras — fade gradual e mais sutil -->
+  <div style="position:absolute;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 55% 50% at 30% 45%,rgba(10,10,10,0.7),rgba(10,10,10,0.25) 55%,transparent 85%)"></div>
 
   <div class="hero-grid" style="max-width:1240px;margin:0 auto;padding:160px 32px 88px;display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:56px;align-items:center;position:relative;z-index:1">
     <div>
@@ -1400,7 +1400,7 @@
     /* Versão suave: menos pontos, menores, mais transparentes, velocidade baixa */
     var AMOUNTX = isMobile ? 20 : 36;
     var AMOUNTY = isMobile ? 14 : 24;
-    var BASE_ALPHA = isMobile ? 0.10 : 0.16; /* bem mais sutil em mobile */
+    var BASE_ALPHA = isMobile ? 0.16 : 0.28; /* visível mas sutil */
     var SPEED = 0.04;
 
     var canvas = document.createElement('canvas');
