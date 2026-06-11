@@ -129,6 +129,29 @@
   [data-reveal].reveal-pending { opacity: 0; transform: translateY(48px) scale(0.97); }
   [data-reveal].reveal-show    { animation: eleva-reveal .85s cubic-bezier(.16,.84,.3,1) forwards; }
 
+  /* ── Form success: bounce + glow + pulse rings + checkmark draw ────── */
+  @keyframes eleva-bounce-in {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes eleva-success-glow {
+    0%, 100% { box-shadow: 0 0 30px rgba(200,245,66,0.35), 0 0 60px rgba(200,245,66,0.12); }
+    50%      { box-shadow: 0 0 60px rgba(200,245,66,0.7),  0 0 120px rgba(200,245,66,0.3); }
+  }
+  @keyframes eleva-ring {
+    0%   { transform: translate(-50%, -50%) scale(0.6); opacity: 0.9; }
+    100% { transform: translate(-50%, -50%) scale(2.2); opacity: 0; }
+  }
+  @keyframes eleva-check-draw {
+    0%   { stroke-dashoffset: 30; }
+    100% { stroke-dashoffset: 0; }
+  }
+  .success-bounce  { animation: eleva-bounce-in .55s cubic-bezier(.175,.885,.32,1.275) forwards; }
+  .success-glow    { animation: eleva-success-glow 2.4s ease-in-out infinite; }
+  .success-ring    { position: absolute; top: 50%; left: 50%; width: 100px; height: 100px; border-radius: 50%; border: 2px solid #C8F542; animation: eleva-ring .9s ease-out forwards; pointer-events: none; }
+  .success-check   { stroke-dasharray: 30; stroke-dashoffset: 30; animation: eleva-check-draw .45s ease-out .25s forwards; }
+
   /* Reduced motion: mata animações decorativas, MAS preserva essenciais ([data-essential-anim]) */
   @media (prefers-reduced-motion: reduce) {
     *:not([data-essential-anim]):not([data-essential-anim] *), *::before, *::after {
@@ -759,10 +782,23 @@
           <button data-magnetic type="submit" id="submit-btn" class="btn-primary btn-primary-lg" style="font-size:15.5px;padding:16px 28px">Quero meu diagnóstico <span>→</span></button>
         </form>
       </div>
-      <div id="form-success" style="display:none;text-align:center;padding:48px 12px">
-        <div style="width:64px;height:64px;border-radius:50%;background:rgba(200,245,66,0.12);border:1.5px solid #C8F542;display:flex;align-items:center;justify-content:center;color:#C8F542;font-size:26px;margin:0 auto 24px">✓</div>
-        <h3 style="margin:0 0 12px;font-size:23px;font-weight:700;letter-spacing:-0.015em">Pedido recebido</h3>
-        <p style="margin:0 auto;font-size:15.5px;color:#9A9B92;line-height:1.65;max-width:340px">Recebemos seu pedido. A Sofia (IA) já está te chamando no WhatsApp pra agendar o diagnóstico.</p>
+      <div id="form-success" style="display:none;text-align:center;padding:48px 12px;position:relative">
+        <!-- Canvas de confetti (overlay, sem interação) -->
+        <canvas id="success-confetti" style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:600px;max-width:100%;height:600px;pointer-events:none;z-index:5"></canvas>
+
+        <!-- Círculo central com bounce + glow + pulse rings + check draw -->
+        <div id="success-bubble" style="position:relative;width:96px;height:96px;border-radius:50%;background:#C8F542;display:flex;align-items:center;justify-content:center;margin:0 auto 28px;z-index:2">
+          <!-- Pulse rings (3 anéis expansivos) -->
+          <div id="success-rings" style="position:absolute;inset:0;pointer-events:none"></div>
+
+          <!-- Checkmark com draw animation -->
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" style="position:relative;z-index:1">
+            <path id="success-check-path" class="success-check" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+
+        <h3 style="margin:0 0 12px;font-size:23px;font-weight:700;letter-spacing:-0.015em;position:relative;z-index:2">Pedido recebido</h3>
+        <p style="margin:0 auto;font-size:15.5px;color:#9A9B92;line-height:1.65;max-width:340px;position:relative;z-index:2">Recebemos seu pedido. A Sofia (IA) já está te chamando no WhatsApp pra agendar o diagnóstico.</p>
       </div>
     </div>
   </div>
@@ -1135,6 +1171,84 @@
       return ok ? data : null;
     }
 
+    /* Sucesso: dispara bounce + glow + 3 rings + confetti */
+    function triggerSuccessAnimation() {
+      var bubble = document.getElementById('success-bubble');
+      var ringsContainer = document.getElementById('success-rings');
+      var canvas = document.getElementById('success-confetti');
+
+      if (bubble) {
+        bubble.classList.add('success-bounce');
+        /* Glow começa depois do bounce terminar */
+        setTimeout(function() { bubble.classList.add('success-glow'); }, 600);
+      }
+
+      /* 3 anéis pulsando com delay escalonado */
+      if (ringsContainer) {
+        ringsContainer.innerHTML = '';
+        [0, 150, 300].forEach(function(delay) {
+          setTimeout(function() {
+            var ring = document.createElement('div');
+            ring.className = 'success-ring';
+            ringsContainer.appendChild(ring);
+            setTimeout(function() { ring.remove(); }, 1000);
+          }, delay);
+        });
+      }
+
+      /* Confetti */
+      if (canvas && canvas.getContext) {
+        var ctx = canvas.getContext('2d');
+        var w = canvas.offsetWidth, h = canvas.offsetHeight;
+        canvas.width = w; canvas.height = h;
+        var particles = [];
+        /* Cores: paleta da identidade (verde neon) + brancos */
+        var palette = ['#C8F542', '#7DD13F', '#E5FF8F', '#F2F2EC', '#C9CABF'];
+        for (var i = 0; i < 60; i++) {
+          particles.push({
+            x: w / 2,
+            y: h / 2,
+            vx: (Math.random() - 0.5) * 14,
+            vy: (Math.random() - 2.2) * 11,
+            life: 100,
+            color: palette[(Math.random() * palette.length) | 0],
+            size: Math.random() * 4 + 2,
+            spin: (Math.random() - 0.5) * 0.4,
+            rot: 0
+          });
+        }
+        (function loop() {
+          if (!particles.length) { ctx.clearRect(0, 0, w, h); return; }
+          ctx.clearRect(0, 0, w, h);
+          for (var i = particles.length - 1; i >= 0; i--) {
+            var p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.48;
+            p.life -= 1.8;
+            p.rot += p.spin;
+            ctx.globalAlpha = Math.max(0, p.life / 100);
+            ctx.fillStyle = p.color;
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot);
+            /* Mistura círculos e quadradinhos pra ter variedade */
+            if (i % 3 === 0) {
+              ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 1.5);
+            } else {
+              ctx.beginPath();
+              ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.restore();
+            if (p.life <= 0) particles.splice(i, 1);
+          }
+          ctx.globalAlpha = 1;
+          requestAnimationFrame(loop);
+        })();
+      }
+    }
+
     form.addEventListener('submit', function(e) {
       e.preventDefault();
       globalErr.style.display = 'none';
@@ -1176,6 +1290,7 @@
         formCard.style.display = 'none';
         formSuccess.style.display = 'block';
         formSuccess.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        triggerSuccessAnimation();
       })
       .catch(function(err) {
         globalErr.textContent = 'Não foi possível enviar agora. Tenta de novo ou nos chame no WhatsApp: (12) 98168-0894';
