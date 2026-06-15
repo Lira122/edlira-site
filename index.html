@@ -272,9 +272,50 @@
     /* Cards de servico: largura mínima menor */
     .servicos-grid { grid-template-columns: 1fr !important; }
   }
+
+  /* ════════════ AMBIENT FX — blobs drift + scroll bar + cursor + floating CTA ════════════ */
+  .eleva-blob { position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; z-index: 0; will-change: transform; }
+  .eleva-blob-1 { width: 520px; height: 520px; background: radial-gradient(circle, rgba(200,245,66,0.35) 0%, transparent 70%); top: -100px; left: -80px; opacity: 0.5; animation: eleva-blob1 24s ease-in-out infinite; }
+  .eleva-blob-2 { width: 460px; height: 460px; background: radial-gradient(circle, rgba(74,123,18,0.40) 0%, transparent 70%); top: 38%; right: -140px; opacity: 0.45; animation: eleva-blob2 30s ease-in-out infinite; }
+  .eleva-blob-3 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(200,245,66,0.25) 0%, transparent 70%); bottom: -120px; left: 40%; opacity: 0.35; animation: eleva-blob3 34s ease-in-out infinite; }
+  @keyframes eleva-blob1 { 0%,100% { transform: translate(0,0) scale(1); } 33% { transform: translate(160px,140px) scale(1.15); } 66% { transform: translate(40px,280px) scale(0.95); } }
+  @keyframes eleva-blob2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-220px,-180px) scale(1.2); } }
+  @keyframes eleva-blob3 { 0%,100% { transform: translate(0,0) scale(1); } 40% { transform: translate(-140px,-90px) scale(1.1); } 80% { transform: translate(180px,-50px) scale(0.9); } }
+
+  .eleva-scroll-progress { position: fixed; top: 0; left: 0; width: 0; height: 2.5px; background: linear-gradient(90deg,#C8F542 0%,#E0FF95 50%,#C8F542 100%); z-index: 9999; box-shadow: 0 0 12px rgba(200,245,66,0.7); transition: width 0.06s linear; will-change: width; }
+
+  .eleva-cursor { position: fixed; width: 240px; height: 240px; border-radius: 50%; background: radial-gradient(circle, rgba(200,245,66,0.10) 0%, transparent 60%); pointer-events: none; z-index: 1; filter: blur(22px); left: -9999px; top: -9999px; opacity: 0; transition: opacity 0.35s; mix-blend-mode: screen; will-change: transform; }
+
+  .eleva-float-cta { position: fixed; bottom: 22px; right: 22px; display: inline-flex; align-items: center; gap: 9px; background: #C8F542; color: #0A0A0A; padding: 13px 22px; border-radius: 999px; text-decoration: none; font-weight: 700; font-size: 14px; box-shadow: 0 10px 40px rgba(200,245,66,0.4), 0 4px 14px rgba(0,0,0,0.5); z-index: 9998; opacity: 0; transform: translateY(80px); transition: opacity 0.5s ease, transform 0.5s cubic-bezier(.16,.84,.3,1), filter 0.2s; pointer-events: none; font-family: inherit; }
+  .eleva-float-cta.is-visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .eleva-float-cta:hover { filter: brightness(1.08); transform: translateY(-3px); }
+  .eleva-float-cta svg { width: 18px; height: 18px; }
+  @keyframes eleva-pulse-ring { 0% { transform: scale(0.85); opacity: 0.55; } 100% { transform: scale(1.7); opacity: 0; } }
+  .eleva-float-cta::before { content: ''; position: absolute; inset: -4px; border-radius: 999px; border: 2px solid #C8F542; pointer-events: none; animation: eleva-pulse-ring 1.9s ease-out infinite; }
+  @media (max-width: 640px) {
+    .eleva-float-cta { bottom: 16px; right: 16px; padding: 11px 18px; font-size: 13px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .eleva-blob { animation: none !important; }
+    .eleva-cursor { display: none !important; }
+    .eleva-float-cta::before { animation: none !important; }
+  }
 </style>
 </head>
 <body>
+
+<!-- ============ AMBIENT DECOR (blobs drift + scroll progress + cursor + float CTA) ============ -->
+<div class="eleva-blob eleva-blob-1" aria-hidden="true"></div>
+<div class="eleva-blob eleva-blob-2" aria-hidden="true"></div>
+<div class="eleva-blob eleva-blob-3" aria-hidden="true"></div>
+<div class="eleva-scroll-progress" id="eleva-scroll-progress" aria-hidden="true"></div>
+<div class="eleva-cursor" id="eleva-cursor" aria-hidden="true"></div>
+
+<a href="https://wa.me/5512981680894?text=Oi%20Edmilson%2C%20quero%20meu%20diagn%C3%B3stico%20gratuito" target="_blank" rel="noopener" class="eleva-float-cta" id="eleva-float-cta" aria-label="Falar no WhatsApp">
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+  Falar com a Sofia
+</a>
 
 <!-- ============ NAV ============ -->
 <nav style="position:fixed;top:0;left:0;right:0;z-index:60;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);background:rgba(10,10,10,0.72);border-bottom:1px solid rgba(255,255,255,0.06)">
@@ -1611,5 +1652,63 @@
 })();
 </script>
 
+<script>
+/* ════════════ AMBIENT FX runtime (scroll progress + cursor + sticky CTA) ════════════ */
+(function() {
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* Scroll progress bar */
+  (function() {
+    var bar = document.getElementById('eleva-scroll-progress');
+    if (!bar) return;
+    function update() {
+      var h = document.documentElement;
+      var max = h.scrollHeight - h.clientHeight;
+      var pct = max > 0 ? (h.scrollTop / max) * 100 : 0;
+      bar.style.width = pct + '%';
+    }
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+  })();
+
+  /* Cursor follower (só desktop, ignora touch) */
+  if (!reduced && window.matchMedia('(pointer:fine)').matches) {
+    var cur = document.getElementById('eleva-cursor');
+    if (cur) {
+      var x = 0, y = 0, tx = 0, ty = 0, raf = 0;
+      function loop() {
+        x += (tx - x) * 0.13;
+        y += (ty - y) * 0.13;
+        cur.style.transform = 'translate(' + (x - 120) + 'px,' + (y - 120) + 'px)';
+        raf = 0;
+        if (Math.abs(tx - x) > 0.3 || Math.abs(ty - y) > 0.3) raf = requestAnimationFrame(loop);
+      }
+      window.addEventListener('mousemove', function(e) {
+        tx = e.clientX; ty = e.clientY;
+        cur.style.opacity = '1';
+        cur.style.left = '0';
+        cur.style.top = '0';
+        if (!raf) raf = requestAnimationFrame(loop);
+      }, { passive: true });
+      document.addEventListener('mouseleave', function() {
+        cur.style.opacity = '0';
+      });
+    }
+  }
+
+  /* Floating WhatsApp CTA — entra depois de 600px de scroll */
+  (function() {
+    var cta = document.getElementById('eleva-float-cta');
+    if (!cta) return;
+    function onScroll() {
+      if (window.scrollY > 600) cta.classList.add('is-visible');
+      else cta.classList.remove('is-visible');
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+})();
+</script>
 </body>
 </html>
