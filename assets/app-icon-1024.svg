@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Fundo Carbon Black -->
+  <rect width="1024" height="1024" fill="#0A0A0A"/>
+
+  <!-- Glow radial verde sutil atrás do E -->
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#C8F542" stop-opacity="0.18"/>
+      <stop offset="60%" stop-color="#C8F542" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#C8F542" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="512" cy="512" r="420" fill="url(#glow)"/>
+
+  <!-- "E" neon centralizado: tipo "Eleva" brand mark -->
+  <!-- Quadrado outline + E estilizado dentro (igual ao logo do briefing) -->
+  <g transform="translate(512 512)">
+    <!-- Square outline -->
+    <rect x="-280" y="-280" width="560" height="560" rx="80" ry="80"
+          fill="none" stroke="#C8F542" stroke-width="32"/>
+
+    <!-- "E" interno: 3 traços horizontais + 1 vertical estilizado -->
+    <!-- Traço vertical esquerdo -->
+    <rect x="-180" y="-160" width="48" height="320" fill="#C8F542"/>
+    <!-- Traço horizontal superior -->
+    <rect x="-180" y="-160" width="280" height="48" fill="#C8F542"/>
+    <!-- Traço horizontal meio (mais curto) -->
+    <rect x="-180" y="-24" width="220" height="48" fill="#C8F542"/>
+    <!-- Traço horizontal inferior -->
+    <rect x="-180" y="112" width="280" height="48" fill="#C8F542"/>
+  </g>
+</svg>
