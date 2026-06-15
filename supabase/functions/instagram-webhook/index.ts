@@ -79,11 +79,20 @@ interface IgMessage {
   message?: { mid?: string; text?: string }
 }
 
+interface IgCommentValue {
+  id?: string                // comment id
+  text?: string
+  from?: { id?: string; username?: string }
+  media?: { id?: string; media_product_type?: string }
+  parent_id?: string         // se for reply de outro comment
+  created_time?: number
+}
+
 interface IgEntry {
   id: string
   time: number
   messaging?: IgMessage[]
-  changes?: Array<{ field: string; value: unknown }>
+  changes?: Array<{ field: string; value: IgCommentValue | Record<string, unknown> }>
 }
 
 interface IgWebhookBody {
@@ -110,6 +119,65 @@ async function sendIgMessage(recipientId: string, text: string): Promise<boolean
     console.error('[IG send] erro:', err)
     return false
   }
+}
+
+// ─── Comments: like, reply público, private reply (DM via comment_id) ──────
+
+async function likeComment(commentId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${GRAPH_API}/${commentId}/likes?access_token=${IG_ACCESS_TOKEN}`, {
+      method: 'POST'
+    })
+    if (!res.ok) console.error('[IG like] falha:', res.status, await res.text())
+    return res.ok
+  } catch (err) { console.error('[IG like] erro:', err); return false }
+}
+
+async function replyToComment(commentId: string, message: string): Promise<boolean> {
+  try {
+    const url = `${GRAPH_API}/${commentId}/replies?access_token=${IG_ACCESS_TOKEN}`
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    })
+    if (!res.ok) console.error('[IG reply] falha:', res.status, await res.text())
+    return res.ok
+  } catch (err) { console.error('[IG reply] erro:', err); return false }
+}
+
+async function sendPrivateReplyToComment(commentId: string, text: string): Promise<boolean> {
+  try {
+    // Private reply via comment_id: permitido até 7 dias após o comment, sem opt-in prévio
+    const res = await fetch(`${GRAPH_API}/${IG_USER_ID}/messages?access_token=${IG_ACCESS_TOKEN}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipient: { comment_id: commentId },
+        message: { text }
+      })
+    })
+    if (!res.ok) console.error('[IG private reply] falha:', res.status, await res.text())
+    return res.ok
+  } catch (err) { console.error('[IG private reply] erro:', err); return false }
+}
+
+// Detecção rápida de interesse por palavras-chave (rule-based, antes do AI)
+function detectInterestKeywords(text: string): boolean {
+  const t = (text || '').toLowerCase()
+  const patterns = [
+    /\beu quero\b/, /\beu preciso\b/, /\bquero\b/, /\bpreciso\b/,
+    /\bme interessa\b/, /\binteresse\b/, /\binteressad/,
+    /\brob[oôõ]\b/, /\bbot\b/, /\bia\b/,
+    /\bcomo funciona\b/, /\bcomo faz\b/, /\bcomo fazer\b/,
+    /\bquanto custa\b/, /\bpre[cç]o\b/, /\bvalor\b/, /\borçament/, /\borcament/,
+    /\binforma[cç]/, /\bme manda\b/, /\bme chama\b/, /\bme passa\b/,
+    /\bcontrat/, /\bfechar\b/, /\bagendar\b/, /\breunião\b/, /\breuniao\b/,
+    /\bcontato\b/, /\bwhats\b/, /\bzap\b/,
+    /^eu$/, /^eu\.$/, /^eu!$/,  // só "EU" sozinho
+    /^sim\b/, /^quero\b/
+  ]
+  return patterns.some(rx => rx.test(t))
 }
 
 async function aiReply(history: Array<{ role: string; content: string }>, userMessage: string) {
@@ -155,6 +223,191 @@ async function aiReply(history: Array<{ role: string; content: string }>, userMe
       interest_level: 'low',
       should_send_to_whatsapp: false,
       lead_info: {}
+    }
+  }
+}
+
+// ─── Persona pra responder COMENTÁRIO público ────────────────────────────
+const SOFIA_IG_COMMENT_PROMPT = `Você É o Lira (Edmilson), dono da Eleva Digital, respondendo um COMENTÁRIO no seu Instagram @o.liraads. NÃO é assistente, NÃO é IA. É VOCÊ MESMO no celular.
+
+## REGRAS DE TOM (idênticas ao DM)
+- Brasileiro, informal, gírias naturais ("mano", "cara", "tipo", "salve", "fechado", "boa").
+- NUNCA emoji. NUNCA travessão "—". Use vírgula, ponto.
+- MÁXIMO 1 frase curtíssima na resposta pública. 2 frases só se for inevitável.
+- Sem listas, sem títulos, sem texto formal.
+
+## CONTEXTO
+O comentário é PÚBLICO, qualquer um vê. Então a resposta tem que:
+- Engajar genuinamente (não parecer atendimento corporativo).
+- Não pedir dados pessoais no público.
+- Se a pessoa demonstrou interesse claro (perguntou preço, "eu quero", "como funciona", "robô", etc), na resposta pública só fala que chama no Direct. Não responde a dúvida no comentário público.
+
+## CLASSIFICAÇÃO (você decide)
+- "interest" = pessoa demonstrou interesse real (quer saber mais, preço, contratar, perguntou sobre o serviço/robô)
+- "question" = dúvida genuína de quem só quer aprender, mas sem intenção de comprar
+- "feedback" = elogio, comentário positivo sobre o conteúdo
+- "neutral" = comentário neutro, vago, ou só interação
+- "spam" = óbvio spam, propaganda externa, ofensa
+
+## QUANDO send_dm=true
+- Sempre quando intent="interest"
+- A mensagem do DM (dm_text) é mais completa: cumprimenta, mostra que viu o comentário, abre conversa pro entendimento da necessidade. Ainda em tom 1ª pessoa Lira.
+
+## EXEMPLOS
+Comment: "show, salvei aqui"
+→ reply_public: "valeu! qualquer coisa tô por aqui"
+→ intent: "feedback", send_dm: false
+
+Comment: "eu quero!!"
+→ reply_public: "fechou, te chamo no direct"
+→ intent: "interest", send_dm: true
+→ dm_text: "fala, vi seu comentário no post. me conta rapidão: tem alguma empresa rodando ou tá começando?"
+
+Comment: "quanto custa pra fazer?"
+→ reply_public: "depende do diagnóstico, vou te chamar no direct"
+→ intent: "interest", send_dm: true
+→ dm_text: "salve, vi seu comentário. me conta seu negócio que eu te passo o caminho de fechar isso"
+
+Comment: "muito bom"
+→ reply_public: "obrigado mano"
+→ intent: "feedback", send_dm: false
+
+Comment: "como funciona esse robô?"
+→ reply_public: "vou te explicar no direct"
+→ intent: "interest", send_dm: true
+→ dm_text: "fala. então o robô atende lead 24h no whats e marca reunião sozinho. tu tem empresa rodando hoje?"
+
+## RETORNO (sempre JSON, sem markdown):
+{
+  "intent": "interest|question|feedback|neutral|spam",
+  "should_like": true,
+  "reply_public": "resposta curta",
+  "send_dm": false,
+  "dm_text": ""
+}
+
+- should_like=true sempre, EXCETO se intent="spam"
+- send_dm=true só quando intent="interest"
+`
+
+async function aiClassifyComment(text: string, username: string) {
+  const userMsg = `Comentário de @${username}: "${text}"`
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${OPENROUTER_KEY}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://elevabrands.com.br',
+      'X-Title': 'Eleva Digital · IG Comments'
+    },
+    body: JSON.stringify({
+      model: 'anthropic/claude-sonnet-4.5',
+      max_tokens: 250,
+      temperature: 0.7,
+      messages: [
+        { role: 'system', content: SOFIA_IG_COMMENT_PROMPT },
+        { role: 'user', content: userMsg }
+      ]
+    })
+  })
+  const json = await res.json() as { choices?: Array<{ message?: { content?: string } }> }
+  const raw = json.choices?.[0]?.message?.content || ''
+  try {
+    const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+    const match = clean.match(/\{[\s\S]*\}/)
+    return JSON.parse(match![0])
+  } catch {
+    console.error('[AI comment] parse fail:', raw)
+    return { intent: 'neutral', should_like: true, reply_public: 'valeu', send_dm: false, dm_text: '' }
+  }
+}
+
+async function handleComment(value: IgCommentValue) {
+  const commentId = value.id
+  const text      = value.text || ''
+  const fromId    = value.from?.id
+  const username  = value.from?.username || 'usuario'
+  if (!commentId || !text) return
+
+  // Ignora comentário da própria conta (auto-replies)
+  if (fromId === IG_USER_ID) {
+    console.log('[IG comment] ignorando comentário da própria conta')
+    return
+  }
+
+  console.log(`[IG comment] @${username}: ${text}`)
+
+  // Boost: keywords de interesse forçam classificação como "interest"
+  const keywordInterest = detectInterestKeywords(text)
+
+  // Classifica via IA
+  const result = await aiClassifyComment(text, username)
+  if (keywordInterest && result.intent !== 'spam') {
+    result.intent = 'interest'
+    result.send_dm = true
+    if (!result.dm_text) {
+      result.dm_text = 'fala, vi seu comentário aqui no post. me conta rapidão: tem alguma empresa rodando ads hoje?'
+    }
+    if (!result.reply_public) result.reply_public = 'fechou, te chamo no direct'
+  }
+
+  // 1. Curte o comentário (se não for spam)
+  if (result.should_like !== false && result.intent !== 'spam') {
+    await likeComment(commentId)
+  }
+
+  // 2. Responde publicamente (se tem texto)
+  if (result.reply_public && result.intent !== 'spam') {
+    await replyToComment(commentId, result.reply_public)
+  }
+
+  // 3. Manda DM privada se interest
+  let dmSent = false
+  if (result.send_dm && result.dm_text) {
+    dmSent = await sendPrivateReplyToComment(commentId, result.dm_text)
+  }
+
+  // 4. Loga no banco pra histórico/CRM
+  const phoneKey = `ig:comment:${fromId || commentId}`
+  try {
+    await supabase.from('chatbot_conversations').upsert({
+      phone: phoneKey,
+      stage: result.intent === 'interest' ? 'qualificado' : 'inicio',
+      messages: [
+        { role: 'user', content: `[comment @${username}]: ${text}` },
+        { role: 'assistant', content: `[reply public]: ${result.reply_public}` },
+        ...(dmSent ? [{ role: 'assistant', content: `[dm]: ${result.dm_text}` }] : [])
+      ],
+      lead_data: {
+        canal: 'instagram_comment',
+        ig_username: username,
+        ig_user_id: fromId,
+        comment_id: commentId,
+        media_id: value.media?.id,
+        intent: result.intent,
+        keyword_match: keywordInterest
+      },
+      last_message_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'phone' })
+  } catch (err) {
+    console.error('[IG comment] db log falhou:', err)
+  }
+
+  // Lead quente direto no CRM se interest
+  if (result.intent === 'interest') {
+    try {
+      await supabase.from('clientes').upsert({
+        nome: `@${username} (IG)`,
+        whatsapp: phoneKey,
+        servico: 'Marketing IA + Tráfego Pago',
+        status: 'qualificado',
+        temperatura: 'quente',
+        observacoes: `Origem: Instagram comment | Comment: "${text.slice(0, 200)}" | DM enviada: ${dmSent ? 'sim' : 'não'}`,
+        atualizado_em: new Date().toISOString()
+      }, { onConflict: 'whatsapp' })
+    } catch (err) {
+      console.error('[IG comment] crm upsert falhou:', err)
     }
   }
 }
@@ -261,10 +514,13 @@ Deno.serve(async (req: Request) => {
         await handleDm(senderId, text)
       }
 
-      // ── Comments, mentions (futuro) ──────────────────────────────
+      // ── Comments + mentions ──────────────────────────────────────
       for (const change of entry.changes || []) {
         console.log('[IG change]', change.field)
-        // TODO: implementar quando o user pedir
+        if (change.field === 'comments') {
+          await handleComment(change.value as IgCommentValue)
+        }
+        // mentions ainda não implementado
       }
     }
   } catch (err) {
