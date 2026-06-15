@@ -116,6 +116,14 @@ app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Rotas explícitas pras páginas legais (garante que a Vercel inclua os HTMLs no bundle)
+['privacidade', 'termos', 'exclusao-dados', 'como-funciona', 'painel'].forEach((name) => {
+  app.get(`/${name}.html`, (_req, res) => {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.sendFile(path.join(__dirname, `${name}.html`));
+  });
+});
+
 // Error middleware do Express — pega exceptions de rota e não derruba o processo.
 app.use((err, _req, res, _next) => {
   console.error('[EXPRESS ERROR]', err && err.stack || err);
