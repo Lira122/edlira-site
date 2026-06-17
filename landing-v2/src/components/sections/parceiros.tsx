@@ -5,6 +5,7 @@ const logos = [
   { src: '/logos/adriane.png', alt: 'Adriane', invert: false },
   { src: '/logos/dr-vitor-campos.png', alt: 'Dr. Vitor Campos', invert: false },
   { src: '/logos/guilherme.png', alt: 'Guilherme', invert: false },
+  { src: '/logos/desjoyaux.png', alt: 'Desjoyaux Piscinas', invert: false },
   { src: '/logos/spetialist.jpg', alt: 'Spetialist', invert: false },
   { src: '/logos/aderis-festin.jpeg', alt: 'Aderis Le Festin', invert: false },
   { src: '/logos/amo-make.jpeg', alt: 'Amo Make', invert: false },
