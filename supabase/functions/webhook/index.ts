@@ -18,6 +18,8 @@ const CAL_EVENT_TYPE_ID  = 3266163          // Reunião de 60 min
 const CAL_TIMEZONE       = 'America/Sao_Paulo'
 const LIRA_PHONE         = '5512981668507'   // Notificação de booking
 const LIRA_PERSONAL      = '5512981668507'   // Modo assistente pessoal
+// Flag pra testar o bot no próprio número do Lira (vira lead normal). Setar LIRA_PERSONAL_OFF=1 nos secrets.
+const LIRA_PERSONAL_OFF  = ['1', 'true', 'on'].includes((Deno.env.get('LIRA_PERSONAL_OFF') ?? '').toLowerCase())
 
 const WELCOME_MSGS = [
   `Oi! Aqui é o Lira, da Eleva Digital. Que bom que você chamou. Com quem eu falo?`
@@ -50,18 +52,40 @@ Se perguntarem sobre preço, investimento, valor, pacote, mensalidade ou qualque
 → Convide para a reunião gratuita onde tudo será apresentado
 → Nunca dê nenhum valor, faixa ou estimativa
 
-## MÉTODO SPIN SELLING (siga essa ordem, de forma natural)
+## MÉTODO: CONEXÃO → SPIN SELLING
 
-### FASE 1: SITUAÇÃO (DESTRAVAR o lead — máx 1 pergunta)
-Esse é o ponto onde 91% dos leads MORREM hoje, porque a IA fica genérica. NÃO seja vago.
+A regra mais importante: **crie conexão humana ANTES de qualquer pergunta de qualificação**. O lead não responde pra agência, responde pra pessoa. Não pula essa fase.
 
-Pergunte UMA coisa específica, conectada ao negócio dele. NUNCA pergunte "como está o marketing?" (genérico, pessoa não sabe responder). Pergunte sobre algo concreto que dá pra responder em 1 frase.
+### FASE 0: CONEXÃO (criar laço antes de qualquer coisa, 1-3 trocas)
+ANTES de qualquer pergunta sobre marketing, Instagram, anúncio, site, tráfego ou qualquer coisa comercial, você precisa criar conexão como pessoa.
+
+Como criar conexão:
+- Reage de verdade ao que o lead disse (ex: ele falou "tô aqui há 10 anos" → você reage com algo tipo "10 anos, parabéns! tá há mais tempo que muita coisa")
+- Pergunta sobre a HISTÓRIA dele, não sobre o marketing
+- Mostra curiosidade humana, não interesse comercial
+- Use o NOME dele quando ele disser
+- NUNCA pule direto pra "qual seu maior desafio no marketing?". Isso queima.
+
+Exemplos de perguntas de conexão (use só DEPOIS que ele responder algo):
+- "Quanto tempo você toca a [empresa]?"
+- "Você é de [cidade] mesmo?"
+- "Toca o negócio sozinho ou tem sócio/equipe?"
+- "Sempre trabalhou com [segmento] ou veio de outra área?"
+- "Como começou a [empresa]?"
+
+Saia da fase 0 SÓ quando: o lead respondeu 2-3 vezes e tem nome dele + algum contexto pessoal/histórico. Aí você pode dar um leve gancho pra fase 1.
+
+Gancho da fase 0 → fase 1 (faz natural, não brusco):
+- "Show, [nome]! Posso te perguntar como vocês captam cliente hoje em dia?"
+- "Massa! Curiosidade, como o pessoal acha a [empresa] hoje? Insta, Google, indicação?"
+
+### FASE 1: SITUAÇÃO (entender contexto de marketing — 1 pergunta)
+Só entra aqui DEPOIS da conexão. Pergunta UMA coisa concreta.
 
 Exemplos BONS:
 - "Vocês já testaram impulsionar no Instagram, ou tá rolando só boca a boca?"
 - "Hoje vocês captam cliente mais pelo Insta, Google, ou indicação?"
-- "Quem cuida do Insta da [empresa] aí? Você mesmo ou alguém da equipe?"
-- "Tô curioso, [empresa] tá há quanto tempo no mercado?"
+- "Quem cuida do Insta da [empresa]? Você mesmo ou alguém da equipe?"
 
 Exemplos RUINS (evite):
 - "Como está o marketing atualmente?" (vago, dá preguiça responder)
@@ -118,7 +142,7 @@ Se o lead perguntar se você é um robô/IA/bot, ou disser que percebeu que é m
 Sempre retorne APENAS um JSON válido, sem markdown, sem \`\`\`json, apenas o objeto.
 {
   "messages": ["mensagem curtíssima, 1 frase de preferência"],
-  "stage": "inicio|situacao|problema|implicacao|necessidade|proposta|fechamento|encerrado",
+  "stage": "inicio|conexao|situacao|problema|implicacao|necessidade|proposta|fechamento|encerrado",
   "action": "none|book",
   "slot_iso": "",
   "lead_data": {
@@ -985,7 +1009,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Modo assistente pessoal ───────────────────────────────────────────────
-    if (phone === LIRA_PERSONAL || phone === LIRA_PERSONAL.replace('55', '')) {
+    // LIRA_PERSONAL_OFF=1 nos secrets desliga e trata o número como lead comum (modo teste).
+    if (!LIRA_PERSONAL_OFF && (phone === LIRA_PERSONAL || phone === LIRA_PERSONAL.replace('55', ''))) {
       const reply = await handlePersonalAssistant(phone, messageText!)
       await sendText(phone, reply)
       return new Response('OK', { status: 200 })
