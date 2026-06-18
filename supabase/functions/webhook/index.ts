@@ -304,10 +304,14 @@ async function sendTextDelayed(phone: string, text: string) {
 
 async function textToSpeech(text: string): Promise<string | null> {
   try {
+    // Timeout 8s pra ElevenLabs — se passar disso, desiste e vai pro fallback texto
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 8000)
     const res = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`,
       {
         method: 'POST',
+        signal: ctrl.signal,
         headers: {
           'xi-api-key': ELEVENLABS_API_KEY,
           'Content-Type': 'application/json',
@@ -321,6 +325,7 @@ async function textToSpeech(text: string): Promise<string | null> {
         })
       }
     )
+    clearTimeout(timer)
 
     if (!res.ok) {
       console.error('[ElevenLabs] Erro:', await res.text())
@@ -355,17 +360,23 @@ async function sendVoice(phone: string, audioBase64: string) {
   }
 }
 
+// Voz por enquanto DESLIGADA — TTS dependia de ElevenLabs que falhou no caso ValePet
+// e o fallback de texto não chegou. Mais confiável responder sempre por texto.
+// Pra reabilitar: troca VOICE_REPLY_ENABLED pra true e testa.
+const VOICE_REPLY_ENABLED = false
+
 async function sendMessagesWithVoice(phone: string, messages: string[], replyAsAudio: boolean) {
+  const useVoice = VOICE_REPLY_ENABLED && replyAsAudio
   for (const msg of messages) {
-    if (replyAsAudio) {
+    if (useVoice) {
       const audio = await textToSpeech(msg)
       if (audio) {
         await sendVoice(phone, audio)
-        // Simula tempo de digitação entre mensagens de voz
         const delay = Math.min(1000 + msg.length * 20, 3000)
         await new Promise(r => setTimeout(r, delay))
         continue
       }
+      // ElevenLabs falhou — sempre cai pra texto, sem travar
     }
     await sendTextDelayed(phone, msg)
   }
