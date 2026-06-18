@@ -1,10 +1,43 @@
 import { db } from '../db.js'
+import { toast } from '../utils.js'
 
 let _timer = null
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
 ))
+
+// ─── Pausar / retomar o bot pra um lead específico ──────────────
+async function pausarBot(phone) {
+  const pausado_ate = new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString()
+  // Busca o lead_data atual pra preservar e adicionar pausado_ate
+  const { data: row } = await db.from('chatbot_conversations')
+    .select('lead_data, stage').eq('phone', phone).maybeSingle()
+  if (!row) { toast('Conversa não encontrada.', 'er'); return }
+  const lead_data = { ...(row.lead_data || {}), pausado_ate, stage_antes_pausa: row.stage }
+  const { error } = await db.from('chatbot_conversations')
+    .update({ stage: 'em_pausa', lead_data, updated_at: new Date().toISOString() })
+    .eq('phone', phone)
+  if (error) { toast('Erro: ' + error.message, 'er'); return }
+  toast('Bot pausado pra este lead.')
+  render()
+}
+
+async function retomarBot(phone) {
+  const { data: row } = await db.from('chatbot_conversations')
+    .select('lead_data').eq('phone', phone).maybeSingle()
+  if (!row) { toast('Conversa não encontrada.', 'er'); return }
+  const ld = { ...(row.lead_data || {}) }
+  const stageAntes = ld.stage_antes_pausa || 'situacao'
+  delete ld.pausado_ate
+  delete ld.stage_antes_pausa
+  const { error } = await db.from('chatbot_conversations')
+    .update({ stage: stageAntes, lead_data: ld, updated_at: new Date().toISOString() })
+    .eq('phone', phone)
+  if (error) { toast('Erro: ' + error.message, 'er'); return }
+  toast('Bot retomado.')
+  render()
+}
 
 function tempoRel(iso) {
   if (!iso) return ''
@@ -80,15 +113,19 @@ export async function render() {
       const ult = msgs.length ? msgs[msgs.length - 1] : null
       const txt = ult?.content ? ult.content.replace(/\s+/g, ' ').trim() : '—'
       const respondeu = msgs.some(m => m.role === 'user')
+      const pausado = x.stage === 'em_pausa'
       let chip
-      if (ld.reuniao_agendada) chip = ['meet', 'Reunião 🎯']
+      if (pausado) chip = ['off', 'Pausado']
+      else if (ld.reuniao_agendada) chip = ['meet', 'Reunião 🎯']
       else if (x.stage === 'encerrado' || ld.opt_out) chip = ['off', 'Encerrada']
       else if (respondeu) chip = ['on', 'Respondeu']
       else chip = ['wait', 'Aguardando']
       const ini = (nome.replace(/[^a-zA-Z0-9]/g, '')[0] || '#').toUpperCase()
       const cor = corAvatar(nome)
+      const btnLabel = pausado ? 'Retomar' : 'Pausar bot'
+      const btnAct = pausado ? 'retomar' : 'pausar'
       return `
-        <div class="apnl-conv-row">
+        <div class="apnl-conv-row" data-phone="${esc(x.phone)}">
           <div class="apnl-av" style="background:${cor}22;color:${cor}">${ini}</div>
           <div class="apnl-cinfo">
             <div class="apnl-cname">${esc(nome)}</div>
@@ -97,6 +134,7 @@ export async function render() {
           <div class="apnl-cmeta">
             <span class="apnl-chip ${chip[0]}">${chip[1]}</span>
             <span class="apnl-ctime">${tempoRel(x.updated_at)}</span>
+            <button class="btn bg bsm prosp-bot-btn" data-act="${btnAct}" data-phone="${esc(x.phone)}" style="margin-top:4px;font-size:11px;padding:4px 10px">${btnLabel}</button>
           </div>
         </div>`
     }).join('')
@@ -117,6 +155,17 @@ export async function render() {
         </div>
         <div style="font-size:11px;color:var(--text-3);text-align:right">atualiza sozinho a cada 30s</div>
       </div>`
+
+    // Handler dos botões "Pausar bot" / "Retomar" em cada lead
+    document.querySelectorAll('.prosp-bot-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const phone = e.currentTarget.dataset.phone
+        const act = e.currentTarget.dataset.act
+        if (!phone) return
+        if (act === 'pausar') pausarBot(phone)
+        else retomarBot(phone)
+      })
+    })
 
     _timer = setInterval(() => {
       if (!document.getElementById('prosp-root')) { clearInterval(_timer); _timer = null; return }
