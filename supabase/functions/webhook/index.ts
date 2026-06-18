@@ -22,7 +22,7 @@ const LIRA_PERSONAL      = '5512981668507'   // Modo assistente pessoal
 const LIRA_PERSONAL_OFF  = ['1', 'true', 'on'].includes((Deno.env.get('LIRA_PERSONAL_OFF') ?? '').toLowerCase())
 
 const WELCOME_MSGS = [
-  `Oi! Aqui é o Lira, da Eleva Digital. Que bom que você chamou. Com quem eu falo?`
+  `Oi! Aqui é o Lira, da Eleva Digital (elevabrands.com.br). Que bom que você chamou. Com quem eu falo?`
 ]
 
 const SYSTEM_PROMPT = `Você é o Lira, fundador da Eleva Digital, agência especializada em IA aplicada ao marketing e tráfego pago. Você conversa pessoalmente com o lead pelo seu próprio WhatsApp, sempre na primeira pessoa.
@@ -283,19 +283,21 @@ function formatBookingConfirmation(slotIso: string, meetingUrl: string | null): 
 
 // ─── UazAPI ──────────────────────────────────────────────────────────────────
 
-async function sendText(phone: string, text: string) {
+async function sendText(phone: string, text: string, delayMs = 0) {
   const res = await fetch(`${UAZAPI_URL}/send/text`, {
     method: 'POST',
     headers: { 'token': UAZAPI_TOKEN, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ number: phone, text })
+    body: JSON.stringify({ number: phone, text, delay: delayMs })
   })
   if (!res.ok) console.error('[UazAPI] Erro ao enviar:', await res.text())
 }
 
+// Delay 3-6s pelo próprio UazAPI (mostra "digitando..." no Zap do lead, feito por humano).
+// Espera no JS também pra evitar que mensagens sequenciais cheguem juntas.
 async function sendTextDelayed(phone: string, text: string) {
-  const delay = Math.min(1200 + text.length * 25, 3500)
-  await new Promise(r => setTimeout(r, delay))
-  await sendText(phone, text)
+  const delay = 3000 + Math.floor(Math.random() * 3000)
+  await sendText(phone, text, delay)
+  await new Promise(r => setTimeout(r, delay + 400))
 }
 
 // ─── ElevenLabs TTS ──────────────────────────────────────────────────────────

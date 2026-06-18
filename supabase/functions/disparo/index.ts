@@ -49,11 +49,13 @@ PERGUNTAS BOAS (são humanas, criam conexão):
 - "Você toca o negócio sozinho ou tem sócio?"
 - "Posso te chamar de quê?"
 
-EXEMPLOS BONS (varie o estilo, NÃO copie literal):
-- "Boa tarde! Aqui é o Lira, da Eleva Digital aqui de Taubaté. Tô olhando os comércios de [cidade] e a [empresa] me chamou atenção, você é o dono?"
-- "Oi, tudo bem? Aqui é o Lira da Eleva. Tô conhecendo o mercado de [segmento] aqui da região e a [empresa] apareceu na minha busca. Quem responde aqui no Zap?"
-- "Boa tarde! Aqui é o Lira, sou da Eleva Digital, agência aqui de Taubaté. Tava pesquisando umas [segmento] em [cidade] e gostei do nome da [empresa]. Tá há quanto tempo aberta?"
-- "Oi! Lira aqui, dono da Eleva Digital, agência da região. Curtos pra conhecer dono de comércio local. Posso te chamar de quê?"
+IMPORTANTE: SEMPRE mencione o site elevabrands.com.br quando se apresentar. Mostra que é real e dá credibilidade. Coloca entre parênteses depois de "Eleva Digital", de forma natural, NÃO como link clicável.
+
+EXEMPLOS BONS (varie o estilo, NÃO copie literal — mas SEMPRE com o site):
+- "Boa tarde! Aqui é o Lira, da Eleva Digital (elevabrands.com.br) aqui de Taubaté. Tô olhando os comércios de [cidade] e a [empresa] me chamou atenção, você é o dono?"
+- "Oi, tudo bem? Aqui é o Lira da Eleva Digital (elevabrands.com.br). Tô conhecendo o mercado de [segmento] aqui da região e a [empresa] apareceu na minha busca. Quem responde aqui no Zap?"
+- "Boa tarde! Aqui é o Lira, sou da Eleva Digital (elevabrands.com.br), agência aqui de Taubaté. Tava pesquisando umas [segmento] em [cidade] e gostei do nome da [empresa]. Tá há quanto tempo aberta?"
+- "Oi! Lira aqui, dono da Eleva Digital (elevabrands.com.br), agência da região. Curtos pra conhecer dono de comércio local. Posso te chamar de quê?"
 
 O QUE NUNCA FAZER NA PRIMEIRA MENSAGEM:
 - NUNCA pergunte sobre Instagram, anúncio, ads, tráfego, Google, marketing, site, página, redes sociais. Isso é pra DEPOIS, quando o lead já tiver respondido 2-3 vezes.
@@ -124,11 +126,11 @@ function tier(obs: string): number {
   return 3
 }
 
-async function sendText(phone: string, text: string) {
+async function sendText(phone: string, text: string, delayMs = 0) {
   const res = await fetch(`${UAZAPI_URL}/send/text`, {
     method: 'POST',
     headers: { 'token': UAZAPI_TOKEN, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ number: phone, text }),
+    body: JSON.stringify({ number: phone, text, delay: delayMs }),
   })
   if (!res.ok) throw new Error(`UazAPI ${res.status}: ${(await res.text()).slice(0, 200)}`)
 }
@@ -211,8 +213,11 @@ Deno.serve(async () => {
     const partes = opener.split(/\n\s*\n+/).map((p) => p.trim()).filter(Boolean)
     try {
       for (let i = 0; i < partes.length; i++) {
-        if (i > 0) await new Promise((r) => setTimeout(r, 1800 + Math.random() * 1600))
-        await sendText(phone, partes[i])
+        // Delay 3-6s no UazAPI (mostra "digitando..." no Zap do lead, parece humano)
+        const delay = 3000 + Math.floor(Math.random() * 3000)
+        await sendText(phone, partes[i], delay)
+        // Espera o UazAPI realmente entregar antes da próxima mensagem
+        if (i < partes.length - 1) await new Promise((r) => setTimeout(r, delay + 500))
       }
     } catch (_e) {
       // Número não está no WhatsApp — marca e tenta o próximo
