@@ -27,3 +27,6 @@ verify_jwt = false
 
 [functions.onboarding-cred-ver]
 verify_jwt = false
+
+[functions.instancia]
+verify_jwt = false
