@@ -840,6 +840,17 @@ async function rodarRotinaAgora(r) {
   const proj = _projs.find(p => p.id === r.projeto_id)
   const etapaInicial = (etapasDe(proj)[0]?.k) || 'todo'
   const hojeStr = new Date().toISOString().slice(0,10)
+
+  // Anti-duplicação: checa se já existem tarefas dessa rotina geradas hoje.
+  const { count } = await db
+    .from('tarefas').select('id', { count: 'exact', head: true })
+    .eq('rotina_id', r.id).eq('prazo', hojeStr)
+  if ((count || 0) > 0) {
+    if (!confirm(`Essa rotina já rodou hoje (${count} tarefa${count === 1 ? '' : 's'} já gerada${count === 1 ? '' : 's'}). Rodar de novo vai duplicar. Continuar mesmo assim?`)) {
+      toast('Cancelado.', 'er'); return
+    }
+  }
+
   const tars = (r.tarefas || []).filter(t => (t.titulo||'').trim()).map(t => ({
     projeto_id: r.projeto_id,
     rotina_id: r.id,
