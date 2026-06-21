@@ -854,11 +854,13 @@ async function rodarRotinaAgora(r) {
   await db.from('rotinas').update({ ultima_geracao: hojeStr }).eq('id', r.id)
 }
 
-// Clientes que aparecem nos dropdowns: tudo MENOS prospecção e perdidos.
-// Sempre inclui o `currentId` (mesmo se prospeccao/perdido) pra não quebrar edição.
+// Clientes que aparecem nos dropdowns: SÓ quem virou cliente de verdade.
+// 'novo'/'qualificado' são leads em qualificação (não cliente ainda).
+// 'prospeccao'/'perdido' nem precisam aparecer.
+// Sempre inclui o `currentId` pra não quebrar edição de registros antigos.
 function clientesAtivos(currentId) {
-  const inativos = new Set(['prospeccao', 'perdido'])
-  return _clis.filter(c => !inativos.has(c.status) || c.id === currentId)
+  const ativos = new Set(['proposta', 'ativo', 'em_pausa', 'fechado'])
+  return _clis.filter(c => ativos.has(c.status) || c.id === currentId)
 }
 
 // ════════ Helpers ═══════════════════════════════════════════════════════
