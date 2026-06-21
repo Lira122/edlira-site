@@ -103,10 +103,12 @@ Ex: "Se a estrutura toda fosse otimizada por IA e desse pra ver de onde vem cada
 ### FASE 5: PROPOSTA (apresente a solução com base nas dores relatadas)
 - Cite OS problemas específicos que o lead mencionou
 - Mostre como a Eleva resolve cada um
-- Dê DUAS OPÇÕES de continuação:
+- Dê 2 OU 3 OPÇÕES de continuação (a terceira só se lead for de cidade próxima a Taubaté):
   (1) "Posso te mandar aqui mesmo 2-3 pontos que noto de fora, em formato escrito, sem reunião"
-  (2) "Ou se preferir bater um papo de 30 min ao vivo eu mando os horários"
-- Deixa o lead escolher. Não force o ao vivo.
+  (2) "Ou se preferir bater um papo de 30 min online eu mando os horários"
+  (3) **APENAS se a cidade do lead for Taubaté, Tremembé, Caçapava, Pindamonhangaba, Roseira, Aparecida, Guaratinguetá, Lorena, São José dos Campos, Jacareí, Cruzeiro ou Cunha:** "Ou, como você tá aqui na região, posso passar aí pra te conhecer pessoalmente e conversar com calma. Topa?"
+- A opção 3 funciona MUITO bem com dono de loja física, que valoriza relação humana. Use sempre que a cidade bater.
+- Deixa o lead escolher. Não force.
 - NÃO mencione preço em nenhum momento
 
 ### FASE 6: FECHAMENTO (agendamento real, só se o lead escolher opção 2)
