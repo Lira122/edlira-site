@@ -866,18 +866,31 @@ async function concluirTarefa(tar, after) {
   })
 
   document.getElementById('cn-now').addEventListener('click', async () => {
-    const apelido = lerApelido()
-    const msg = `Oi${nomeCli ? `, ${nomeCli}` : ''}! Terminei aqui: ${apelido}.`
-    // Marca como já notificada pra não duplicar no resumão das 18h
-    await db.from('tarefas').update({
-      apelido_cliente: apelido,
-      notificar_cliente: true,
-      notificado_cliente_em: new Date().toISOString(),
-    }).eq('id', tar.id)
-    const wa = String(cli.whatsapp).replace(/\D/g, '')
-    window.open(`https://wa.me/${wa}?text=${encodeURIComponent(msg)}`, '_blank')
-    toast('Abrindo WhatsApp…')
-    fechar()
+    const btn = document.getElementById('cn-now')
+    btn.disabled = true; btn.textContent = 'Enviando…'
+    try {
+      const apelido = lerApelido()
+      // Salva apelido + flag pra função pegar essa tarefa no agrupado
+      await db.from('tarefas').update({
+        apelido_cliente: apelido,
+        notificar_cliente: true,
+      }).eq('id', tar.id)
+
+      // Descobre o destino certo: grupo do projeto (se tiver) OU DM do cliente
+      const proj = _projs.find(p => p.id === tar.projeto_id)
+      const blocoId = (proj && proj.jid_grupo) || cli.whatsapp
+      // Função agrega TUDO que tá pendente desse destino hoje, formata
+      // formalmente e envia via bot — não abre wa.me.
+      await invokeFn('digest-cliente', {
+        bloco_id: blocoId,
+        apelidos: { [tar.id]: apelido },
+      })
+      toast(`Enviado pra ${cli.empresa || cli.nome} ✓`)
+      fechar()
+    } catch (e) {
+      btn.disabled = false; btn.textContent = 'Avisar agora'
+      toast('Erro ao enviar: ' + e.message, 'err')
+    }
   })
 }
 
