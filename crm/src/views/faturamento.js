@@ -209,7 +209,7 @@ function renderDespesas() {
   const doMes = _despesas.filter(d => (d.data || '').startsWith(mesAtualStr))
   const totMes = doMes.reduce((s, d) => s + Number(d.valor), 0)
   const totAno = _despesas.filter(d => (d.data || '').startsWith(String(ano))).reduce((s, d) => s + Number(d.valor), 0)
-  const totRec = _recorrentes.filter(r => r.ativa).reduce((s, r) => s + Number(r.valor), 0)
+  const totRec = _recDespesas.filter(r => r.ativa).reduce((s, r) => s + Number(r.valor), 0)
 
   // Por categoria (mês atual)
   const porCat = {}
