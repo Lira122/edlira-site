@@ -1,5 +1,30 @@
 import { db, selectAll } from '../db.js'
+import { sbAuth } from '../auth.js'
 import { fmtd, toast, openModal, closeModal } from '../utils.js'
+
+const SB_URL = 'https://flzpblpegoqjxaacjvhf.supabase.co'
+
+// Chama edge function direto via fetch — evita esquisitices do supabase-js
+// quando o client tá usando service_role e o browser faz CORS preflight.
+async function invokeFn(name, body) {
+  const { data } = await sbAuth.auth.getSession()
+  const tok = data?.session?.access_token
+  const r = await fetch(`${SB_URL}/functions/v1/${name}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(tok ? { Authorization: `Bearer ${tok}` } : {}),
+    },
+    body: JSON.stringify(body || {}),
+  })
+  const txt = await r.text()
+  let json
+  try { json = JSON.parse(txt) } catch { json = { ok: false, erro: txt } }
+  if (!r.ok || json?.ok === false) {
+    throw new Error(json?.erro || `HTTP ${r.status}`)
+  }
+  return json
+}
 
 const DEFAULT_ETAPAS = [
   { k: 'todo',   l: 'A fazer',  cor: '#A0A0A0' },
@@ -98,9 +123,7 @@ async function renderResumao() {
 
   let preview
   try {
-    const { data, error } = await db.functions.invoke('digest-cliente', { body: {} })
-    if (error) throw new Error(error.message || String(error))
-    preview = data
+    preview = await invokeFn('digest-cliente', {})
   } catch (e) {
     c.innerHTML = `<div class="empty">Erro ao carregar: ${escapeHtml(e.message)}</div>`
     return
@@ -208,10 +231,7 @@ async function renderResumao() {
           for (const tid of desmarcadas) {
             await db.from('tarefas').update({ notificar_cliente: false }).eq('id', tid)
           }
-          const { data, error } = await db.functions.invoke('digest-cliente', {
-            body: { cliente_id: cid, apelidos },
-          })
-          if (error || !data?.ok) throw new Error(data?.erro || error?.message || 'falhou')
+          await invokeFn('digest-cliente', { cliente_id: cid, apelidos })
           toast(`Enviado pra ${cli.nome} ✓`)
           closeModal()
           renderResumao()
@@ -668,6 +688,11 @@ function projForm(p = {}) {
     </div>
     <div class="fg" style="margin-top:11px"><label class="fl">Cor</label>
       <div class="pj-cor-row" id="pj-cor-row">${corOpts}</div></div>
+    <div class="fg" style="margin-top:11px">
+      <label class="fl">JID do grupo WhatsApp <span style="color:var(--text-3);font-weight:400">(opcional — deixe vazio pra enviar no DM do cliente)</span></label>
+      <input class="fi" id="pj-jid" value="${escapeAttr(p.jid_grupo || '')}" placeholder="Ex: 120363409551896994@g.us">
+      <div style="font-size:11px;color:var(--text-3);margin-top:5px">Se preenchido, o resumão deste projeto vai pro grupo (e não pro DM do cliente).</div>
+    </div>
     <div class="fg" style="margin-top:14px">
       <label class="fl">Etapas do fluxo</label>
       <div id="pj-etapas-list" class="pj-etapas-list"></div>
@@ -739,6 +764,7 @@ function projForm(p = {}) {
       nome: document.getElementById('pj-nome').value.trim(),
       descricao: document.getElementById('pj-desc').value.trim() || null,
       cliente_id: document.getElementById('pj-cli').value || null,
+      jid_grupo: document.getElementById('pj-jid').value.trim() || null,
       prazo: document.getElementById('pj-prazo').value || null,
       cor,
       etapas: etapasClean,
@@ -1029,20 +1055,29 @@ function rotinaForm(r = {}) {
   `)
 
   const renderTars = () => {
-    document.getElementById('rt-tars').innerHTML = tarefasState.map((t, i) => `
-      <div class="pj-rot-tar-row" data-i="${i}">
-        <input type="text" class="fi rt-t-titulo" data-i="${i}" value="${escapeAttr(t.titulo||'')}" placeholder="Título" style="flex:2;padding:6px 9px;font-size:12.5px">
-        <select class="fsl rt-t-prio" data-i="${i}" style="flex:1;padding:6px 9px;font-size:12.5px">
-          ${PRIOS.map(p => `<option value="${p.k}"${(t.prioridade||'media')===p.k?' selected':''}>${p.l}</option>`).join('')}
-        </select>
-        <button class="pj-sub-del" type="button" data-i="${i}">×</button>
-      </div>
-    `).join('')
+    document.getElementById('rt-tars').innerHTML = tarefasState.map((t, i) => {
+      const incluir = t.notificar_cliente !== false
+      return `
+      <div class="pj-rot-tar-row" data-i="${i}" style="flex-direction:column;align-items:stretch;gap:6px;padding:10px;border:1px solid var(--line);border-radius:var(--rs);margin-bottom:6px">
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="text" class="fi rt-t-titulo" data-i="${i}" value="${escapeAttr(t.titulo||'')}" placeholder="Título interno" style="flex:2;padding:6px 9px;font-size:12.5px">
+          <select class="fsl rt-t-prio" data-i="${i}" style="flex:1;padding:6px 9px;font-size:12.5px">
+            ${PRIOS.map(p => `<option value="${p.k}"${(t.prioridade||'media')===p.k?' selected':''}>${p.l}</option>`).join('')}
+          </select>
+          <button class="pj-sub-del" type="button" data-i="${i}">×</button>
+        </div>
+        <input type="text" class="fi rt-t-apelido" data-i="${i}" value="${escapeAttr(t.apelido_cliente||'')}" placeholder="Como mostrar pro cliente (opcional)" style="padding:6px 9px;font-size:12.5px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-3);cursor:pointer">
+          <input type="checkbox" class="rt-t-notif" data-i="${i}" ${incluir?'checked':''}>
+          <span>Incluir no resumão pro cliente</span>
+        </label>
+      </div>`
+    }).join('')
   }
   renderTars()
 
   document.getElementById('rt-tar-add').addEventListener('click', () => {
-    tarefasState.push({ titulo: '', prioridade: 'media' })
+    tarefasState.push({ titulo: '', prioridade: 'media', apelido_cliente: '', notificar_cliente: true })
     renderTars()
   })
   document.getElementById('rt-tars').addEventListener('click', e => {
@@ -1052,8 +1087,14 @@ function rotinaForm(r = {}) {
   document.getElementById('rt-tars').addEventListener('input', e => {
     const ti = e.target.closest('.rt-t-titulo')
     const pr = e.target.closest('.rt-t-prio')
+    const ap = e.target.closest('.rt-t-apelido')
     if (ti) tarefasState[+ti.dataset.i].titulo = ti.value
     if (pr) tarefasState[+pr.dataset.i].prioridade = pr.value
+    if (ap) tarefasState[+ap.dataset.i].apelido_cliente = ap.value
+  })
+  document.getElementById('rt-tars').addEventListener('change', e => {
+    const nt = e.target.closest('.rt-t-notif')
+    if (nt) tarefasState[+nt.dataset.i].notificar_cliente = nt.checked
   })
 
   // Cadência toggle
@@ -1135,6 +1176,8 @@ async function gerarTarefasDeRotinas() {
       prioridade: t.prioridade || 'media',
       status: etapaInicial,
       prazo: hojeStr,
+      apelido_cliente: (t.apelido_cliente || '').trim() || null,
+      notificar_cliente: t.notificar_cliente !== false,
     }))
     if (!tars.length) continue
     await db.from('tarefas').insert(tars)
@@ -1166,6 +1209,8 @@ async function rodarRotinaAgora(r) {
     prioridade: t.prioridade || 'media',
     status: etapaInicial,
     prazo: hojeStr,
+    apelido_cliente: (t.apelido_cliente || '').trim() || null,
+    notificar_cliente: t.notificar_cliente !== false,
   }))
   if (!tars.length) { toast('Rotina sem tarefas', 'err'); return }
   await db.from('tarefas').insert(tars)

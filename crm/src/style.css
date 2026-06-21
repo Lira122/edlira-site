@@ -312,6 +312,9 @@ body[data-view="pipeline"] .kcards { flex: 1; overflow-y: auto; min-height: 0; }
 .pj-row { cursor: pointer; transition: background 100ms; }
 .pj-row:hover { background: rgba(255,255,255,.02); }
 .pj-row-title { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+.pj-main .tw td, .pj-main .tw th { white-space: nowrap; width: 1%; }
+.pj-main .tw td.pj-row-title, .pj-main .tw th:nth-child(2) { width: auto; white-space: normal; }
+.pj-main .tw td:last-child, .pj-main .tw th:last-child { text-align: right; padding-left: 8px; padding-right: 12px; }
 
 .pj-cor-row { display: flex; gap: 8px; }
 .pj-cor-opt { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color 120ms; }

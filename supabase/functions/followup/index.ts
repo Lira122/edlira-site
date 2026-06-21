@@ -86,6 +86,8 @@ Deno.serve(async (req: Request) => {
       .from('clientes').select('whatsapp').eq('status', 'perdido').in('whatsapp', phones)
     const phonesPerdidos = new Set((perdidos || []).map((p: { whatsapp: string }) => p.whatsapp))
 
+    let descartados = 0
+
     for (const conv of convs) {
       const phone = conv.phone as string
       if (!phone || phone.startsWith('__')) continue
@@ -107,6 +109,26 @@ Deno.serve(async (req: Request) => {
       const interesse = leadData.interesse || ''
       const segmento  = leadData.segmento  || ''
       const followups = (leadData.followups_enviados as unknown as string[]) || []
+      const origem    = leadData.origem || ''
+      const messages  = (conv.messages || []) as Array<{ role?: string }>
+      const respondeu = messages.some((m) => m?.role === 'user')
+
+      // Regra do dono: lead da prospecção que não respondeu em 48h vira descarte
+      // definitivo. Quem respondeu segue o ciclo normal de follow-up.
+      if (origem === 'disparo_prospeccao' && !respondeu && diffH >= 48) {
+        await supabase.from('chatbot_conversations').update({
+          stage: 'encerrado',
+          lead_data: { ...leadData, descartado_em: now.toISOString(), motivo_descarte: 'sem_resposta_48h' },
+          updated_at: now.toISOString(),
+        }).eq('phone', phone)
+        await supabase.from('clientes').update({
+          status: 'perdido',
+          atualizado_em: now.toISOString(),
+        }).eq('whatsapp', phone)
+        console.log(`[FOLLOWUP] descarte automático: ${phone} sem resposta em ${Math.round(diffH)}h`)
+        descartados++
+        continue
+      }
 
       let tipo: string | null = null
       let mensagem = ''
@@ -140,7 +162,6 @@ Deno.serve(async (req: Request) => {
         const novosFollowups = [...followups, tipo]
 
         // Salva mensagem no histórico e marca follow-up enviado
-        const messages = (conv.messages || []) as unknown[]
         await supabase.from('chatbot_conversations').update({
           messages: [...messages, { role: 'assistant', content: mensagem }],
           lead_data: { ...leadData, followups_enviados: novosFollowups },
@@ -158,8 +179,8 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    console.log(`[FOLLOWUP] Rodada finalizada: ${enviados} enviados, ${erros} erros`)
-    return new Response(JSON.stringify({ ok: true, enviados, erros, total: convs.length }), {
+    console.log(`[FOLLOWUP] Rodada finalizada: ${enviados} enviados, ${erros} erros, ${descartados} descartados`)
+    return new Response(JSON.stringify({ ok: true, enviados, erros, descartados, total: convs.length }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
