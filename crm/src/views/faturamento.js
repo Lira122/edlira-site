@@ -12,10 +12,12 @@ const CATS = [
 ]
 const CAT_MAP = Object.fromEntries(CATS.map(c => [c.k, c]))
 
-let _fat        = []
-let _despesas   = []
-let _recorrentes = []
-let _view       = 'receita'
+let _fat         = []
+let _despesas    = []
+let _recDespesas = []
+let _recReceitas = []
+let _clis        = []
+let _view        = 'receita'
 
 export async function render() {
   const c = document.getElementById('content')
@@ -30,14 +32,18 @@ export async function render() {
 }
 
 async function loadAll() {
-  const [f, d, r] = await Promise.all([
+  const [f, d, rd, rr, cli] = await Promise.all([
     db.from('faturamento').select('*').order('ano', { ascending: false }).order('mes', { ascending: false }),
     selectAll('despesas',             { order: { column: 'data', ascending: false } }),
     selectAll('despesas_recorrentes', { order: { column: 'criado_em', ascending: false } }),
+    selectAll('receitas_recorrentes', { order: { column: 'criado_em', ascending: false } }),
+    selectAll('clientes', { columns: 'id,nome,empresa,status' }),
   ])
   _fat         = f.data || []
   _despesas    = d.data || []
-  _recorrentes = r.data || []
+  _recDespesas = rd.data || []
+  _recReceitas = rr.data || []
+  _clis        = cli.data || []
 }
 
 function renderToolbar() {
@@ -45,7 +51,9 @@ function renderToolbar() {
   let addBtn = ''
   if (_view === 'receita')     addBtn = `<button class="btn bp" id="btn-add">+ Receita</button>`
   if (_view === 'despesas')    addBtn = `<button class="btn bp" id="btn-add">+ Despesa</button>`
-  if (_view === 'recorrentes') addBtn = `<button class="btn bp" id="btn-add">+ Despesa recorrente</button>`
+  if (_view === 'recorrentes') addBtn = `
+    <button class="btn bg" id="btn-add-rec-receita">+ Receita recorrente</button>
+    <button class="btn bp" id="btn-add-rec-despesa">+ Despesa recorrente</button>`
 
   document.getElementById('tbacts').innerHTML = `
     <div class="pj-tabs">${tab('receita','Receita')}${tab('despesas','Despesas')}${tab('recorrentes','Recorrentes')}${tab('resumo','Resumo')}</div>
@@ -56,10 +64,13 @@ function renderToolbar() {
   }))
   const add = document.getElementById('btn-add')
   if (add) {
-    if (_view === 'receita')     add.addEventListener('click', () => fatForm())
-    if (_view === 'despesas')    add.addEventListener('click', () => despForm())
-    if (_view === 'recorrentes') add.addEventListener('click', () => recForm())
+    if (_view === 'receita')  add.addEventListener('click', () => fatForm())
+    if (_view === 'despesas') add.addEventListener('click', () => despForm())
   }
+  const addRecR = document.getElementById('btn-add-rec-receita')
+  const addRecD = document.getElementById('btn-add-rec-despesa')
+  if (addRecR) addRecR.addEventListener('click', () => recReceitaForm())
+  if (addRecD) addRecD.addEventListener('click', () => recDespesaForm())
 }
 
 function renderView() {
@@ -104,7 +115,7 @@ function renderReceita() {
           <td>${MESF[f.mes - 1]}</td>
           <td class="tm">${f.ano}</td>
           <td style="font-weight:600;color:var(--accent)">${brl(f.valor)}</td>
-          <td class="tm">${esc(f.descricao || '—')}</td>
+          <td class="tm">${esc(f.descricao || '—')}${f.recorrente_id?'<span class="desp-rec-tag" title="Receita recorrente">↻</span>':''}</td>
           <td class="tm">${fmtd(f.criado_em)}</td>
           <td style="display:flex;gap:6px">
             <button class="btn bg bsm edit-fat" data-id="${f.id}">Editar</button>
@@ -214,73 +225,89 @@ function renderDespesas() {
   c.querySelectorAll('.del-desp').forEach(b => b.addEventListener('click', () => delDesp(b.dataset.id)))
 }
 
-// ════════ RECORRENTES ════════════════════════════════════════════════════
+// ════════ RECORRENTES (RECEITAS + DESPESAS lado a lado) ═════════════════
 function renderRecorrentes() {
   const c = document.getElementById('content')
-  if (!_recorrentes.length) {
-    c.innerHTML = `<div class="empty" style="padding:80px 20px">
-      <div style="font-size:14px;color:var(--text-2);margin-bottom:6px">Nenhuma despesa recorrente</div>
-      <div style="font-size:12px;margin-bottom:18px">Cadastra suas assinaturas mensais (Claude, Supabase, etc.)<br>e elas viram despesa automaticamente no dia certo.</div>
-      <button class="btn bp" id="btn-first-rec">+ Adicionar recorrente</button>
-    </div>`
-    document.getElementById('btn-first-rec').addEventListener('click', () => recForm())
-    return
-  }
 
-  const totAtivas = _recorrentes.filter(r => r.ativa).reduce((s, r) => s + Number(r.valor), 0)
+  const totRecAtivas = _recReceitas.filter(r => r.ativa).reduce((s, r) => s + Number(r.valor), 0)
+  const totDesAtivas = _recDespesas.filter(r => r.ativa).reduce((s, r) => s + Number(r.valor), 0)
+  const lucroMensal  = totRecAtivas - totDesAtivas
 
-  const cards = _recorrentes.map(r => {
-    const cat = CAT_MAP[r.categoria] || CAT_MAP.outro
-    return `<div class="desp-rec-card ${r.ativa?'':'paused'}" data-rid="${r.id}">
+  const renderRecCard = (r, tipo) => {
+    const tabela = tipo === 'receita' ? 'receitas_recorrentes' : 'despesas_recorrentes'
+    const cor    = tipo === 'receita' ? 'var(--accent)' : 'var(--danger)'
+    const cat    = tipo === 'despesa' ? (CAT_MAP[r.categoria] || CAT_MAP.outro) : null
+    const cli    = tipo === 'receita' && r.cliente_id ? _clis.find(x => x.id === r.cliente_id) : null
+    const diaLbl = r.dia_util ? `${r.dia_mes}º dia útil` : `Dia ${r.dia_mes}`
+    return `<div class="desp-rec-card ${r.ativa?'':'paused'}" data-rid="${r.id}" data-tipo="${tipo}">
       <div class="desp-rec-head">
-        <span class="desp-cat-pill" style="background:${cat.cor}22;color:${cat.cor}">${cat.l}</span>
+        ${cat ? `<span class="desp-cat-pill" style="background:${cat.cor}22;color:${cat.cor}">${cat.l}</span>` : (cli ? `<span class="desp-cat-pill" style="background:rgba(193,255,42,.12);color:var(--accent)">${esc(cli.empresa||cli.nome)}</span>` : '<span></span>')}
         <label class="pj-rot-toggle">
-          <input type="checkbox" class="desp-rec-active" data-rid="${r.id}" ${r.ativa?'checked':''}>
+          <input type="checkbox" class="desp-rec-active" data-rid="${r.id}" data-tipo="${tipo}" ${r.ativa?'checked':''}>
           <span>${r.ativa ? 'Ativa' : 'Pausada'}</span>
         </label>
       </div>
       <div class="desp-rec-name">${esc(r.descricao)}</div>
-      <div class="desp-rec-val">${brl(r.valor)}</div>
-      <div class="desp-rec-meta">Dia ${r.dia_mes} de cada mês${r.ultima_geracao ? ' · Última: '+fmtd(r.ultima_geracao) : ''}</div>
+      <div class="desp-rec-val" style="color:${cor}">${brl(r.valor)}</div>
+      <div class="desp-rec-meta">${diaLbl} de cada mês${r.ultima_geracao ? ' · Última: '+fmtd(r.ultima_geracao) : ''}</div>
       <div class="desp-rec-acts">
-        <button class="btn bg bsm rec-edit" data-rid="${r.id}">Editar</button>
-        <button class="btn bg bsm rec-run"  data-rid="${r.id}">Lançar agora</button>
-        <button class="btn bd bsm rec-del"  data-rid="${r.id}">Excluir</button>
+        <button class="btn bg bsm rec-edit" data-rid="${r.id}" data-tipo="${tipo}">Editar</button>
+        <button class="btn bg bsm rec-run"  data-rid="${r.id}" data-tipo="${tipo}">Lançar agora</button>
+        <button class="btn bd bsm rec-del"  data-rid="${r.id}" data-tipo="${tipo}">Excluir</button>
       </div>
     </div>`
-  }).join('')
+  }
+
+  const receitaCards = _recReceitas.map(r => renderRecCard(r, 'receita')).join('')
+                       || `<div class="empty">Nenhuma receita recorrente cadastrada.</div>`
+  const despesaCards = _recDespesas.map(r => renderRecCard(r, 'despesa')).join('')
+                       || `<div class="empty">Nenhuma despesa recorrente cadastrada.</div>`
 
   c.innerHTML = `
-    <div class="sg" style="grid-template-columns:1fr 1fr">
-      <div class="sc"><div class="sl">Total ativas</div><div class="sv" style="color:var(--danger)">${brl(totAtivas)}<span style="font-size:11px;color:var(--text-3);font-weight:400;margin-left:6px">/mês</span></div></div>
-      <div class="sc"><div class="sl">No ano</div><div class="sv">${brl(totAtivas*12)}</div></div>
+    <div class="sg">
+      <div class="sc"><div class="sl">Receitas/mês</div><div class="sv" style="color:var(--accent)">${brl(totRecAtivas)}</div></div>
+      <div class="sc"><div class="sl">Despesas/mês</div><div class="sv" style="color:var(--danger)">${brl(totDesAtivas)}</div></div>
+      <div class="sc"><div class="sl">Lucro projetado/mês</div><div class="sv" style="color:${lucroMensal>=0?'var(--ok)':'var(--danger)'}">${brl(lucroMensal)}</div></div>
+      <div class="sc"><div class="sl">Lucro projetado/ano</div><div class="sv">${brl(lucroMensal*12)}</div></div>
     </div>
-    <div class="desp-rec-grid">${cards}</div>`
+
+    <div class="tw" style="margin-bottom:22px">
+      <div class="th"><h3>💰 Receitas Recorrentes — entram automaticamente</h3></div>
+      <div style="padding:14px"><div class="desp-rec-grid">${receitaCards}</div></div>
+    </div>
+
+    <div class="tw">
+      <div class="th"><h3>💸 Despesas Recorrentes — saem automaticamente</h3></div>
+      <div style="padding:14px"><div class="desp-rec-grid">${despesaCards}</div></div>
+    </div>`
 
   c.addEventListener('click', async e => {
     const edit = e.target.closest('.rec-edit')
     const del  = e.target.closest('.rec-del')
     const run  = e.target.closest('.rec-run')
     const tog  = e.target.closest('.desp-rec-active')
-    if (edit) { const r = _recorrentes.find(x => x.id === edit.dataset.rid); if (r) recForm(r) }
-    else if (del) {
-      const r = _recorrentes.find(x => x.id === del.dataset.rid)
-      if (r && confirm(`Excluir "${r.descricao}"? (Despesas já geradas continuam)`)) {
-        await db.from('despesas_recorrentes').delete().eq('id', r.id)
-        toast('Excluída'); render()
-      }
-    }
-    else if (run) {
-      const r = _recorrentes.find(x => x.id === run.dataset.rid)
-      if (r) { await rodarRecorrenteAgora(r); toast('Despesa lançada'); render() }
-    }
-    else if (tog) {
-      const r = _recorrentes.find(x => x.id === tog.dataset.rid)
-      if (r) {
-        r.ativa = tog.checked
-        await db.from('despesas_recorrentes').update({ ativa: r.ativa, atualizado_em: new Date().toISOString() }).eq('id', r.id)
-        render()
-      }
+    const action = edit || del || run || tog
+    if (!action) return
+    const tipo = action.dataset.tipo
+    const list = tipo === 'receita' ? _recReceitas : _recDespesas
+    const tbl  = tipo === 'receita' ? 'receitas_recorrentes' : 'despesas_recorrentes'
+    const r    = list.find(x => x.id === action.dataset.rid)
+    if (!r) return
+
+    if (edit) {
+      tipo === 'receita' ? recReceitaForm(r) : recDespesaForm(r)
+    } else if (del) {
+      if (!confirm(`Excluir "${r.descricao}"? (Lançamentos já gerados continuam)`)) return
+      await db.from(tbl).delete().eq('id', r.id)
+      toast('Excluída'); render()
+    } else if (run) {
+      await rodarRecorrenteAgora(r, tipo)
+      toast(tipo === 'receita' ? 'Receita lançada' : 'Despesa lançada')
+      render()
+    } else if (tog) {
+      r.ativa = tog.checked
+      await db.from(tbl).update({ ativa: r.ativa, atualizado_em: new Date().toISOString() }).eq('id', r.id)
+      render()
     }
   })
 }
@@ -439,42 +466,44 @@ async function delDesp(id) {
   toast('Removida'); render()
 }
 
-function recForm(r = {}) {
+function recDespesaForm(r = {}) {
   const isNew = !r.id
   const catOpts = CATS.map(c => `<option value="${c.k}"${(r.categoria||'outro')===c.k?' selected':''}>${c.l}</option>`).join('')
 
-  openModal(isNew ? 'Nova despesa recorrente' : 'Editar recorrente', `
+  openModal(isNew ? 'Nova despesa recorrente' : 'Editar despesa recorrente', `
     <div class="fg"><label class="fl">Descrição *</label>
       <input class="fi" id="r-desc" value="${escAttr(r.descricao || '')}" placeholder="Ex: Claude Pro, Supabase, Vercel…"></div>
     <div class="frow" style="margin-top:11px">
       <div class="fg"><label class="fl">Categoria</label><select class="fsl" id="r-cat">${catOpts}</select></div>
       <div class="fg"><label class="fl">Valor (R$) *</label><input class="fi" id="r-val" type="number" step="0.01" value="${r.valor || ''}"></div>
     </div>
-    <div class="fg" style="margin-top:11px"><label class="fl">Dia do mês (1-28) *</label>
-      <input class="fi" type="number" min="1" max="28" id="r-dia" value="${r.dia_mes || 1}" style="width:120px"></div>
-    <div style="margin-top:10px;font-size:11px;color:var(--text-3);line-height:1.5">A despesa é lançada automaticamente toda vez que você abre essa tela e chega o dia configurado.</div>
+    <div class="frow" style="margin-top:11px">
+      <div class="fg"><label class="fl">Dia *</label>
+        <input class="fi" type="number" min="1" max="31" id="r-dia" value="${r.dia_mes || 1}"></div>
+      <div class="fg"><label class="fl">Tipo de dia</label>
+        <select class="fsl" id="r-dia-util">
+          <option value="false"${!r.dia_util?' selected':''}>Dia do calendário</option>
+          <option value="true"${r.dia_util?' selected':''}>Dia útil (seg-sex)</option>
+        </select></div>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--text-3);line-height:1.5">A despesa é lançada automaticamente toda vez que você abre essa tela e chega o dia configurado.<br>Ex: "Dia 30" cai no último dia em fevereiro. "5º dia útil" pula sáb/dom.</div>
   `, `
-    ${isNew ? '' : '<button class="btn bd" id="r-del">Excluir</button>'}
     <button class="btn bg" id="m-cancel">Cancelar</button>
     <button class="btn bp" id="m-save">Salvar</button>
   `)
   document.getElementById('m-cancel').addEventListener('click', closeModal)
-  if (!isNew) document.getElementById('r-del').addEventListener('click', async () => {
-    if (!confirm('Excluir?')) return
-    await db.from('despesas_recorrentes').delete().eq('id', r.id)
-    closeModal(); toast('Excluída'); render()
-  })
   document.getElementById('m-save').addEventListener('click', async () => {
     const payload = {
       descricao: document.getElementById('r-desc').value.trim(),
       categoria: document.getElementById('r-cat').value,
       valor:     parseFloat(document.getElementById('r-val').value) || 0,
       dia_mes:   parseInt(document.getElementById('r-dia').value) || 1,
+      dia_util:  document.getElementById('r-dia-util').value === 'true',
       atualizado_em: new Date().toISOString(),
     }
     if (!payload.descricao) return toast('Descrição obrigatória', 'err')
     if (!payload.valor)     return toast('Valor obrigatório', 'err')
-    if (payload.dia_mes < 1 || payload.dia_mes > 28) return toast('Dia entre 1 e 28', 'err')
+    if (payload.dia_mes < 1 || payload.dia_mes > 31) return toast('Dia entre 1 e 31', 'err')
     const { error } = r.id
       ? await db.from('despesas_recorrentes').update(payload).eq('id', r.id)
       : await db.from('despesas_recorrentes').insert({ ...payload, ativa: true })
@@ -483,41 +512,137 @@ function recForm(r = {}) {
   })
 }
 
-// ════════ Auto-geração de despesas recorrentes ══════════════════════════
+function recReceitaForm(r = {}) {
+  const isNew = !r.id
+  const ativos = _clis.filter(c => ['proposta','ativo','em_pausa','fechado'].includes(c.status) || c.id === r.cliente_id)
+  const cliOpts = `<option value="">— sem cliente vinculado —</option>` +
+    ativos.map(c => `<option value="${c.id}"${r.cliente_id===c.id?' selected':''}>${escAttr(c.empresa || c.nome)}</option>`).join('')
+
+  openModal(isNew ? 'Nova receita recorrente' : 'Editar receita recorrente', `
+    <div class="fg"><label class="fl">Descrição *</label>
+      <input class="fi" id="rr-desc" value="${escAttr(r.descricao || '')}" placeholder="Ex: Vale Pet — mensalidade"></div>
+    <div class="frow" style="margin-top:11px">
+      <div class="fg"><label class="fl">Cliente</label><select class="fsl" id="rr-cli">${cliOpts}</select></div>
+      <div class="fg"><label class="fl">Valor (R$) *</label><input class="fi" id="rr-val" type="number" step="0.01" value="${r.valor || ''}"></div>
+    </div>
+    <div class="frow" style="margin-top:11px">
+      <div class="fg"><label class="fl">Dia *</label>
+        <input class="fi" type="number" min="1" max="31" id="rr-dia" value="${r.dia_mes || 1}"></div>
+      <div class="fg"><label class="fl">Tipo de dia</label>
+        <select class="fsl" id="rr-dia-util">
+          <option value="false"${!r.dia_util?' selected':''}>Dia do calendário</option>
+          <option value="true"${r.dia_util?' selected':''}>Dia útil (seg-sex)</option>
+        </select></div>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--text-3);line-height:1.5">A receita entra automaticamente na aba Faturamento quando chegar o dia configurado.</div>
+  `, `
+    <button class="btn bg" id="m-cancel">Cancelar</button>
+    <button class="btn bp" id="m-save">Salvar</button>
+  `)
+  document.getElementById('m-cancel').addEventListener('click', closeModal)
+  document.getElementById('m-save').addEventListener('click', async () => {
+    const payload = {
+      descricao:  document.getElementById('rr-desc').value.trim(),
+      cliente_id: document.getElementById('rr-cli').value || null,
+      valor:      parseFloat(document.getElementById('rr-val').value) || 0,
+      dia_mes:    parseInt(document.getElementById('rr-dia').value) || 1,
+      dia_util:   document.getElementById('rr-dia-util').value === 'true',
+      atualizado_em: new Date().toISOString(),
+    }
+    if (!payload.descricao) return toast('Descrição obrigatória', 'err')
+    if (!payload.valor)     return toast('Valor obrigatório', 'err')
+    if (payload.dia_mes < 1 || payload.dia_mes > 31) return toast('Dia entre 1 e 31', 'err')
+    const { error } = r.id
+      ? await db.from('receitas_recorrentes').update(payload).eq('id', r.id)
+      : await db.from('receitas_recorrentes').insert({ ...payload, ativa: true })
+    if (error) return toast('Erro: '+error.message, 'err')
+    closeModal(); toast('Salvo'); render()
+  })
+}
+
+// ════════ Auto-geração ═══════════════════════════════════════════════════
+function diasNoMes(year, month1to12) {
+  return new Date(year, month1to12, 0).getDate()
+}
+
+// N-ésimo dia útil do mês (segunda a sexta). Retorna day-of-month ou null.
+function nthDiaUtil(year, month1to12, n) {
+  let count = 0
+  const limit = diasNoMes(year, month1to12)
+  for (let day = 1; day <= limit; day++) {
+    const dow = new Date(year, month1to12 - 1, day).getDay()
+    if (dow !== 0 && dow !== 6) {
+      count++
+      if (count === n) return day
+    }
+  }
+  return limit  // se "10º dia útil" mas só tem 8, usa o último
+}
+
+// Dia do calendário em que essa recorrente deve disparar no mês dado
+function diaAlvoNoMes(r, year, month1to12) {
+  if (r.dia_util) return nthDiaUtil(year, month1to12, r.dia_mes)
+  return Math.min(r.dia_mes, diasNoMes(year, month1to12))
+}
+
 async function gerarRecorrentes() {
   const hoje = new Date()
   const hojeStr = hoje.toISOString().slice(0,10)
+  const ano = hoje.getFullYear()
+  const mes = hoje.getMonth() + 1
   const diaHoje = hoje.getDate()
-  const mesAtualStr = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`
+  const mesPref = `${ano}-${String(mes).padStart(2,'0')}`
 
-  for (const r of _recorrentes) {
+  // Receitas → faturamento
+  for (const r of _recReceitas) {
     if (!r.ativa) continue
-    // Já gerou este mês? compara mês da ultima_geracao com mês atual
-    if (r.ultima_geracao && r.ultima_geracao.startsWith(mesAtualStr)) continue
-    // Já passou (ou é hoje) o dia configurado?
-    if (diaHoje < r.dia_mes) continue
+    if (r.ultima_geracao && r.ultima_geracao.startsWith(mesPref)) continue
+    const diaAlvo = diaAlvoNoMes(r, ano, mes)
+    if (diaHoje < diaAlvo) continue
+    await db.from('faturamento').insert({
+      mes, ano,
+      valor: r.valor,
+      descricao: r.descricao,
+      cliente_id: r.cliente_id || null,
+      recorrente_id: r.id,
+    })
+    await db.from('receitas_recorrentes').update({ ultima_geracao: hojeStr }).eq('id', r.id)
+  }
 
+  // Despesas → despesas
+  for (const r of _recDespesas) {
+    if (!r.ativa) continue
+    if (r.ultima_geracao && r.ultima_geracao.startsWith(mesPref)) continue
+    const diaAlvo = diaAlvoNoMes(r, ano, mes)
+    if (diaHoje < diaAlvo) continue
     await db.from('despesas').insert({
       descricao: r.descricao,
       categoria: r.categoria,
       valor:     r.valor,
-      data:      `${mesAtualStr}-${String(r.dia_mes).padStart(2,'0')}`,
+      data:      `${mesPref}-${String(diaAlvo).padStart(2,'0')}`,
       recorrente_id: r.id,
     })
     await db.from('despesas_recorrentes').update({ ultima_geracao: hojeStr }).eq('id', r.id)
   }
 }
 
-async function rodarRecorrenteAgora(r) {
-  const hoje = new Date().toISOString().slice(0,10)
-  await db.from('despesas').insert({
-    descricao: r.descricao,
-    categoria: r.categoria,
-    valor:     r.valor,
-    data:      hoje,
-    recorrente_id: r.id,
-  })
-  await db.from('despesas_recorrentes').update({ ultima_geracao: hoje }).eq('id', r.id)
+async function rodarRecorrenteAgora(r, tipo) {
+  const hoje = new Date()
+  const hojeStr = hoje.toISOString().slice(0,10)
+  if (tipo === 'receita') {
+    await db.from('faturamento').insert({
+      mes: hoje.getMonth() + 1, ano: hoje.getFullYear(),
+      valor: r.valor, descricao: r.descricao,
+      cliente_id: r.cliente_id || null, recorrente_id: r.id,
+    })
+    await db.from('receitas_recorrentes').update({ ultima_geracao: hojeStr }).eq('id', r.id)
+  } else {
+    await db.from('despesas').insert({
+      descricao: r.descricao, categoria: r.categoria, valor: r.valor,
+      data: hojeStr, recorrente_id: r.id,
+    })
+    await db.from('despesas_recorrentes').update({ ultima_geracao: hojeStr }).eq('id', r.id)
+  }
 }
 
 // ════════ Helpers ════════════════════════════════════════════════════════
