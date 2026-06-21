@@ -19,6 +19,9 @@ let _recReceitas = []
 let _clis        = []
 let _view        = 'receita'
 let _delegationAttached = false
+// Mês/ano selecionado na aba Resumo (default: hoje)
+let _resumoMes   = new Date().getMonth() + 1
+let _resumoAno   = new Date().getFullYear()
 
 export async function render() {
   const c = document.getElementById('content')
@@ -368,21 +371,28 @@ function projecaoMes(mesAlvo, anoAlvo) {
 function renderResumo() {
   const c = document.getElementById('content')
   const now = new Date()
-  const ano = now.getFullYear()
-  const mes = now.getMonth() + 1
+  const ano = _resumoAno
+  const mes = _resumoMes
+  const mesHoje = now.getMonth() + 1
+  const anoHoje = now.getFullYear()
 
-  // Ano calendário Jan–Dez com projeção
+  // Ano calendário Jan–Dez com projeção (do ano selecionado)
   const chart = []
   for (let m = 1; m <= 12; m++) {
     const p = projecaoMes(m, ano)
-    chart.push({ label: MES[m - 1], mes: m, ...p, cur: m === mes })
+    chart.push({ label: MES[m - 1], mes: m, ...p, cur: m === mes, hoje: m === mesHoje && ano === anoHoje })
   }
   const maxV = Math.max(...chart.flatMap(d => [d.recProj, d.desProj]), 1)
-  const mesAtual = chart[mes - 1]
+  const mesSel = chart[mes - 1]  // o "mês em foco" agora é o selecionado, não o atual
 
-  // Próximo mês (o que o usuário pediu pra projetar)
-  const proxIdx = mes // se mes=6 (jun), proxIdx=6 → chart[6] = jul
-  const proxMes = proxIdx <= 11 ? chart[proxIdx] : null  // null se dezembro
+  // Próximo mês relativo ao selecionado (mantém pra mostrar como sneak peek)
+  let proxMes = null
+  if (mes < 12)      proxMes = chart[mes]
+  else if (mes === 12) {
+    // dezembro do ano selecionado: pula pra janeiro do ano seguinte
+    const p = projecaoMes(1, ano + 1)
+    proxMes = { label: MES[0], mes: 1, ano: ano + 1, ...p, prox_ano: true }
+  }
 
   // Total realizado YTD vs projeção do ano
   const recRealAno = chart.reduce((s, d) => s + d.recReal, 0)
@@ -419,46 +429,63 @@ function renderResumo() {
     </div>`
   }).join('')
 
-  // Próximos 6 meses (pra planejar fluxo)
+  // Próximos 6 meses a partir do selecionado — atravessa anos se necessário
   const cardsProximos = []
   for (let i = 0; i < 6; i++) {
-    const targetIdx = mes - 1 + i
-    if (targetIdx >= 12) break
-    const d = chart[targetIdx]
-    cardsProximos.push(`
-      <div class="sc" style="${d.cur?'border-color:rgba(197,248,42,.3)':''}">
-        <div class="sl">${MESF[d.mes-1]} ${d.cur ? '· atual' : ''}</div>
-        <div class="sv" style="color:${d.lucroProj>=0?'var(--ok)':'var(--danger)'}">${brl(d.lucroProj)}</div>
-        <div class="ss">${brl(d.recProj)} − ${brl(d.desProj)}</div>
-      </div>`)
+    const targetMes0 = mes - 1 + i
+    if (targetMes0 < 12) {
+      const d = chart[targetMes0]
+      cardsProximos.push(cardMes(d, ano))
+    } else {
+      const offsetYear = Math.floor(targetMes0 / 12)
+      const realMes = (targetMes0 % 12) + 1
+      const realAno = ano + offsetYear
+      const p = projecaoMes(realMes, realAno)
+      const d = { label: MES[realMes - 1], mes: realMes, ...p, cur: realMes === mesHoje && realAno === anoHoje }
+      cardsProximos.push(cardMes(d, realAno))
+    }
   }
 
-  c.innerHTML = `
-    <!-- Destaque: próximo mês (o que o usuário quer planejar) -->
-    ${proxMes ? `
-      <div class="cw" style="margin-bottom:18px;border:1px solid rgba(193,255,42,.2)">
-        <div class="ct" style="color:var(--accent)">Projeção — ${MESF[proxMes.mes-1]} ${ano}</div>
-        <div class="sg" style="grid-template-columns:repeat(4,1fr);margin-bottom:0;margin-top:12px">
-          <div class="sc" style="background:var(--bg-alt)">
-            <div class="sl">Receita prevista</div>
-            <div class="sv" style="color:var(--accent)">${brl(proxMes.recProj)}</div>
-          </div>
-          <div class="sc" style="background:var(--bg-alt)">
-            <div class="sl">Despesa prevista</div>
-            <div class="sv" style="color:var(--danger)">${brl(proxMes.desProj)}</div>
-          </div>
-          <div class="sc" style="background:var(--bg-alt)">
-            <div class="sl">Lucro projetado</div>
-            <div class="sv" style="color:${proxMes.lucroProj>=0?'var(--ok)':'var(--danger)'}">${brl(proxMes.lucroProj)}</div>
-          </div>
-          <div class="sc" style="background:var(--bg-alt)">
-            <div class="sl">Margem</div>
-            <div class="sv">${proxMes.recProj>0?Math.round(proxMes.lucroProj/proxMes.recProj*100)+'%':'—'}</div>
-          </div>
-        </div>
-      </div>` : ''}
+  // Picker: seletor de mês/ano + jump pra hoje
+  const isHoje = mes === mesHoje && ano === anoHoje
+  const pickerHTML = `
+    <div class="resumo-picker">
+      <button class="btn bg bsm" id="rsm-prev" title="Mês anterior">◀</button>
+      <select class="fsl" id="rsm-mes">${MESF.map((m,i)=>`<option value="${i+1}"${i+1===mes?' selected':''}>${m}</option>`).join('')}</select>
+      <input class="fi" type="number" id="rsm-ano" value="${ano}" style="width:90px;text-align:center;padding:6px 9px">
+      <button class="btn bg bsm" id="rsm-next" title="Próximo mês">▶</button>
+      ${!isHoje ? `<button class="btn bg bsm" id="rsm-hoje">Voltar pra hoje</button>` : ''}
+    </div>`
 
-    <!-- Fluxo dos próximos 6 meses -->
+  c.innerHTML = `
+    ${pickerHTML}
+
+    <!-- Destaque: mês em foco (o selecionado no picker) -->
+    <div class="cw" style="margin-bottom:18px;border:1px solid rgba(193,255,42,.2)">
+      <div class="ct" style="color:var(--accent)">${mesSel.isPast ? 'Realizado' : 'Projeção'} — ${MESF[mesSel.mes-1]} ${ano}${mesSel.hoje ? ' · atual' : ''}</div>
+      <div class="sg" style="grid-template-columns:repeat(4,1fr);margin-bottom:0;margin-top:12px">
+        <div class="sc" style="background:var(--bg-alt)">
+          <div class="sl">Receita ${mesSel.isPast?'realizada':'prevista'}</div>
+          <div class="sv" style="color:var(--accent)">${brl(mesSel.recProj)}</div>
+          ${mesSel.recPend > 0 ? `<div class="ss">${brl(mesSel.recReal)} recebido · ${brl(mesSel.recPend)} a receber</div>` : ''}
+        </div>
+        <div class="sc" style="background:var(--bg-alt)">
+          <div class="sl">Despesa ${mesSel.isPast?'paga':'prevista'}</div>
+          <div class="sv" style="color:var(--danger)">${brl(mesSel.desProj)}</div>
+          ${mesSel.desPend > 0 ? `<div class="ss">${brl(mesSel.desReal)} pago · ${brl(mesSel.desPend)} a pagar</div>` : ''}
+        </div>
+        <div class="sc" style="background:var(--bg-alt)">
+          <div class="sl">Lucro ${mesSel.isPast?'realizado':'projetado'}</div>
+          <div class="sv" style="color:${mesSel.lucroProj>=0?'var(--ok)':'var(--danger)'}">${brl(mesSel.lucroProj)}</div>
+        </div>
+        <div class="sc" style="background:var(--bg-alt)">
+          <div class="sl">Margem</div>
+          <div class="sv">${mesSel.recProj>0?Math.round(mesSel.lucroProj/mesSel.recProj*100)+'%':'—'}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fluxo dos próximos 6 meses a partir do selecionado -->
     <div class="ct" style="margin-bottom:8px">Próximos meses — lucro projetado</div>
     <div class="sg" style="grid-template-columns:repeat(${cardsProximos.length},1fr);margin-bottom:22px">${cardsProximos.join('')}</div>
 
@@ -493,6 +520,34 @@ function renderResumo() {
         <tbody>${rows}</tbody>
       </table>
     </div>`
+
+  // ── Handlers do picker ──────────────────────────────────────────────────
+  const goto = (m, a) => {
+    let mm = m, aa = a
+    if (mm < 1)  { mm = 12; aa-- }
+    if (mm > 12) { mm = 1;  aa++ }
+    if (aa < 2020 || aa > 2099) return
+    _resumoMes = mm; _resumoAno = aa
+    renderResumo()
+  }
+  document.getElementById('rsm-prev').addEventListener('click', () => goto(mes - 1, ano))
+  document.getElementById('rsm-next').addEventListener('click', () => goto(mes + 1, ano))
+  document.getElementById('rsm-mes').addEventListener('change', e => goto(parseInt(e.target.value), ano))
+  document.getElementById('rsm-ano').addEventListener('change', e => {
+    const v = parseInt(e.target.value)
+    if (v >= 2020 && v <= 2099) goto(mes, v)
+  })
+  const hojeBtn = document.getElementById('rsm-hoje')
+  if (hojeBtn) hojeBtn.addEventListener('click', () => goto(mesHoje, anoHoje))
+}
+
+// Card pequeno usado em "Próximos meses"
+function cardMes(d, anoCard) {
+  return `<div class="sc" style="${d.cur?'border-color:rgba(197,248,42,.3)':''}">
+    <div class="sl">${MESF[d.mes-1]}${d.cur ? ' · atual' : ''}</div>
+    <div class="sv" style="color:${d.lucroProj>=0?'var(--ok)':'var(--danger)'}">${brl(d.lucroProj)}</div>
+    <div class="ss">${brl(d.recProj)} − ${brl(d.desProj)}</div>
+  </div>`
 }
 
 // ════════ FORMS ══════════════════════════════════════════════════════════
