@@ -33,3 +33,6 @@ verify_jwt = false
 
 [functions.digest-diario]
 verify_jwt = false
+
+[functions.gerar-recorrentes]
+verify_jwt = false

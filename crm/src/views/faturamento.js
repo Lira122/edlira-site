@@ -23,8 +23,8 @@ export async function render() {
   const c = document.getElementById('content')
   c.innerHTML = '<div class="empty">Carregando...</div>'
 
-  await loadAll()
-  await gerarRecorrentes()
+  // Auto-geração agora é server-side via pg_cron (edge function gerar-recorrentes).
+  // Cliente só carrega os dados.
   await loadAll()
 
   renderToolbar()
@@ -560,72 +560,7 @@ function recReceitaForm(r = {}) {
   })
 }
 
-// ════════ Auto-geração ═══════════════════════════════════════════════════
-function diasNoMes(year, month1to12) {
-  return new Date(year, month1to12, 0).getDate()
-}
-
-// N-ésimo dia útil do mês (segunda a sexta). Retorna day-of-month ou null.
-function nthDiaUtil(year, month1to12, n) {
-  let count = 0
-  const limit = diasNoMes(year, month1to12)
-  for (let day = 1; day <= limit; day++) {
-    const dow = new Date(year, month1to12 - 1, day).getDay()
-    if (dow !== 0 && dow !== 6) {
-      count++
-      if (count === n) return day
-    }
-  }
-  return limit  // se "10º dia útil" mas só tem 8, usa o último
-}
-
-// Dia do calendário em que essa recorrente deve disparar no mês dado
-function diaAlvoNoMes(r, year, month1to12) {
-  if (r.dia_util) return nthDiaUtil(year, month1to12, r.dia_mes)
-  return Math.min(r.dia_mes, diasNoMes(year, month1to12))
-}
-
-async function gerarRecorrentes() {
-  const hoje = new Date()
-  const hojeStr = hoje.toISOString().slice(0,10)
-  const ano = hoje.getFullYear()
-  const mes = hoje.getMonth() + 1
-  const diaHoje = hoje.getDate()
-  const mesPref = `${ano}-${String(mes).padStart(2,'0')}`
-
-  // Receitas → faturamento
-  for (const r of _recReceitas) {
-    if (!r.ativa) continue
-    if (r.ultima_geracao && r.ultima_geracao.startsWith(mesPref)) continue
-    const diaAlvo = diaAlvoNoMes(r, ano, mes)
-    if (diaHoje < diaAlvo) continue
-    await db.from('faturamento').insert({
-      mes, ano,
-      valor: r.valor,
-      descricao: r.descricao,
-      cliente_id: r.cliente_id || null,
-      recorrente_id: r.id,
-    })
-    await db.from('receitas_recorrentes').update({ ultima_geracao: hojeStr }).eq('id', r.id)
-  }
-
-  // Despesas → despesas
-  for (const r of _recDespesas) {
-    if (!r.ativa) continue
-    if (r.ultima_geracao && r.ultima_geracao.startsWith(mesPref)) continue
-    const diaAlvo = diaAlvoNoMes(r, ano, mes)
-    if (diaHoje < diaAlvo) continue
-    await db.from('despesas').insert({
-      descricao: r.descricao,
-      categoria: r.categoria,
-      valor:     r.valor,
-      data:      `${mesPref}-${String(diaAlvo).padStart(2,'0')}`,
-      recorrente_id: r.id,
-    })
-    await db.from('despesas_recorrentes').update({ ultima_geracao: hojeStr }).eq('id', r.id)
-  }
-}
-
+// ════════ Lançamento manual (botão "Lançar agora") ══════════════════════
 async function rodarRecorrenteAgora(r, tipo) {
   const hoje = new Date()
   const hojeStr = hoje.toISOString().slice(0,10)
