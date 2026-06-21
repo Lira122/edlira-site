@@ -30,3 +30,6 @@ verify_jwt = false
 
 [functions.instancia]
 verify_jwt = false
+
+[functions.digest-diario]
+verify_jwt = false
