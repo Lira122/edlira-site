@@ -10,17 +10,30 @@ const FN_URL = `${SB_URL}/functions/v1/instancia`
 let _polling = null
 let _state   = null
 
+// Marca: quando a view tá montada, o content tem data-view="instancia".
+// Se o usuário navega pra outra tela, o data-view some — aí abortamos o polling.
+function viewAtiva() {
+  const c = document.getElementById('content')
+  return c && c.dataset.view === 'instancia'
+}
+function pararPolling() {
+  if (_polling) { clearInterval(_polling); _polling = null }
+}
+
 export async function render() {
+  pararPolling()
   document.getElementById('tbacts').innerHTML =
     `<button class="btn bp bsm" id="ins-refresh">Atualizar</button>`
   document.getElementById('ins-refresh').addEventListener('click', () => carregar(true))
 
   const c = document.getElementById('content')
+  c.dataset.view = 'instancia'
   c.innerHTML = '<div class="empty">Consultando a UazAPI...</div>'
   await carregar(true)
 }
 
 async function carregar(showLoading = false) {
+  if (!viewAtiva()) { pararPolling(); return }
   const c = document.getElementById('content')
   if (showLoading && !_state) c.innerHTML = '<div class="empty">Consultando a UazAPI...</div>'
 
@@ -54,47 +67,48 @@ async function carregar(showLoading = false) {
   }
 }
 
-// ── Helpers pra parsear o que a UazAPI devolve (varia entre builds) ─────────
-function getInstanceData(api) {
-  if (!api) return {}
-  // O proxy devolve { ok, httpStatus, path, data }
-  const d = api.data || api
-  // UazAPI v2 às vezes embrulha em "instance" ou devolve direto
-  return d?.instance || d || {}
-}
+// ── Parsing da resposta UazAPI ─────────────────────────────────────────────
+// Estrutura real:
+// { ok, data: { connected: bool, loggedIn: bool, instance: { status, name, owner, qrcode, profileName, ... } } }
+function inst(api) { return api?.data?.instance || {} }
 
 function getStatus(api) {
-  const d = getInstanceData(api)
-  const candidates = [d.status, d.state, d.connection, d.connected, d.connectionState].filter(v => v !== undefined && v !== null)
-  if (!candidates.length) return 'unknown'
-  const v = String(candidates[0]).toLowerCase()
-  if (['connected','open','ready','online','true'].includes(v) || candidates[0] === true) return 'connected'
-  if (['disconnected','closed','offline','false','close','logged_out'].includes(v) || candidates[0] === false) return 'disconnected'
-  if (['connecting','qr','qrcode','waiting','pairing','scanning'].includes(v)) return 'connecting'
-  return v
+  const d = api?.data
+  if (!d) return 'unknown'
+  if (d.connected === true)  return 'connected'
+  if (inst(api).qrcode)      return 'connecting'
+  if (d.connected === false) return 'disconnected'
+  return 'unknown'
 }
 
 function getPhone(api) {
-  const d = getInstanceData(api)
-  return d.phone || d.number || d.wid || d.jid || d.connectedPhone || d.owner || null
+  return inst(api).owner || inst(api).phone || null
+}
+
+function getProfileName(api) {
+  return inst(api).profileName || null
+}
+
+function getInstanceName(api) {
+  return inst(api).name || 'sofia'
 }
 
 function getQR(api) {
-  const d = getInstanceData(api)
-  // Vários formatos possíveis: data URL, base64 pura, ou url remota
-  let qr = d.qrcode || d.qr || d.qrCode || d.qr_code || d.base64 || null
+  let qr = inst(api).qrcode
   if (!qr) return null
   qr = String(qr)
   if (qr.startsWith('data:image')) return qr
-  if (qr.startsWith('http')) return qr
-  // base64 puro → vira data URL
+  if (qr.startsWith('http'))       return qr
   return `data:image/png;base64,${qr}`
 }
 
 // ── Render ──────────────────────────────────────────────────────────────────
 function renderPage() {
+  if (!viewAtiva()) { pararPolling(); return }
   const status   = getStatus(_state.api)
   const phone    = getPhone(_state.api)
+  const profName = getProfileName(_state.api)
+  const instName = getInstanceName(_state.api)
   const qr       = getQR(_state.api)
   const apiOk    = _state.api?.ok !== false
   const apiErr   = _state.api?.error || (_state.api?.httpStatus && _state.api.httpStatus >= 400 ? `HTTP ${_state.api.httpStatus}` : null)
@@ -120,10 +134,8 @@ function renderPage() {
     </div>` : ''
 
   const acoes = status === 'connected'
-    ? `<button class="btn bd" id="ins-disconnect">Desconectar</button>
-       <button class="btn bg" id="ins-restart">Reiniciar</button>`
-    : `<button class="btn bp" id="ins-connect">Gerar QR / Reconectar</button>
-       <button class="btn bg" id="ins-restart">Reiniciar</button>`
+    ? `<button class="btn bd" id="ins-disconnect">Desconectar</button>`
+    : `<button class="btn bp" id="ins-connect">Gerar QR / Reconectar</button>`
 
   const c = document.getElementById('content')
   c.innerHTML = `
@@ -141,6 +153,7 @@ function renderPage() {
             <div>
               <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Número conectado</div>
               <div style="font-size:18px;font-weight:600;font-family:ui-monospace,monospace">${phone ? formatPhone(phone) : '—'}</div>
+              ${profName ? `<div style="font-size:12px;color:var(--text-3);margin-top:2px">${esc(profName)}</div>` : ''}
             </div>
             <div>
               <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Última mensagem recebida</div>
@@ -178,7 +191,7 @@ function renderPage() {
         </div>
         <div>
           <div style="color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Instância</div>
-          <div style="font-family:ui-monospace,monospace;color:var(--text-2)">sofia</div>
+          <div style="font-family:ui-monospace,monospace;color:var(--text-2)">${esc(instName)}</div>
         </div>
         <div>
           <div style="color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Webhook</div>
@@ -200,10 +213,8 @@ function renderPage() {
   // Listeners dos botões
   const cn = document.getElementById('ins-connect')
   const ds = document.getElementById('ins-disconnect')
-  const rs = document.getElementById('ins-restart')
   if (cn) cn.addEventListener('click', () => acao('connect',    'Gerando QR…',     'QR gerado'))
   if (ds) ds.addEventListener('click', () => acao('disconnect', 'Desconectando…', 'Desconectada'))
-  if (rs) rs.addEventListener('click', () => acao('restart',    'Reiniciando…',   'Reiniciada'))
 }
 
 async function acao(action, msgInicio, msgFim) {
@@ -222,23 +233,22 @@ async function acao(action, msgInicio, msgFim) {
   }
 }
 
-// Polling automático quando não tá conectado
+// Polling automático apenas quando a view tá ativa E não conectado
 function decidirPolling() {
   const status = getStatus(_state.api)
   const naoConectado = status !== 'connected'
 
+  if (!viewAtiva()) { pararPolling(); return }
+
   if (naoConectado && !_polling) {
-    _polling = setInterval(() => carregar(false), 5000)
+    _polling = setInterval(() => {
+      if (!viewAtiva()) { pararPolling(); return }
+      carregar(false)
+    }, 5000)
   } else if (!naoConectado && _polling) {
-    clearInterval(_polling)
-    _polling = null
+    pararPolling()
   }
 }
-
-// Para o polling quando o usuário sai da view (chama render de outro)
-window.addEventListener('hashchange', () => {
-  if (_polling) { clearInterval(_polling); _polling = null }
-})
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function esc(s) {

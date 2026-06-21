@@ -10,6 +10,25 @@ const CORS = {
   'Content-Type':                 'application/json',
 }
 
+// Campos que NUNCA podem voltar pro browser
+const SENSITIVE_KEYS = new Set([
+  'token', 'openai_apikey', 'apikey', 'api_key',
+  'adminField01', 'adminField02', 'profilePicUrl',
+])
+
+function sanitize(value: any): any {
+  if (Array.isArray(value)) return value.map(sanitize)
+  if (value && typeof value === 'object') {
+    const out: Record<string, any> = {}
+    for (const [k, v] of Object.entries(value)) {
+      if (SENSITIVE_KEYS.has(k)) continue
+      out[k] = sanitize(v)
+    }
+    return out
+  }
+  return value
+}
+
 async function uaz(path: string, method: string = 'GET', body: unknown = null) {
   const url = `${UAZAPI_URL.replace(/\/+$/, '')}${path}`
   const init: RequestInit = {
@@ -22,7 +41,7 @@ async function uaz(path: string, method: string = 'GET', body: unknown = null) {
     const text = await res.text()
     let data: unknown
     try { data = JSON.parse(text) } catch { data = text }
-    return { ok: res.ok, httpStatus: res.status, path, data }
+    return { ok: res.ok, httpStatus: res.status, path, data: sanitize(data) }
   } catch (err) {
     return { ok: false, httpStatus: 0, path, error: String(err) }
   }
@@ -38,31 +57,14 @@ Deno.serve(async (req: Request) => {
     let result: unknown
     switch (action) {
       case 'status':
-        // Tenta /instance/me, /status como fallback. Resposta vem normalizada.
-        result = await uaz('/instance/me')
-        if (!(result as any).ok) result = await uaz('/status')
-        break
-
       case 'connect':
-        // Pega o QR (ou retorna conectado se já tá ok)
+        // /instance/connect é idempotente: retorna dados completos se já tá
+        // conectado, ou retorna QR pra escanear quando offline.
         result = await uaz('/instance/connect', 'POST', {})
-        if (!(result as any).ok) {
-          // fallback comum em algumas builds UazAPI
-          result = await uaz('/instance/qrcode')
-        }
         break
 
       case 'disconnect':
         result = await uaz('/instance/disconnect', 'POST', {})
-        break
-
-      case 'restart':
-        result = await uaz('/instance/restart', 'POST', {})
-        break
-
-      case 'webhook':
-        // Mostra qual webhook está configurado
-        result = await uaz('/instance/webhook')
         break
 
       default:
