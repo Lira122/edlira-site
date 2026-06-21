@@ -330,6 +330,40 @@ function renderRecorrentes() {
   // Listener é delegado em attachDelegation() — anexado UMA vez no render() inicial.
 }
 
+// Projeção de um mês: o que JÁ foi lançado + o que VAI entrar/sair por recorrente
+function projecaoMes(mesAlvo, anoAlvo) {
+  const hoje = new Date()
+  const isPast = (anoAlvo < hoje.getFullYear())
+    || (anoAlvo === hoje.getFullYear() && mesAlvo < hoje.getMonth() + 1)
+  const mStr = `${anoAlvo}-${String(mesAlvo).padStart(2,'0')}`
+
+  const recReal = _fat.filter(f => f.mes === mesAlvo && f.ano === anoAlvo)
+                      .reduce((s, f) => s + Number(f.valor), 0)
+  const desReal = _despesas.filter(x => (x.data||'').startsWith(mStr))
+                           .reduce((s, x) => s + Number(x.valor), 0)
+
+  let recPend = 0, desPend = 0
+  if (!isPast) {
+    for (const r of _recReceitas) {
+      if (!r.ativa) continue
+      const jaTem = _fat.some(f => f.recorrente_id === r.id && f.mes === mesAlvo && f.ano === anoAlvo)
+      if (!jaTem) recPend += Number(r.valor)
+    }
+    for (const r of _recDespesas) {
+      if (!r.ativa) continue
+      const jaTem = _despesas.some(x => x.recorrente_id === r.id && (x.data||'').startsWith(mStr))
+      if (!jaTem) desPend += Number(r.valor)
+    }
+  }
+
+  return {
+    recReal, recPend, recProj: recReal + recPend,
+    desReal, desPend, desProj: desReal + desPend,
+    lucroProj: (recReal + recPend) - (desReal + desPend),
+    isPast,
+  }
+}
+
 // ════════ RESUMO (receita - despesa = lucro) ════════════════════════════
 function renderResumo() {
   const c = document.getElementById('content')
@@ -337,92 +371,125 @@ function renderResumo() {
   const ano = now.getFullYear()
   const mes = now.getMonth() + 1
 
-  // Ano calendário Jan–Dez (alinha com Despesas que também é por ano)
+  // Ano calendário Jan–Dez com projeção
   const chart = []
   for (let m = 1; m <= 12; m++) {
-    const mStr = `${ano}-${String(m).padStart(2,'0')}`
-    const rec = _fat.filter(f => f.mes === m && f.ano === ano).reduce((s, f) => s + Number(f.valor), 0)
-    const des = _despesas.filter(x => (x.data||'').startsWith(mStr)).reduce((s, x) => s + Number(x.valor), 0)
-    chart.push({ label: MES[m - 1], mes: m, rec, des, lucro: rec - des, cur: m === mes })
+    const p = projecaoMes(m, ano)
+    chart.push({ label: MES[m - 1], mes: m, ...p, cur: m === mes })
   }
-  const maxV = Math.max(...chart.flatMap(d => [d.rec, d.des, Math.abs(d.lucro)]), 1)
+  const maxV = Math.max(...chart.flatMap(d => [d.recProj, d.desProj]), 1)
   const mesAtual = chart[mes - 1]
 
-  // Realizado no ano (jan até hoje, baseado no que está lançado)
-  const recAno = chart.reduce((s, d) => s + d.rec, 0)
-  const desAno = chart.reduce((s, d) => s + d.des, 0)
-  const lucroAno = recAno - desAno
+  // Próximo mês (o que o usuário pediu pra projetar)
+  const proxIdx = mes // se mes=6 (jun), proxIdx=6 → chart[6] = jul
+  const proxMes = proxIdx <= 11 ? chart[proxIdx] : null  // null se dezembro
 
-  // Projeção: realizado + (recorrentes mensais × meses restantes do ano, incluindo hoje)
-  const mesesRestantes = 12 - mes + 1
-  const recRecorr = _recReceitas.filter(r => r.ativa).reduce((s, r) => s + Number(r.valor), 0)
-  const desRecorr = _recDespesas.filter(r => r.ativa).reduce((s, r) => s + Number(r.valor), 0)
-  // O mês atual já pode ter parte do recorrente realizado, então subtraio do que falta:
-  const recProj = recAno + recRecorr * mesesRestantes - mesAtual.rec
-  const desProj = desAno + desRecorr * mesesRestantes - mesAtual.des
-  const lucroProj = recProj - desProj
+  // Total realizado YTD vs projeção do ano
+  const recRealAno = chart.reduce((s, d) => s + d.recReal, 0)
+  const desRealAno = chart.reduce((s, d) => s + d.desReal, 0)
+  const lucroRealAno = recRealAno - desRealAno
+  const recProjAno = chart.reduce((s, d) => s + d.recProj, 0)
+  const desProjAno = chart.reduce((s, d) => s + d.desProj, 0)
+  const lucroProjAno = recProjAno - desProjAno
 
-  const rows = chart.slice().reverse().map(d => `
-    <tr>
-      <td>${d.label}${d.cur?' <span style="font-size:10px;color:var(--accent);font-weight:600">ATUAL</span>':''}</td>
-      <td style="color:var(--accent);font-weight:500">${brl(d.rec)}</td>
-      <td style="color:var(--danger);font-weight:500">${brl(d.des)}</td>
-      <td style="font-weight:700;color:${d.lucro>=0?'var(--ok)':'var(--danger)'}">${brl(d.lucro)}</td>
-    </tr>`).join('')
+  const rows = chart.slice().reverse().map(d => {
+    const recCell = d.recPend > 0
+      ? `<b>${brl(d.recProj)}</b><div style="font-size:10px;color:var(--text-3);font-weight:400">${brl(d.recReal)} recebido · ${brl(d.recPend)} a receber</div>`
+      : brl(d.recReal)
+    const desCell = d.desPend > 0
+      ? `<b>${brl(d.desProj)}</b><div style="font-size:10px;color:var(--text-3);font-weight:400">${brl(d.desReal)} pago · ${brl(d.desPend)} a pagar</div>`
+      : brl(d.desReal)
+    return `<tr>
+      <td>${d.label}${d.cur?' <span style="font-size:10px;color:var(--accent);font-weight:600">ATUAL</span>':''}${d.isPast?'':' <span style="font-size:10px;color:var(--text-3)">prev</span>'}</td>
+      <td style="color:var(--accent)">${recCell}</td>
+      <td style="color:var(--danger)">${desCell}</td>
+      <td style="font-weight:700;color:${d.lucroProj>=0?'var(--ok)':'var(--danger)'}">${brl(d.lucroProj)}</td>
+    </tr>`
+  }).join('')
 
   const barRows = chart.map(d => {
-    const recPct = Math.round(d.rec / maxV * 100)
-    const desPct = Math.round(d.des / maxV * 100)
+    const recPct = Math.round(d.recProj / maxV * 100)
+    const desPct = Math.round(d.desProj / maxV * 100)
     return `<div class="resumo-bg${d.cur?' cur':''}">
       <div class="resumo-bars">
-        <div class="resumo-bar rec" style="height:${recPct}%" title="Receita ${brl(d.rec)}"></div>
-        <div class="resumo-bar des" style="height:${desPct}%" title="Despesa ${brl(d.des)}"></div>
+        <div class="resumo-bar rec${d.isPast?'':' proj'}" style="height:${recPct}%" title="Receita ${brl(d.recProj)}"></div>
+        <div class="resumo-bar des${d.isPast?'':' proj'}" style="height:${desPct}%" title="Despesa ${brl(d.desProj)}"></div>
       </div>
       <div class="bl">${d.label}</div>
     </div>`
   }).join('')
 
-  c.innerHTML = `
-    <div class="sg">
-      <div class="sc"><div class="sl">Receita ${MESF[mes-1]}</div><div class="sv" style="color:var(--accent)">${brl(mesAtual.rec)}</div></div>
-      <div class="sc"><div class="sl">Despesa ${MESF[mes-1]}</div><div class="sv" style="color:var(--danger)">${brl(mesAtual.des)}</div></div>
-      <div class="sc"><div class="sl">Lucro ${MESF[mes-1]}</div><div class="sv" style="color:${mesAtual.lucro>=0?'var(--ok)':'var(--danger)'}">${brl(mesAtual.lucro)}</div></div>
-      <div class="sc"><div class="sl">Margem mês</div><div class="sv">${mesAtual.rec>0?Math.round(mesAtual.lucro/mesAtual.rec*100)+'%':'—'}</div></div>
-    </div>
+  // Próximos 6 meses (pra planejar fluxo)
+  const cardsProximos = []
+  for (let i = 0; i < 6; i++) {
+    const targetIdx = mes - 1 + i
+    if (targetIdx >= 12) break
+    const d = chart[targetIdx]
+    cardsProximos.push(`
+      <div class="sc" style="${d.cur?'border-color:rgba(197,248,42,.3)':''}">
+        <div class="sl">${MESF[d.mes-1]} ${d.cur ? '· atual' : ''}</div>
+        <div class="sv" style="color:${d.lucroProj>=0?'var(--ok)':'var(--danger)'}">${brl(d.lucroProj)}</div>
+        <div class="ss">${brl(d.recProj)} − ${brl(d.desProj)}</div>
+      </div>`)
+  }
 
+  c.innerHTML = `
+    <!-- Destaque: próximo mês (o que o usuário quer planejar) -->
+    ${proxMes ? `
+      <div class="cw" style="margin-bottom:18px;border:1px solid rgba(193,255,42,.2)">
+        <div class="ct" style="color:var(--accent)">Projeção — ${MESF[proxMes.mes-1]} ${ano}</div>
+        <div class="sg" style="grid-template-columns:repeat(4,1fr);margin-bottom:0;margin-top:12px">
+          <div class="sc" style="background:var(--bg-alt)">
+            <div class="sl">Receita prevista</div>
+            <div class="sv" style="color:var(--accent)">${brl(proxMes.recProj)}</div>
+          </div>
+          <div class="sc" style="background:var(--bg-alt)">
+            <div class="sl">Despesa prevista</div>
+            <div class="sv" style="color:var(--danger)">${brl(proxMes.desProj)}</div>
+          </div>
+          <div class="sc" style="background:var(--bg-alt)">
+            <div class="sl">Lucro projetado</div>
+            <div class="sv" style="color:${proxMes.lucroProj>=0?'var(--ok)':'var(--danger)'}">${brl(proxMes.lucroProj)}</div>
+          </div>
+          <div class="sc" style="background:var(--bg-alt)">
+            <div class="sl">Margem</div>
+            <div class="sv">${proxMes.recProj>0?Math.round(proxMes.lucroProj/proxMes.recProj*100)+'%':'—'}</div>
+          </div>
+        </div>
+      </div>` : ''}
+
+    <!-- Fluxo dos próximos 6 meses -->
+    <div class="ct" style="margin-bottom:8px">Próximos meses — lucro projetado</div>
+    <div class="sg" style="grid-template-columns:repeat(${cardsProximos.length},1fr);margin-bottom:22px">${cardsProximos.join('')}</div>
+
+    <!-- Ano corrente -->
     <div class="sg" style="grid-template-columns:repeat(3,1fr)">
       <div class="sc"><div class="sl">Realizado em ${ano}</div>
-        <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
-          <span class="sv" style="color:${lucroAno>=0?'var(--ok)':'var(--danger)'}">${brl(lucroAno)}</span>
-          <span style="font-size:11px;color:var(--text-3)">lucro</span>
-        </div>
-        <div class="ss">${brl(recAno)} receita · ${brl(desAno)} despesa</div>
+        <div class="sv" style="color:${lucroRealAno>=0?'var(--ok)':'var(--danger)'}">${brl(lucroRealAno)}</div>
+        <div class="ss">${brl(recRealAno)} − ${brl(desRealAno)}</div>
       </div>
       <div class="sc"><div class="sl">Projeção ${ano} (com recorrentes)</div>
-        <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
-          <span class="sv" style="color:${lucroProj>=0?'var(--ok)':'var(--danger)'}">${brl(lucroProj)}</span>
-          <span style="font-size:11px;color:var(--text-3)">lucro</span>
-        </div>
-        <div class="ss">${brl(recProj)} receita · ${brl(desProj)} despesa</div>
+        <div class="sv" style="color:${lucroProjAno>=0?'var(--ok)':'var(--danger)'}">${brl(lucroProjAno)}</div>
+        <div class="ss">${brl(recProjAno)} − ${brl(desProjAno)}</div>
       </div>
       <div class="sc"><div class="sl">Recorrentes ativas</div>
-        <div class="sv">${brl(recRecorr - desRecorr)}<span style="font-size:11px;color:var(--text-3);font-weight:400;margin-left:6px">lucro/mês</span></div>
-        <div class="ss">${brl(recRecorr)} entra · ${brl(desRecorr)} sai</div>
+        <div class="sv">${brl(_recReceitas.filter(r=>r.ativa).reduce((s,r)=>s+Number(r.valor),0) - _recDespesas.filter(r=>r.ativa).reduce((s,r)=>s+Number(r.valor),0))}<span style="font-size:11px;color:var(--text-3);font-weight:400;margin-left:6px">/mês</span></div>
       </div>
     </div>
 
     <div class="cw">
-      <div class="ct">Receita vs Despesa — ${ano}</div>
+      <div class="ct">Receita vs Despesa — ${ano} (projetado)</div>
       <div class="bc">${barRows}</div>
-      <div style="display:flex;gap:18px;font-size:11px;color:var(--text-3);margin-top:8px;justify-content:center">
+      <div style="display:flex;gap:18px;font-size:11px;color:var(--text-3);margin-top:8px;justify-content:center;flex-wrap:wrap">
         <span><span style="display:inline-block;width:10px;height:10px;background:var(--accent);border-radius:2px;vertical-align:middle;margin-right:5px"></span>Receita</span>
         <span><span style="display:inline-block;width:10px;height:10px;background:var(--danger);border-radius:2px;vertical-align:middle;margin-right:5px"></span>Despesa</span>
+        <span style="opacity:.6">Barras com listras = projeção (ainda não realizada)</span>
       </div>
     </div>
     <div class="tw">
       <div class="th"><h3>Detalhamento mensal — ${ano}</h3></div>
       <table>
-        <thead><tr><th>Mês</th><th>Receita</th><th>Despesa</th><th>Lucro</th></tr></thead>
+        <thead><tr><th>Mês</th><th>Receita</th><th>Despesa</th><th>Lucro proj.</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`
