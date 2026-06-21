@@ -50,7 +50,7 @@ export async function render() {
 async function loadAll() {
   const [p, cli, t, s, r] = await Promise.all([
     selectAll('projetos', { order: { column: 'criado_em', ascending: false } }),
-    selectAll('clientes', { columns: 'id,nome,empresa', order: { column: 'nome', ascending: true } }),
+    selectAll('clientes', { columns: 'id,nome,empresa,status', order: { column: 'nome', ascending: true } }),
     selectAll('tarefas',  { order: { column: 'ordem', ascending: true } }),
     selectAll('tarefa_subtasks', { order: { column: 'ordem', ascending: true } }),
     selectAll('rotinas',  { order: { column: 'criado_em', ascending: false } }),
@@ -446,7 +446,7 @@ function wireBoardInteractions() {
 // ════════ FORM PROJETO (com editor de etapas) ════════════════════════════
 function projForm(p = {}) {
   const cliOpts = `<option value="">— sem cliente (interno) —</option>` +
-    _clis.map(c => `<option value="${c.id}"${p.cliente_id===c.id?' selected':''}>${escapeHtml(c.empresa || c.nome)}</option>`).join('')
+    clientesAtivos(p.cliente_id).map(c => `<option value="${c.id}"${p.cliente_id===c.id?' selected':''}>${escapeHtml(c.empresa || c.nome)}</option>`).join('')
   const corOpts = CORES_PROJ.map(c => `<span class="pj-cor-opt${(p.cor||CORES_PROJ[0])===c?' on':''}" data-cor="${c}" style="background:${c}"></span>`).join('')
 
   let etapasState = Array.isArray(p.etapas) && p.etapas.length ? JSON.parse(JSON.stringify(p.etapas)) : JSON.parse(JSON.stringify(DEFAULT_ETAPAS))
@@ -677,7 +677,7 @@ async function delTar(id) {
 function rotinaForm(r = {}) {
   const isNew = !r.id
   const cliOpts = `<option value="">— sem cliente —</option>` +
-    _clis.map(c => `<option value="${c.id}"${r.cliente_id===c.id?' selected':''}>${escapeHtml(c.empresa || c.nome)}</option>`).join('')
+    clientesAtivos(r.cliente_id).map(c => `<option value="${c.id}"${r.cliente_id===c.id?' selected':''}>${escapeHtml(c.empresa || c.nome)}</option>`).join('')
   const projOpts = `<option value="">— escolha um projeto —</option>` +
     _projs.map(p => `<option value="${p.id}"${r.projeto_id===p.id?' selected':''}>${escapeHtml(p.nome)}</option>`).join('')
 
@@ -852,6 +852,13 @@ async function rodarRotinaAgora(r) {
   if (!tars.length) { toast('Rotina sem tarefas', 'err'); return }
   await db.from('tarefas').insert(tars)
   await db.from('rotinas').update({ ultima_geracao: hojeStr }).eq('id', r.id)
+}
+
+// Clientes que aparecem nos dropdowns: tudo MENOS prospecção e perdidos.
+// Sempre inclui o `currentId` (mesmo se prospeccao/perdido) pra não quebrar edição.
+function clientesAtivos(currentId) {
+  const inativos = new Set(['prospeccao', 'perdido'])
+  return _clis.filter(c => !inativos.has(c.status) || c.id === currentId)
 }
 
 // ════════ Helpers ═══════════════════════════════════════════════════════
