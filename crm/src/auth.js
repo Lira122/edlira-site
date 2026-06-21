@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { setDb } from './db.js'
+import { setDb, setCfg } from './db.js'
 
 // Anon key é seguro expor — ele é o token usado por qualquer browser pra
 // falar com o Supabase Auth. O service_role só chega depois do login validado.
@@ -27,6 +27,7 @@ export async function bootstrapAdmin(session) {
   const cfg = await r.json()
   if (!cfg.ok || !cfg.SB_KEY) throw new Error('Server não devolveu as chaves.')
   setDb(SB_URL, cfg.SB_KEY)
+  setCfg({ OR_KEY: cfg.OR_KEY || '' })
   return cfg
 }
 

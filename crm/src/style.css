@@ -358,6 +358,35 @@ body[data-view="pipeline"] .kcards { flex: 1; overflow-y: auto; min-height: 0; }
 .pj-rot-acts { display: flex; gap: 6px; margin-top: 4px; }
 .pj-rot-badge { display: inline-block; font-size: 10px; color: var(--accent); margin-left: 5px; font-weight: 700; }
 
+/* Rotinas agrupadas por projeto */
+.pj-rot-groups { display: flex; flex-direction: column; gap: 14px; }
+.pj-rot-group { background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; position: relative; }
+.pj-rot-group::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--proj-color, var(--accent)); }
+.pj-rot-group-orphan::before { opacity: .25; }
+.pj-rot-group-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 18px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.015); }
+.pj-rot-group-h-l { display: flex; align-items: center; gap: 9px; }
+.pj-rot-group-h-r { display: flex; align-items: center; gap: 10px; }
+.pj-rot-group-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
+.pj-rot-group-name { font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
+.pj-rot-group-count { font-size: 11.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.pj-rot-group-list { display: flex; flex-direction: column; }
+.pj-rot-item { display: flex; align-items: stretch; gap: 16px; padding: 14px 18px; border-bottom: 1px solid var(--line); transition: background 100ms; }
+.pj-rot-item:last-child { border-bottom: none; }
+.pj-rot-item:hover { background: rgba(255,255,255,.015); }
+.pj-rot-item.paused { opacity: .58; }
+.pj-rot-item-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.pj-rot-item-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pj-rot-item-name { font-size: 13.5px; font-weight: 600; }
+.pj-rot-item-meta { display: flex; flex-wrap: wrap; gap: 5px; }
+.pj-rot-item-tarefas { display: flex; flex-direction: column; gap: 2px; padding: 7px 10px; background: rgba(255,255,255,.02); border-radius: var(--rs); margin-top: 2px; }
+.pj-rot-item-acts { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; align-self: center; }
+.pj-rot-chip-dim { color: var(--text-3) !important; opacity: .8; }
+@media (max-width: 720px) {
+  .pj-rot-item { flex-direction: column; gap: 10px; }
+  .pj-rot-item-acts { flex-direction: row; align-self: stretch; }
+  .pj-rot-item-acts .btn { flex: 1; justify-content: center; }
+}
+
 /* Rotina form */
 .pj-cad-row { display: flex; gap: 6px; }
 .pj-cad-opt { flex: 1; text-align: center; padding: 8px 10px; background: var(--bg-input); border: 1px solid var(--line); border-radius: var(--rs); font-size: 12.5px; color: var(--text-2); cursor: pointer; transition: all 120ms; }

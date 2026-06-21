@@ -117,32 +117,44 @@ Deno.serve(async (req: Request) => {
       ].filter(Boolean).join(' | ')
     }, { onConflict: 'whatsapp' })
 
-    // 2. Cria conversa no chatbot (se ainda não existir)
+    // 2. Verifica conversation existente
     const { data: existing } = await supabase
       .from('chatbot_conversations')
-      .select('phone')
+      .select('phone, messages')
       .eq('phone', phone)
-      .single()
+      .maybeSingle()
+
+    const welcomeMsgs = buildWelcomeMsgs(name, company || '')
+    const welcomeText = welcomeMsgs.join('\n')
+    const leadData = {
+      nome: name,
+      empresa: company || '',
+      segmento: segment || '',
+      interesse: 'alto',
+      origem: 'formulario_site'
+    }
 
     if (!existing) {
-      const welcomeMsgs = buildWelcomeMsgs(name, company || '')
-
+      // Lead novo — cria conversation
       await supabase.from('chatbot_conversations').insert({
         phone,
-        stage: 'fechamento',  // lead já demonstrou intenção — vai direto pro agendamento
-        messages: [{ role: 'assistant', content: welcomeMsgs.join('\n') }],
-        lead_data: {
-          nome: name,
-          empresa: company || '',
-          segmento: segment || '',
-          interesse: 'alto',
-          origem: 'formulario_site'
-        }
+        stage: 'fechamento',
+        messages: [{ role: 'assistant', content: welcomeText }],
+        lead_data: leadData
       })
-
-      // 3. Dispara mensagens personalizadas no WhatsApp
-      for (const msg of welcomeMsgs) await sendTextDelayed(phone, msg)
+    } else {
+      // Lead já tinha conversation — reseta pra fechamento e atualiza
+      const prev = Array.isArray(existing.messages) ? existing.messages : []
+      await supabase.from('chatbot_conversations').update({
+        stage: 'fechamento',
+        messages: [...prev, { role: 'assistant', content: welcomeText }],
+        lead_data: leadData
+      }).eq('phone', phone)
     }
+
+    // 3. SEMPRE dispara as mensagens — form é intent forte, mesmo lead recorrente
+    //    deve receber o welcome (puxa pro fechamento de novo).
+    for (const msg of welcomeMsgs) await sendTextDelayed(phone, msg)
 
     return new Response(JSON.stringify({ ok: true, phone }), { status: 200, headers: corsHeaders })
 

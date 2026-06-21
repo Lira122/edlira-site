@@ -21,6 +21,14 @@ export function isDbReady() {
   return _client !== null
 }
 
+// Config exposta (OR_KEY, etc) — preenchida pelo auth.js após bootstrap.
+// Outras views (como agentes.js) leem aqui pra chamar APIs externas (OpenRouter).
+export const CFG = {}
+
+export function setCfg(obj) {
+  Object.assign(CFG, obj)
+}
+
 // Busca TODAS as linhas de uma tabela, contornando o limite de linhas por
 // requisição da API do Supabase (estava cortando as listas em ~100 leads).
 export async function selectAll(table, { columns = '*', order } = {}) {

@@ -50,7 +50,7 @@ export async function render() {
 async function loadAll() {
   const [p, cli, t, s, r] = await Promise.all([
     selectAll('projetos', { order: { column: 'criado_em', ascending: false } }),
-    selectAll('clientes', { columns: 'id,nome,empresa,status', order: { column: 'nome', ascending: true } }),
+    selectAll('clientes', { columns: 'id,nome,empresa,status,whatsapp', order: { column: 'nome', ascending: true } }),
     selectAll('tarefas',  { order: { column: 'ordem', ascending: true } }),
     selectAll('tarefa_subtasks', { order: { column: 'ordem', ascending: true } }),
     selectAll('rotinas',  { order: { column: 'criado_em', ascending: false } }),
@@ -69,7 +69,7 @@ function renderToolbar() {
     : `<button class="btn bp" id="btn-add-proj">+ Novo projeto</button>`
 
   document.getElementById('tbacts').innerHTML = `
-    <div class="pj-tabs">${tab('kanban','Kanban')}${tab('lista','Lista')}${tab('hoje','Hoje')}${tab('rotinas','Rotinas')}</div>
+    <div class="pj-tabs">${tab('kanban','Kanban')}${tab('lista','Lista')}${tab('hoje','Hoje')}${tab('resumao','Resumão')}${tab('rotinas','Rotinas')}</div>
     ${addBtn}
   `
   document.querySelectorAll('.pj-tab').forEach(el => el.addEventListener('click', () => {
@@ -85,7 +85,158 @@ function renderToolbar() {
 function renderView() {
   if (_view === 'hoje')    return renderHoje()
   if (_view === 'rotinas') return renderRotinasList()
+  if (_view === 'resumao') return renderResumao()
   return renderProjetoArea()
+}
+
+// ════════ RESUMÃO — revisão das notificações pro cliente ═════════════════
+// Lista as tarefas que viraram 'done' hoje e tão esperando serem avisadas.
+// Você edita o apelido, decide quais incluem, e dispara só com seu OK.
+async function renderResumao() {
+  const c = document.getElementById('content')
+  c.innerHTML = '<div class="empty">Carregando resumão…</div>'
+
+  let preview
+  try {
+    const { data, error } = await db.functions.invoke('digest-cliente', { body: {} })
+    if (error) throw new Error(error.message || String(error))
+    preview = data
+  } catch (e) {
+    c.innerHTML = `<div class="empty">Erro ao carregar: ${escapeHtml(e.message)}</div>`
+    return
+  }
+
+  const clientes = preview?.clientes || []
+
+  if (!clientes.length) {
+    c.innerHTML = `
+      <div class="tw" style="padding:60px 20px;text-align:center">
+        <div style="font-size:14px;color:var(--text-2);margin-bottom:6px">Nada pra avisar hoje 🎯</div>
+        <div style="font-size:12px;color:var(--text-3)">Conclua tarefas com cliente vinculado e elas aparecem aqui pra revisão.</div>
+      </div>`
+    return
+  }
+
+  const blocoCliente = (cli) => {
+    const linhasTarefas = cli.tarefas.map(t => `
+      <tr data-tid="${t.id}">
+        <td style="width:30px">
+          <input type="checkbox" class="rs-tar-cb" data-tid="${t.id}" checked>
+        </td>
+        <td style="color:var(--text-3);font-size:12px;width:42%">${escapeHtml(t.titulo)}</td>
+        <td>
+          <input type="text"
+            class="fi rs-apelido"
+            data-tid="${t.id}"
+            value="${escapeAttr(t.apelido || t.titulo)}"
+            placeholder="Como mostrar pro cliente"
+            style="width:100%">
+        </td>
+      </tr>`).join('')
+
+    return `
+      <div class="tw" data-cid="${cli.cliente_id}" style="margin-bottom:18px">
+        <div class="th" style="align-items:flex-start">
+          <div>
+            <h3 style="font-size:14px">${escapeHtml(cli.nome)}</h3>
+            <div style="font-size:11px;color:var(--text-3);margin-top:3px">${cli.tarefas.length} tarefa${cli.tarefas.length===1?'':'s'} pendente${cli.tarefas.length===1?'':'s'} · ${escapeHtml(cli.whatsapp || '')}</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn bg bsm rs-skip" data-cid="${cli.cliente_id}">Pular hoje</button>
+            <button class="btn bp bsm rs-send" data-cid="${cli.cliente_id}">Revisar e enviar →</button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Tarefa interna</th>
+              <th>O que o cliente vai ver</th>
+            </tr>
+          </thead>
+          <tbody>${linhasTarefas}</tbody>
+        </table>
+      </div>`
+  }
+
+  c.innerHTML = `
+    <div style="font-size:13px;color:var(--text-3);margin-bottom:16px;line-height:1.5">
+      ${clientes.length} cliente${clientes.length===1?'':'s'} esperando aviso.
+      Revise os apelidos, desmarque o que não quer mandar, e clique <strong style="color:var(--text-2)">Revisar e enviar</strong> — vai abrir uma confirmação com o texto final.
+    </div>
+    ${clientes.map(blocoCliente).join('')}
+  `
+
+  // Enviar
+  c.querySelectorAll('.rs-send').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const cid = btn.dataset.cid
+      const cli = clientes.find(x => x.cliente_id === cid)
+      if (!cli) return
+      const bloco = c.querySelector(`.tw[data-cid="${cid}"]`)
+      const tarefasOK = [...bloco.querySelectorAll('.rs-tar-cb')]
+        .filter(cb => cb.checked).map(cb => cb.dataset.tid)
+      if (!tarefasOK.length) { toast('Nenhuma tarefa marcada.', 'err'); return }
+
+      const apelidos = {}
+      tarefasOK.forEach(tid => {
+        const inp = bloco.querySelector(`.rs-apelido[data-tid="${tid}"]`)
+        if (inp) apelidos[tid] = inp.value.trim()
+      })
+
+      // Monta preview da mensagem pro modal de confirmação
+      const nomeCli = (cli.nome || '').split(' ')[0] || ''
+      const head = nomeCli ? `Oi, ${nomeCli}! Fechando o dia aqui.` : `Oi! Fechando o dia aqui.`
+      const corpo = tarefasOK.map(tid => `✓ ${apelidos[tid] || cli.tarefas.find(t => t.id === tid)?.titulo || ''}`).join('\n')
+      const previewMsg = `${head}\n\nHoje a gente avançou:\n${corpo}\n\nQualquer dúvida é só chamar.`
+
+      openModal(
+        `Enviar pra ${cli.nome}?`,
+        `<div style="font-size:12px;color:var(--text-3);margin-bottom:8px">Texto final que vai pelo WhatsApp:</div>
+         <pre style="background:var(--bg-input);border:1px solid var(--line);border-radius:var(--rs);padding:14px;font-family:inherit;font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.5;margin-bottom:10px">${escapeHtml(previewMsg)}</pre>
+         <div style="font-size:11px;color:var(--text-3)">Pro: <strong style="color:var(--text-2)">${escapeHtml(cli.whatsapp || '—')}</strong></div>`,
+        `<button class="btn bg" id="rs-cancel">Cancelar</button>
+         <button class="btn bp" id="rs-confirm">Confirmar envio</button>`
+      )
+      document.getElementById('rs-cancel').addEventListener('click', closeModal)
+      document.getElementById('rs-confirm').addEventListener('click', async () => {
+        const btnConf = document.getElementById('rs-confirm')
+        btnConf.disabled = true; btnConf.textContent = 'Enviando…'
+        try {
+          // Tarefas DESMARCADAS recebem notificar_cliente=false (não voltam amanhã)
+          const desmarcadas = cli.tarefas.filter(t => !tarefasOK.includes(t.id)).map(t => t.id)
+          for (const tid of desmarcadas) {
+            await db.from('tarefas').update({ notificar_cliente: false }).eq('id', tid)
+          }
+          const { data, error } = await db.functions.invoke('digest-cliente', {
+            body: { cliente_id: cid, apelidos },
+          })
+          if (error || !data?.ok) throw new Error(data?.erro || error?.message || 'falhou')
+          toast(`Enviado pra ${cli.nome} ✓`)
+          closeModal()
+          renderResumao()
+        } catch (e) {
+          btnConf.disabled = false; btnConf.textContent = 'Confirmar envio'
+          toast('Erro: ' + e.message, 'err')
+        }
+      })
+    })
+  })
+
+  // Pular hoje — marca tudo como notificado pra sumir da lista, sem enviar
+  c.querySelectorAll('.rs-skip').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const cid = btn.dataset.cid
+      const cli = clientes.find(x => x.cliente_id === cid)
+      if (!cli) return
+      if (!confirm(`Pular ${cli.nome} hoje? As tarefas somem do resumão e não viram aviso.`)) return
+      const ids = cli.tarefas.map(t => t.id)
+      const agora = new Date().toISOString()
+      await db.from('tarefas').update({ notificado_cliente_em: agora }).in('id', ids)
+      toast(`${cli.nome} pulado`)
+      renderResumao()
+    })
+  })
 }
 
 // ════════ HOJE — tudo que vence até hoje, agrupado por projeto ═════════
@@ -138,10 +289,7 @@ function renderHoje() {
       e.stopPropagation()
       const tar = _tars.find(t => t.id === cb.dataset.tid)
       if (!tar) return
-      tar.status = 'done'
-      await db.from('tarefas').update({ status: 'done', atualizado_em: new Date().toISOString() }).eq('id', tar.id)
-      toast('Marcada como feita')
-      render()
+      await concluirTarefa(tar, () => render())
       return
     }
     const row = e.target.closest('.pj-hoje-row')
@@ -152,7 +300,7 @@ function renderHoje() {
   })
 }
 
-// ════════ ROTINAS — lista + form ═════════════════════════════════════════
+// ════════ ROTINAS — agrupadas por projeto ═══════════════════════════════
 function renderRotinasList() {
   const c = document.getElementById('content')
   if (!_rotinas.length) {
@@ -165,37 +313,91 @@ function renderRotinasList() {
     return
   }
 
-  const cards = _rotinas.map(r => {
-    const proj = _projs.find(p => p.id === r.projeto_id)
-    const cli  = _clis.find(x => x.id === r.cliente_id) || (proj && _clis.find(x => x.id === proj.cliente_id))
+  // Agrupa rotinas por projeto (rotinas sem projeto ficam no fim)
+  const porProjeto = new Map()
+  const semProjeto = []
+
+  _rotinas.forEach(r => {
+    if (!r.projeto_id) { semProjeto.push(r); return }
+    if (!porProjeto.has(r.projeto_id)) porProjeto.set(r.projeto_id, [])
+    porProjeto.get(r.projeto_id).push(r)
+  })
+
+  // Ordena projetos: ativos primeiro, depois alfabético
+  const gruposProjetos = [..._projs]
+    .filter(p => porProjeto.has(p.id))
+    .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''))
+
+  const renderRot = (r) => {
+    const cli = _clis.find(x => x.id === r.cliente_id)
     const tarefas = Array.isArray(r.tarefas) ? r.tarefas : []
-    return `<div class="pj-rot-card" data-rid="${r.id}">
-      <div class="pj-rot-head">
-        <div class="pj-rot-name">${escapeHtml(r.nome)}</div>
-        <label class="pj-rot-toggle">
-          <input type="checkbox" class="pj-rot-active" data-rid="${r.id}" ${r.ativa?'checked':''}>
-          <span>${r.ativa ? 'Ativa' : 'Pausada'}</span>
-        </label>
+    return `<div class="pj-rot-item ${r.ativa ? '' : 'paused'}" data-rid="${r.id}">
+      <div class="pj-rot-item-main">
+        <div class="pj-rot-item-top">
+          <div class="pj-rot-item-name">${escapeHtml(r.nome)}</div>
+          <label class="pj-rot-toggle">
+            <input type="checkbox" class="pj-rot-active" data-rid="${r.id}" ${r.ativa?'checked':''}>
+            <span>${r.ativa ? 'Ativa' : 'Pausada'}</span>
+          </label>
+        </div>
+        <div class="pj-rot-item-meta">
+          ${cli ? `<span class="pj-rot-chip">${escapeHtml(cli.empresa||cli.nome)}</span>` : ''}
+          <span class="pj-rot-chip">${cadenciaLabel(r)}</span>
+          <span class="pj-rot-chip">${tarefas.length} tarefa${tarefas.length===1?'':'s'}</span>
+          ${r.ultima_geracao ? `<span class="pj-rot-chip pj-rot-chip-dim">Última: ${fmtd(r.ultima_geracao)}</span>` : ''}
+        </div>
+        ${tarefas.length ? `<div class="pj-rot-item-tarefas">${tarefas.map(t => `<span class="pj-rot-tlbl">• ${escapeHtml(t.titulo||'')}</span>`).join('')}</div>` : ''}
       </div>
-      <div class="pj-rot-meta">
-        ${proj ? `<span class="pj-rot-chip"><span class="pj-side-dot" style="background:${proj.cor||'#C5F82A'};width:7px;height:7px"></span>${escapeHtml(proj.nome)}</span>` : ''}
-        ${cli ? `<span class="pj-rot-chip">${escapeHtml(cli.empresa||cli.nome)}</span>` : ''}
-        <span class="pj-rot-chip">${cadenciaLabel(r)}</span>
-        <span class="pj-rot-chip">${tarefas.length} tarefa${tarefas.length===1?'':'s'}</span>
-        ${r.ultima_geracao ? `<span class="pj-rot-chip" style="color:var(--text-3)">Última: ${fmtd(r.ultima_geracao)}</span>` : ''}
-      </div>
-      ${tarefas.length ? `<div class="pj-rot-tarefas">${tarefas.map(t => `<span class="pj-rot-tlbl">• ${escapeHtml(t.titulo||'')}</span>`).join('')}</div>` : ''}
-      <div class="pj-rot-acts">
+      <div class="pj-rot-item-acts">
         <button class="btn bg bsm rot-edit" data-rid="${r.id}">Editar</button>
         <button class="btn bg bsm rot-run"  data-rid="${r.id}">Rodar agora</button>
         <button class="btn bd bsm rot-del"  data-rid="${r.id}">Excluir</button>
       </div>
     </div>`
+  }
+
+  const grupos = gruposProjetos.map(p => {
+    const rotinas = porProjeto.get(p.id) || []
+    const ativas = rotinas.filter(r => r.ativa).length
+    const cor = p.cor || '#C5F82A'
+    return `<div class="pj-rot-group" style="--proj-color:${cor}">
+      <div class="pj-rot-group-h">
+        <div class="pj-rot-group-h-l">
+          <span class="pj-rot-group-dot" style="background:${cor}"></span>
+          <span class="pj-rot-group-name">${escapeHtml(p.nome)}</span>
+        </div>
+        <div class="pj-rot-group-h-r">
+          <span class="pj-rot-group-count">${ativas}/${rotinas.length} ativa${rotinas.length===1?'':'s'}</span>
+          <button class="btn bp bsm rot-add-proj" data-pid="${p.id}">+ Rotina</button>
+        </div>
+      </div>
+      <div class="pj-rot-group-list">
+        ${rotinas.map(renderRot).join('')}
+      </div>
+    </div>`
   }).join('')
 
-  c.innerHTML = `<div class="pj-rot-grid">${cards}</div>`
+  const grupoSem = semProjeto.length ? `<div class="pj-rot-group pj-rot-group-orphan">
+    <div class="pj-rot-group-h">
+      <div class="pj-rot-group-h-l">
+        <span class="pj-rot-group-dot" style="background:var(--text-3)"></span>
+        <span class="pj-rot-group-name">Sem projeto vinculado</span>
+      </div>
+      <span class="pj-rot-group-count">${semProjeto.length}</span>
+    </div>
+    <div class="pj-rot-group-list">
+      ${semProjeto.map(renderRot).join('')}
+    </div>
+  </div>` : ''
+
+  c.innerHTML = `<div class="pj-rot-groups">${grupos}${grupoSem}</div>`
 
   c.addEventListener('click', async e => {
+    const addPj = e.target.closest('.rot-add-proj')
+    if (addPj) {
+      rotinaForm({ projeto_id: addPj.dataset.pid })
+      return
+    }
     const edit = e.target.closest('.rot-edit')
     const del  = e.target.closest('.rot-del')
     const run  = e.target.closest('.rot-run')
@@ -435,6 +637,10 @@ function wireBoardInteractions() {
       const newStatus = drop.dataset.drop
       const tar = _tars.find(t => t.id === dragged)
       if (!tar || tar.status === newStatus) return
+      if (newStatus === 'done') {
+        await concluirTarefa(tar, () => renderMain())
+        return
+      }
       tar.status = newStatus
       const { error } = await db.from('tarefas').update({ status: newStatus, atualizado_em: new Date().toISOString() }).eq('id', dragged)
       if (error) { toast('Erro: ' + error.message, 'err'); return }
@@ -561,6 +767,94 @@ async function delProj(p) {
   render()
 }
 
+// ════════ CONCLUIR TAREFA (com aviso opcional pro cliente) ══════════════
+// Marca status=done. Se a tarefa pertence a um projeto com cliente E está
+// marcada como `notificar_cliente`, abre um modal pra confirmar o apelido
+// que vai no resumão das 18h, ou disparar um WhatsApp na hora pelo wa.me
+// (usando a conta do dono do CRM — não vai pelo bot).
+async function concluirTarefa(tar, after) {
+  // Já estava feita? não faz nada
+  if (tar.status === 'done') { after && after(); return }
+
+  // Marca feita imediatamente. Se cancelar o modal, fica feita do mesmo
+  // jeito — o resumão decide se notifica o cliente.
+  tar.status = 'done'
+  const { error } = await db.from('tarefas')
+    .update({ status: 'done', atualizado_em: new Date().toISOString() })
+    .eq('id', tar.id)
+  if (error) { toast('Erro: ' + error.message, 'err'); return }
+
+  const proj = _projs.find(p => p.id === tar.projeto_id)
+  const cli  = proj ? _clis.find(c => c.id === proj.cliente_id) : null
+
+  // Sem cliente, sem whatsapp ou opt-out → só conclui, sem perguntar
+  if (!cli || !cli.whatsapp || tar.notificar_cliente === false) {
+    toast('Marcada como feita')
+    after && after()
+    return
+  }
+
+  const apelidoInicial = tar.apelido_cliente || tar.titulo || ''
+  const nomeCli = (cli.nome || '').split(' ')[0] || ''
+  openModal('Tarefa concluída — avisar o cliente?', `
+    <div style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:14px">
+      Cliente: <strong style="color:var(--text)">${escapeHtml(cli.empresa || cli.nome)}</strong>
+    </div>
+    <div class="fg" style="margin-bottom:11px">
+      <label class="fl">Como mostrar pro cliente</label>
+      <input class="fi" id="cn-apelido" value="${escapeAttr(apelidoInicial)}" placeholder="Ex: Criativo de feed dessa semana">
+      <div style="font-size:11px;color:var(--text-3);margin-top:5px">Linguagem de cliente, não de tarefa interna.</div>
+    </div>
+    <div class="fg" style="margin-bottom:6px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+        <input type="checkbox" id="cn-incluir" checked>
+        <span>Incluir no resumão automático das 18h</span>
+      </label>
+    </div>
+  `, `
+    <button class="btn bg" id="cn-skip">Não notificar</button>
+    <button class="btn bg" id="cn-save">Salvar no resumão</button>
+    <button class="btn bp" id="cn-now">Avisar agora</button>
+  `)
+
+  const fechar = (cb) => { closeModal(); after && after(); cb && cb() }
+  const lerApelido = () => document.getElementById('cn-apelido').value.trim() || tar.titulo
+  const lerIncluir = () => document.getElementById('cn-incluir').checked
+
+  document.getElementById('cn-skip').addEventListener('click', async () => {
+    await db.from('tarefas')
+      .update({ apelido_cliente: lerApelido(), notificar_cliente: false })
+      .eq('id', tar.id)
+    toast('Concluída — cliente não vai ser avisado')
+    fechar()
+  })
+
+  document.getElementById('cn-save').addEventListener('click', async () => {
+    const apelido = lerApelido()
+    const incluir = lerIncluir()
+    await db.from('tarefas')
+      .update({ apelido_cliente: apelido, notificar_cliente: incluir })
+      .eq('id', tar.id)
+    toast(incluir ? 'No resumão das 18h' : 'Concluída — sem aviso')
+    fechar()
+  })
+
+  document.getElementById('cn-now').addEventListener('click', async () => {
+    const apelido = lerApelido()
+    const msg = `Oi${nomeCli ? `, ${nomeCli}` : ''}! Terminei aqui: ${apelido}.`
+    // Marca como já notificada pra não duplicar no resumão das 18h
+    await db.from('tarefas').update({
+      apelido_cliente: apelido,
+      notificar_cliente: true,
+      notificado_cliente_em: new Date().toISOString(),
+    }).eq('id', tar.id)
+    const wa = String(cli.whatsapp).replace(/\D/g, '')
+    window.open(`https://wa.me/${wa}?text=${encodeURIComponent(msg)}`, '_blank')
+    toast('Abrindo WhatsApp…')
+    fechar()
+  })
+}
+
 // ════════ FORM TAREFA ════════════════════════════════════════════════════
 function tarForm(t = {}) {
   const isNew = !t.id
@@ -582,6 +876,17 @@ function tarForm(t = {}) {
     </div>
     <div class="fg" style="margin-bottom:11px"><label class="fl">Prazo</label>
       <input class="fi" type="date" id="tr-prazo" value="${t.prazo || ''}"></div>
+    <div class="fg" style="margin-bottom:11px">
+      <label class="fl">Como mostrar pro cliente <span style="color:var(--text-3);font-weight:400">(opcional)</span></label>
+      <input class="fi" id="tr-apelido" value="${escapeAttr(t.apelido_cliente || '')}" placeholder="Se vazio, usa o título da tarefa">
+      <div style="font-size:11px;color:var(--text-3);margin-top:5px">Aparece no resumão das 18h pro cliente.</div>
+    </div>
+    <div class="fg" style="margin-bottom:11px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+        <input type="checkbox" id="tr-notif" ${t.notificar_cliente === false ? '' : 'checked'}>
+        <span>Incluir esta tarefa no resumão automático pro cliente</span>
+      </label>
+    </div>
     <div class="fg">
       <label class="fl">Checklist</label>
       <div id="tr-subs" class="pj-subs">${subs.map(s => subRow(s.id, s.texto, s.feito)).join('')}</div>
@@ -624,6 +929,8 @@ function tarForm(t = {}) {
       status: document.getElementById('tr-status').value,
       prioridade: document.getElementById('tr-prio').value,
       prazo: document.getElementById('tr-prazo').value || null,
+      apelido_cliente: document.getElementById('tr-apelido').value.trim() || null,
+      notificar_cliente: document.getElementById('tr-notif').checked,
       atualizado_em: new Date().toISOString(),
     }
     if (!payload.titulo) return toast('Título é obrigatório', 'err')

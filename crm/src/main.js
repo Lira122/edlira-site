@@ -67,6 +67,7 @@ export function go(v) {
   document.querySelectorAll('.ni').forEach(el => el.classList.toggle('on', el.dataset.v === v))
   document.getElementById('vtitle').textContent = VIEWS[v].title
   document.getElementById('tbacts').innerHTML = ''
+  document.body.dataset.view = v
   VIEWS[v].render()
 }
 
