@@ -207,20 +207,21 @@ function renderDespesas() {
   const mesAtualStr = `${ano}-${String(mesAtual).padStart(2,'0')}`
 
   const doMes = _despesas.filter(d => (d.data || '').startsWith(mesAtualStr))
+  const doAno = _despesas.filter(d => (d.data || '').startsWith(String(ano)))
   const totMes = doMes.reduce((s, d) => s + Number(d.valor), 0)
-  const totAno = _despesas.filter(d => (d.data || '').startsWith(String(ano))).reduce((s, d) => s + Number(d.valor), 0)
+  const totAno = doAno.reduce((s, d) => s + Number(d.valor), 0)
   const totRec = _recDespesas.filter(r => r.ativa).reduce((s, r) => s + Number(r.valor), 0)
 
-  // Por categoria (mês atual)
+  // Por categoria — ano todo (alinha com Resumo que também é por ano)
   const porCat = {}
-  for (const d of doMes) {
+  for (const d of doAno) {
     porCat[d.categoria || 'outro'] = (porCat[d.categoria || 'outro'] || 0) + Number(d.valor)
   }
   const catCards = Object.entries(porCat)
     .sort(([, a], [, b]) => b - a)
     .map(([k, v]) => {
       const c = CAT_MAP[k] || CAT_MAP.outro
-      const pct = totMes > 0 ? Math.round(v / totMes * 100) : 0
+      const pct = totAno > 0 ? Math.round(v / totAno * 100) : 0
       return `<div class="desp-cat-card">
         <div class="desp-cat-head">
           <span class="desp-cat-dot" style="background:${c.cor}"></span>
@@ -229,7 +230,7 @@ function renderDespesas() {
         </div>
         <div class="desp-cat-val">${brl(v)}</div>
       </div>`
-    }).join('') || `<div class="empty">Sem despesas neste mês.</div>`
+    }).join('') || `<div class="empty">Sem despesas em ${ano}.</div>`
 
   const rows = _despesas.length
     ? _despesas.map(d => {
@@ -254,7 +255,7 @@ function renderDespesas() {
       <div class="sc"><div class="sl">Recorrentes ativas</div><div class="sv">${brl(totRec)}<span style="font-size:11px;color:var(--text-3);font-weight:400;margin-left:6px">/mês</span></div></div>
     </div>
     <div class="cw">
-      <div class="ct">Por categoria — ${MESF[mesAtual-1]} ${ano}</div>
+      <div class="ct">Por categoria — ${ano}</div>
       <div class="desp-cat-grid">${catCards}</div>
     </div>
     <div class="tw">
@@ -336,19 +337,30 @@ function renderResumo() {
   const ano = now.getFullYear()
   const mes = now.getMonth() + 1
 
-  // 12 meses
+  // Ano calendário Jan–Dez (alinha com Despesas que também é por ano)
   const chart = []
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(ano, mes - 1 - i, 1)
-    const m = d.getMonth() + 1, y = d.getFullYear()
-    const mStr = `${y}-${String(m).padStart(2,'0')}`
-    const rec = _fat.filter(f => f.mes === m && f.ano === y).reduce((s, f) => s + Number(f.valor), 0)
+  for (let m = 1; m <= 12; m++) {
+    const mStr = `${ano}-${String(m).padStart(2,'0')}`
+    const rec = _fat.filter(f => f.mes === m && f.ano === ano).reduce((s, f) => s + Number(f.valor), 0)
     const des = _despesas.filter(x => (x.data||'').startsWith(mStr)).reduce((s, x) => s + Number(x.valor), 0)
-    chart.push({ label: MES[m - 1], rec, des, lucro: rec - des, cur: i === 0 })
+    chart.push({ label: MES[m - 1], mes: m, rec, des, lucro: rec - des, cur: m === mes })
   }
   const maxV = Math.max(...chart.flatMap(d => [d.rec, d.des, Math.abs(d.lucro)]), 1)
+  const mesAtual = chart[mes - 1]
 
-  const mesAtual = chart[chart.length - 1]
+  // Realizado no ano (jan até hoje, baseado no que está lançado)
+  const recAno = chart.reduce((s, d) => s + d.rec, 0)
+  const desAno = chart.reduce((s, d) => s + d.des, 0)
+  const lucroAno = recAno - desAno
+
+  // Projeção: realizado + (recorrentes mensais × meses restantes do ano, incluindo hoje)
+  const mesesRestantes = 12 - mes + 1
+  const recRecorr = _recReceitas.filter(r => r.ativa).reduce((s, r) => s + Number(r.valor), 0)
+  const desRecorr = _recDespesas.filter(r => r.ativa).reduce((s, r) => s + Number(r.valor), 0)
+  // O mês atual já pode ter parte do recorrente realizado, então subtraio do que falta:
+  const recProj = recAno + recRecorr * mesesRestantes - mesAtual.rec
+  const desProj = desAno + desRecorr * mesesRestantes - mesAtual.des
+  const lucroProj = recProj - desProj
 
   const rows = chart.slice().reverse().map(d => `
     <tr>
@@ -361,7 +373,7 @@ function renderResumo() {
   const barRows = chart.map(d => {
     const recPct = Math.round(d.rec / maxV * 100)
     const desPct = Math.round(d.des / maxV * 100)
-    return `<div class="resumo-bg">
+    return `<div class="resumo-bg${d.cur?' cur':''}">
       <div class="resumo-bars">
         <div class="resumo-bar rec" style="height:${recPct}%" title="Receita ${brl(d.rec)}"></div>
         <div class="resumo-bar des" style="height:${desPct}%" title="Despesa ${brl(d.des)}"></div>
@@ -375,10 +387,32 @@ function renderResumo() {
       <div class="sc"><div class="sl">Receita ${MESF[mes-1]}</div><div class="sv" style="color:var(--accent)">${brl(mesAtual.rec)}</div></div>
       <div class="sc"><div class="sl">Despesa ${MESF[mes-1]}</div><div class="sv" style="color:var(--danger)">${brl(mesAtual.des)}</div></div>
       <div class="sc"><div class="sl">Lucro ${MESF[mes-1]}</div><div class="sv" style="color:${mesAtual.lucro>=0?'var(--ok)':'var(--danger)'}">${brl(mesAtual.lucro)}</div></div>
-      <div class="sc"><div class="sl">Margem</div><div class="sv">${mesAtual.rec>0?Math.round(mesAtual.lucro/mesAtual.rec*100)+'%':'—'}</div></div>
+      <div class="sc"><div class="sl">Margem mês</div><div class="sv">${mesAtual.rec>0?Math.round(mesAtual.lucro/mesAtual.rec*100)+'%':'—'}</div></div>
     </div>
+
+    <div class="sg" style="grid-template-columns:repeat(3,1fr)">
+      <div class="sc"><div class="sl">Realizado em ${ano}</div>
+        <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+          <span class="sv" style="color:${lucroAno>=0?'var(--ok)':'var(--danger)'}">${brl(lucroAno)}</span>
+          <span style="font-size:11px;color:var(--text-3)">lucro</span>
+        </div>
+        <div class="ss">${brl(recAno)} receita · ${brl(desAno)} despesa</div>
+      </div>
+      <div class="sc"><div class="sl">Projeção ${ano} (com recorrentes)</div>
+        <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+          <span class="sv" style="color:${lucroProj>=0?'var(--ok)':'var(--danger)'}">${brl(lucroProj)}</span>
+          <span style="font-size:11px;color:var(--text-3)">lucro</span>
+        </div>
+        <div class="ss">${brl(recProj)} receita · ${brl(desProj)} despesa</div>
+      </div>
+      <div class="sc"><div class="sl">Recorrentes ativas</div>
+        <div class="sv">${brl(recRecorr - desRecorr)}<span style="font-size:11px;color:var(--text-3);font-weight:400;margin-left:6px">lucro/mês</span></div>
+        <div class="ss">${brl(recRecorr)} entra · ${brl(desRecorr)} sai</div>
+      </div>
+    </div>
+
     <div class="cw">
-      <div class="ct">Receita vs Despesa — últimos 12 meses</div>
+      <div class="ct">Receita vs Despesa — ${ano}</div>
       <div class="bc">${barRows}</div>
       <div style="display:flex;gap:18px;font-size:11px;color:var(--text-3);margin-top:8px;justify-content:center">
         <span><span style="display:inline-block;width:10px;height:10px;background:var(--accent);border-radius:2px;vertical-align:middle;margin-right:5px"></span>Receita</span>
@@ -386,7 +420,7 @@ function renderResumo() {
       </div>
     </div>
     <div class="tw">
-      <div class="th"><h3>Detalhamento mensal</h3></div>
+      <div class="th"><h3>Detalhamento mensal — ${ano}</h3></div>
       <table>
         <thead><tr><th>Mês</th><th>Receita</th><th>Despesa</th><th>Lucro</th></tr></thead>
         <tbody>${rows}</tbody>

@@ -107,10 +107,17 @@ tbody tr:hover { background: rgba(255,255,255,0.025); }
 /* KANBAN */
 .kanban { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; }
 .kc { flex-shrink: 0; width: 232px; background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--r); display: flex; flex-direction: column; }
-.kch { padding: 12px 14px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+.kch { padding: 12px 14px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
 .kct { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
 .kcn { font-size: 11px; background: rgba(255,255,255,.06); padding: 2px 7px; border-radius: 10px; color: var(--text-3); }
 .kcards { padding: 8px; display: flex; flex-direction: column; gap: 7px; min-height: 80px; }
+
+/* Pipeline em tela cheia: kanban herda altura disponível, só a lista de cards rola */
+body[data-view="pipeline"] .main { overflow: hidden; }
+body[data-view="pipeline"] .content { min-height: 0; overflow: hidden; }
+body[data-view="pipeline"] .kanban { height: 100%; padding-bottom: 0; }
+body[data-view="pipeline"] .kc { max-height: 100%; overflow: hidden; }
+body[data-view="pipeline"] .kcards { flex: 1; overflow-y: auto; min-height: 0; }
 .kcard { background: var(--bg-alt); border: 1px solid var(--line); border-radius: var(--rs); padding: 11px 13px; cursor: pointer; transition: border-color 100ms; }
 .kcard:hover { border-color: var(--line2); }
 .kcard-name { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
@@ -399,6 +406,7 @@ tbody tr:hover { background: rgba(255,255,255,0.025); }
 .resumo-bar { flex: 1; min-height: 1px; border-radius: 3px 3px 0 0; transition: height 200ms; }
 .resumo-bar.rec { background: var(--accent); opacity: .9; }
 .resumo-bar.des { background: var(--danger); opacity: .8; }
+.resumo-bg.cur .bl { color: var(--accent); font-weight: 600; }
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
