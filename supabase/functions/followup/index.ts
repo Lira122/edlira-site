@@ -79,9 +79,22 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ ok: true, enviados: 0 }), { status: 200 })
     }
 
+    // Pré-busca: telefones que estão como PERDIDO no CRM. Esses NUNCA recebem
+    // follow-up — o usuário marcou como descarte definitivo.
+    const phones = (convs || []).map((c) => c.phone as string).filter(Boolean)
+    const { data: perdidos } = await supabase
+      .from('clientes').select('whatsapp').eq('status', 'perdido').in('whatsapp', phones)
+    const phonesPerdidos = new Set((perdidos || []).map((p: { whatsapp: string }) => p.whatsapp))
+
     for (const conv of convs) {
       const phone = conv.phone as string
       if (!phone || phone.startsWith('__')) continue
+
+      // Lead descartado no CRM (status=perdido) → ignora pra sempre
+      if (phonesPerdidos.has(phone)) {
+        console.log(`[FOLLOWUP] ${phone} é PERDIDO no CRM — ignorando.`)
+        continue
+      }
 
       // Referência de tempo: última mensagem do lead (last_message_at) ou updated_at
       const ref       = conv.last_message_at || conv.updated_at

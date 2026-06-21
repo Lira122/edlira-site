@@ -2,13 +2,14 @@ import { db, selectAll } from '../db.js'
 import { brl } from '../utils.js'
 import { editCliente } from './clientes.js'
 
+// Perdidos NÃO aparecem aqui — entram numa lista de descartados que nunca
+// mais é contatada. Pra ver os perdidos: Clientes > filtrar status=perdido.
 const COLS = [
   { k: 'novo',        l: 'Novo',        cor: '#4A9EFF' },
   { k: 'qualificado', l: 'Qualificado', cor: '#F5A623' },
   { k: 'proposta',    l: 'Proposta',    cor: '#A78BFA' },
   { k: 'ativo',       l: 'Ativo',       cor: '#C5F82A' },
   { k: 'fechado',     l: 'Fechado',     cor: '#34D399' },
-  { k: 'perdido',     l: 'Perdido',     cor: '#FF5C5C' },
 ]
 
 export async function render() {
