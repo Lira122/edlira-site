@@ -18,10 +18,12 @@ let _recDespesas = []
 let _recReceitas = []
 let _clis        = []
 let _view        = 'receita'
+let _delegationAttached = false
 
 export async function render() {
   const c = document.getElementById('content')
   c.innerHTML = '<div class="empty">Carregando...</div>'
+  attachDelegation()  // listener único guardado por flag — evita acúmulo entre re-renders
 
   // Auto-geração agora é server-side via pg_cron (edge function gerar-recorrentes).
   // Cliente só carrega os dados.
@@ -29,6 +31,50 @@ export async function render() {
 
   renderToolbar()
   renderView()
+}
+
+// Listener delegado, anexado UMA vez por sessão. Roteia por _view e classes.
+function attachDelegation() {
+  if (_delegationAttached) return
+  _delegationAttached = true
+  document.getElementById('content').addEventListener('click', async (e) => {
+    if (_view !== 'recorrentes') return
+    const edit = e.target.closest('.rec-edit')
+    const del  = e.target.closest('.rec-del')
+    const run  = e.target.closest('.rec-run')
+    const tog  = e.target.closest('.desp-rec-active')
+    const action = edit || del || run || tog
+    if (!action) return
+
+    const tipo = action.dataset.tipo
+    const list = tipo === 'receita' ? _recReceitas : _recDespesas
+    const tbl  = tipo === 'receita' ? 'receitas_recorrentes' : 'despesas_recorrentes'
+    const r    = list.find(x => x.id === action.dataset.rid)
+    if (!r) return
+
+    try {
+      if (edit) {
+        tipo === 'receita' ? recReceitaForm(r) : recDespesaForm(r)
+      } else if (del) {
+        if (!confirm(`Excluir "${r.descricao}"? (Lançamentos já gerados continuam)`)) return
+        const { error } = await db.from(tbl).delete().eq('id', r.id)
+        if (error) throw error
+        toast('Excluída'); render()
+      } else if (run) {
+        await rodarRecorrenteAgora(r, tipo)
+        toast(tipo === 'receita' ? 'Receita lançada' : 'Despesa lançada')
+        render()
+      } else if (tog) {
+        r.ativa = tog.checked
+        const { error } = await db.from(tbl).update({ ativa: r.ativa, atualizado_em: new Date().toISOString() }).eq('id', r.id)
+        if (error) throw error
+        render()
+      }
+    } catch (err) {
+      console.error('[recorrentes]', err)
+      toast('Erro: ' + (err.message || err), 'err')
+    }
+  })
 }
 
 async function loadAll() {
@@ -280,36 +326,7 @@ function renderRecorrentes() {
       <div class="th"><h3>💸 Despesas Recorrentes — saem automaticamente</h3></div>
       <div style="padding:14px"><div class="desp-rec-grid">${despesaCards}</div></div>
     </div>`
-
-  c.addEventListener('click', async e => {
-    const edit = e.target.closest('.rec-edit')
-    const del  = e.target.closest('.rec-del')
-    const run  = e.target.closest('.rec-run')
-    const tog  = e.target.closest('.desp-rec-active')
-    const action = edit || del || run || tog
-    if (!action) return
-    const tipo = action.dataset.tipo
-    const list = tipo === 'receita' ? _recReceitas : _recDespesas
-    const tbl  = tipo === 'receita' ? 'receitas_recorrentes' : 'despesas_recorrentes'
-    const r    = list.find(x => x.id === action.dataset.rid)
-    if (!r) return
-
-    if (edit) {
-      tipo === 'receita' ? recReceitaForm(r) : recDespesaForm(r)
-    } else if (del) {
-      if (!confirm(`Excluir "${r.descricao}"? (Lançamentos já gerados continuam)`)) return
-      await db.from(tbl).delete().eq('id', r.id)
-      toast('Excluída'); render()
-    } else if (run) {
-      await rodarRecorrenteAgora(r, tipo)
-      toast(tipo === 'receita' ? 'Receita lançada' : 'Despesa lançada')
-      render()
-    } else if (tog) {
-      r.ativa = tog.checked
-      await db.from(tbl).update({ ativa: r.ativa, atualizado_em: new Date().toISOString() }).eq('id', r.id)
-      render()
-    }
-  })
+  // Listener é delegado em attachDelegation() — anexado UMA vez no render() inicial.
 }
 
 // ════════ RESUMO (receita - despesa = lucro) ════════════════════════════
