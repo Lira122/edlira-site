@@ -361,6 +361,28 @@ body[data-view="pipeline"] .kcards { flex: 1; overflow-y: auto; min-height: 0; }
 .pj-rot-acts { display: flex; gap: 6px; margin-top: 4px; }
 .pj-rot-badge { display: inline-block; font-size: 10px; color: var(--accent); margin-left: 5px; font-weight: 700; }
 
+/* ════ AGENDA — Rotinas pessoais ═════════════════════════════════════════ */
+.rot-card { transition: background 140ms, border-color 140ms; }
+.rot-card:hover { border-color: var(--line2) !important; }
+.rot-check { transition: transform 140ms, background 140ms, border-color 140ms; }
+.rot-check:hover { transform: scale(1.08); }
+.rot-check:active { transform: scale(.92); }
+.rot-streak { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; padding: 2px 8px; border-radius: 10px; background: rgba(255,107,53,.13); color: #FF6B35; font-weight: 700; letter-spacing: .02em; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.rot-edit-btn { transition: color 140ms, background 140ms; }
+.rot-edit-btn:hover { color: var(--text) !important; background: rgba(255,255,255,.04) !important; }
+
+/* Dias da semana picker no form */
+.rot-days { display: flex; gap: 6px; flex-wrap: wrap; }
+.rot-day-chip { position: relative; cursor: pointer; user-select: none; }
+.rot-day-chip input { position: absolute; opacity: 0; width: 0; height: 0; }
+.rot-day-chip span { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text-2); font-size: 12px; font-weight: 600; transition: all 140ms; }
+.rot-day-chip:hover span { border-color: var(--line2); color: var(--text); }
+.rot-day-chip input:checked + span { background: var(--accent-d); border-color: var(--accent); color: var(--accent); }
+
+/* Seletor "Adicionar na agenda" */
+.ag-pick-opt:hover { border-color: var(--accent) !important; background: rgba(193,255,42,.04) !important; }
+.ag-pick-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* Rotinas agrupadas por projeto */
 .pj-rot-groups { display: flex; flex-direction: column; gap: 14px; }
 .pj-rot-group { background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; position: relative; }

@@ -24,11 +24,27 @@ const STATUS_COR   = Object.fromEntries(STATUS_OPTS.map(o => [o.v, o.cor]))
 
 const DIAS_SEMANA  = ['domingo','segunda','terça','quarta','quinta','sexta','sábado']
 const DIAS_ABREV   = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
+const DIAS_KEY     = ['dom','seg','ter','qua','qui','sex','sab']
 const MES_ABREV    = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
 const MES_NOME     = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 
+// Categorias de rotina pessoal — sugestão de ícone e cor
+const ROT_CATS = [
+  { v: 'academia',   l: 'Academia',     icone: '💪', cor: '#FF6B35' },
+  { v: 'leitura',    l: 'Leitura',      icone: '📚', cor: '#4A9EFF' },
+  { v: 'estudo',     l: 'Estudo',       icone: '✍️', cor: '#A78BFA' },
+  { v: 'meditacao',  l: 'Meditação',    icone: '🧘', cor: '#34D399' },
+  { v: 'sono',       l: 'Sono / Acordar', icone: '😴', cor: '#94A3B8' },
+  { v: 'alimentacao',l: 'Alimentação',  icone: '🥗', cor: '#F5A623' },
+  { v: 'trabalho',   l: 'Trabalho',     icone: '💼', cor: '#C5F82A' },
+  { v: 'outra',      l: 'Outra',        icone: '⭐', cor: '#22D3EE' },
+]
+const ROT_CAT_MAP = Object.fromEntries(ROT_CATS.map(c => [c.v, c]))
+
 let _eventos     = []
 let _clientes    = []
+let _rotinas     = []   // templates de rotina pessoal
+let _checks      = []   // checks dos últimos 60 dias (pra streak)
 let _filtroStatus = 'pendente'  // pendente (agendado), realizado, cancelado, todos
 let _filtroBusca  = ''
 let _viewMode    = 'lista'      // 'lista' | 'mes'
@@ -56,15 +72,22 @@ function formataHora(t) {
 
 export async function render() {
   document.getElementById('tbacts').innerHTML =
-    `<button class="btn bp" id="btn-add-ev">+ Novo evento</button>`
-  document.getElementById('btn-add-ev').addEventListener('click', () => abrirNovo())
+    `<button class="btn bp" id="btn-add-ev">+ Adicionar</button>`
+  document.getElementById('btn-add-ev').addEventListener('click', () => abrirSeletor())
 
   const c = document.getElementById('content')
   c.innerHTML = '<div class="empty">Carregando...</div>'
 
-  const [ev, cl] = await Promise.all([
+  // Cutoff pra checks: 60 dias atrás (suficiente pra streak)
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - 60)
+  const cutoffStr = cutoff.toLocaleDateString('en-CA')
+
+  const [ev, cl, rot, chk] = await Promise.all([
     selectAll('agenda', { order: { column: 'data', ascending: true } }),
     selectAll('clientes', { columns: 'id, nome, empresa', order: { column: 'nome', ascending: true } }),
+    selectAll('agenda_rotinas', { order: { column: 'criado_em', ascending: true } }).catch(() => ({ data: [], error: null })),
+    db.from('agenda_rotinas_check').select('rotina_id, data').gte('data', cutoffStr).then(r => r, () => ({ data: [], error: null })),
   ])
   if (ev.error) {
     c.innerHTML = `<div class="empty">Erro: ${ev.error.message}<br><br>Rode <code>supabase/agenda.sql</code> no SQL Editor primeiro.</div>`
@@ -72,9 +95,81 @@ export async function render() {
   }
   _eventos  = ev.data || []
   _clientes = cl.data || []
+  // Se a tabela rotinas ainda não existe (migration não rodada), trata como vazia sem quebrar
+  _rotinas  = (rot && !rot.error && rot.data) ? rot.data : []
+  _checks   = (chk && !chk.error && chk.data) ? chk.data : []
+
   if (!_mesView) {
     const h = hojeStr().split('-').map(Number)
     _mesView = new Date(h[0], h[1] - 1, 1)
+  }
+  renderPage()
+}
+
+// ── Helpers de rotinas pessoais ─────────────────────────────────────────────
+
+function diaSemKey(dt) {
+  return DIAS_KEY[dt.getDay()]
+}
+
+// Streak: quantos dias consecutivos terminando em ref (default = hoje) tem check
+function calcStreak(rotinaId, refDateStr) {
+  const ref = refDateStr || hojeStr()
+  const set = new Set(_checks.filter(c => c.rotina_id === rotinaId).map(c => c.data))
+  let streak = 0
+  const cur = new Date(ref + 'T00:00:00')
+  while (set.has(cur.toLocaleDateString('en-CA'))) {
+    streak++
+    cur.setDate(cur.getDate() - 1)
+  }
+  return streak
+}
+
+function rotinaFeitaNaData(rotinaId, dataStr) {
+  return _checks.some(c => c.rotina_id === rotinaId && c.data === dataStr)
+}
+
+// Gera "eventos virtuais" das rotinas pra uma data específica.
+// Cada um vira pseudo-event com _isRotina:true pra render diferenciado.
+function rotinasNaData(dataStr) {
+  const dt = new Date(dataStr + 'T00:00:00')
+  const dk = diaSemKey(dt)
+  return _rotinas
+    .filter(r => r.ativa && Array.isArray(r.dias_semana) && r.dias_semana.includes(dk))
+    .map(r => {
+      const cat = ROT_CAT_MAP[r.categoria] || ROT_CAT_MAP.outra
+      return {
+        _isRotina: true,
+        id: 'rot-' + r.id + '-' + dataStr,
+        rotina_id: r.id,
+        titulo: r.nome,
+        data: dataStr,
+        hora_inicio: r.horario || null,
+        local: null,
+        categoria: r.categoria,
+        icone: r.icone || cat.icone,
+        cor: r.cor || cat.cor,
+        observacoes: r.observacoes,
+        feito: rotinaFeitaNaData(r.id, dataStr),
+        streak: calcStreak(r.id, dataStr),
+      }
+    })
+}
+
+// Marca/desmarca rotina como feita numa data
+async function toggleCheckRotina(rotinaId, dataStr) {
+  const existe = _checks.find(c => c.rotina_id === rotinaId && c.data === dataStr)
+  if (existe) {
+    const { error } = await db.from('agenda_rotinas_check').delete()
+      .eq('rotina_id', rotinaId).eq('data', dataStr)
+    if (error) { toast('Erro: ' + error.message, 'er'); return }
+    _checks = _checks.filter(c => !(c.rotina_id === rotinaId && c.data === dataStr))
+    toast('Desmarcado.')
+  } else {
+    const { error } = await db.from('agenda_rotinas_check').insert({ rotina_id: rotinaId, data: dataStr })
+    if (error) { toast('Erro: ' + error.message, 'er'); return }
+    _checks.push({ rotina_id: rotinaId, data: dataStr })
+    toast('Feito! 🔥')
   }
   renderPage()
 }
@@ -101,6 +196,29 @@ function renderPage() {
   const amanhaStr = amanha.toLocaleDateString('en-CA')
   const fimSemanaStr = fimSemana.toLocaleDateString('en-CA')
 
+  // Expande rotinas pessoais nas datas relevantes (hoje, amanhã, próximos 7 dias)
+  const datasFuturas = [hoje, amanhaStr]
+  for (let i = 2; i <= 7; i++) {
+    const d = new Date(t); d.setDate(t.getDate() + i)
+    datasFuturas.push(d.toLocaleDateString('en-CA'))
+  }
+  const rotinasExpandidas = []
+  for (const dStr of datasFuturas) {
+    rotinasExpandidas.push(...rotinasNaData(dStr))
+  }
+  // Aplica filtro de busca também nas rotinas
+  let rotsFiltradas = rotinasExpandidas
+  if (_filtroBusca) {
+    const q = _filtroBusca.toLowerCase()
+    rotsFiltradas = rotinasExpandidas.filter(r =>
+      (r.titulo || '').toLowerCase().includes(q) ||
+      (r.categoria || '').toLowerCase().includes(q)
+    )
+  }
+  // Quando filtrando por status específico (realizado/cancelado), oculta rotinas
+  // (rotinas têm seu próprio "feito"). No filtro 'pendente' e 'todos', mostra.
+  const mostrarRotinas = _filtroStatus === 'pendente' || _filtroStatus === 'todos'
+
   const buckets = { hoje: [], amanha: [], semana: [], futuro: [], passado: [] }
   for (const ev of lista) {
     const d = String(ev.data || '').slice(0, 10)
@@ -110,6 +228,14 @@ function renderPage() {
     else if (d === amanhaStr)     buckets.amanha.push(ev)
     else if (d <= fimSemanaStr)   buckets.semana.push(ev)
     else                          buckets.futuro.push(ev)
+  }
+  // Adiciona rotinas nos buckets certos
+  if (mostrarRotinas) {
+    for (const r of rotsFiltradas) {
+      if (r.data === hoje)            buckets.hoje.push(r)
+      else if (r.data === amanhaStr)  buckets.amanha.push(r)
+      else if (r.data <= fimSemanaStr) buckets.semana.push(r)
+    }
   }
   // Ordena dentro de cada bucket por data+hora
   for (const k of Object.keys(buckets)) {
@@ -165,8 +291,23 @@ function renderPage() {
   c.querySelectorAll('[data-view]').forEach(btn =>
     btn.addEventListener('click', () => { _viewMode = btn.dataset.view; renderPage() })
   )
-  c.querySelectorAll('.ev-card').forEach(card =>
+  c.querySelectorAll('.ev-card:not(.rot-card)').forEach(card =>
     card.addEventListener('click', () => abrirEdicao(card.dataset.id))
+  )
+  // Toggle de check da rotina
+  c.querySelectorAll('.rot-check').forEach(btn =>
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation()
+      toggleCheckRotina(btn.dataset.rotid, btn.dataset.data)
+    })
+  )
+  // Editar rotina
+  c.querySelectorAll('.rot-edit-btn').forEach(btn =>
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation()
+      const r = _rotinas.find(x => x.id === btn.dataset.rotid)
+      if (r) abrirRotinaForm(r)
+    })
   )
   // Calendário: nav + clicks
   const navPrev  = document.getElementById('cal-prev')
@@ -286,6 +427,8 @@ function secao(titulo, eventos, cor, isPassado = false) {
 }
 
 function cardEvento(ev, fade = false) {
+  if (ev._isRotina) return cardRotina(ev, fade)
+
   const horaIni = formataHora(ev.hora_inicio)
   const horaFim = formataHora(ev.hora_fim)
   const horaStr = horaIni && horaFim ? `${horaIni} – ${horaFim}` : (horaIni || (fade ? '' : '— sem hora —'))
@@ -312,6 +455,47 @@ function cardEvento(ev, fade = false) {
         ${ev.cliente_nome || ev.local ? `<div style="font-size:11px;color:var(--text-3);margin-top:2px">${ev.local ? esc(LOCAL_LABEL[ev.local] || ev.local) : ''}${cliente}</div>` : ''}
         ${ev.descricao ? `<div style="font-size:12px;color:var(--text-2);margin-top:5px;line-height:1.45">${esc(ev.descricao)}</div>` : ''}
       </div>
+    </div>`
+}
+
+// Card de rotina pessoal (academia, leitura, etc) — visual diferenciado
+function cardRotina(r, fade = false) {
+  const horaStr = r.hora_inicio ? formataHora(r.hora_inicio) : ''
+  const dataFmt = formataData(r.data)
+  const feito = r.feito
+  const streak = r.streak || 0
+  const cor = r.cor || '#C5F82A'
+  const icone = r.icone || '⭐'
+  const streakBadge = streak > 0
+    ? `<span class="rot-streak" title="${streak} dia${streak === 1 ? '' : 's'} consecutivo${streak === 1 ? '' : 's'}">🔥 ${streak}</span>`
+    : ''
+
+  return `
+    <div class="ev-card rot-card${feito ? ' rot-done' : ''}" data-rotid="${r.rotina_id}" data-data="${r.data}"
+      style="margin:0 12px 6px;padding:12px 14px;border:1px solid ${feito ? cor + '55' : 'var(--line)'};border-radius:8px;background:${feito ? cor + '0A' : 'var(--bg-card)'};display:flex;gap:14px;align-items:center;${fade ? 'opacity:.55;' : ''}">
+      <div style="min-width:62px;font-size:11px;color:var(--text-3);line-height:1.4">
+        <div style="color:var(--text-2);font-weight:600">${horaStr || '—'}</div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-top:1px">${dataFmt}</div>
+      </div>
+      <button class="rot-check" data-rotid="${r.rotina_id}" data-data="${r.data}" title="${feito ? 'Desmarcar' : 'Marcar como feito'}"
+        style="width:32px;height:32px;border-radius:50%;border:2px solid ${feito ? cor : 'var(--line2)'};background:${feito ? cor : 'transparent'};color:${feito ? '#000' : 'var(--text-3)'};cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 140ms">
+        ${feito ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+      </button>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:500;color:var(--text)">
+          <span style="font-size:18px;line-height:1">${icone}</span>
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${feito ? 'text-decoration:line-through;opacity:.65' : ''}">${esc(r.titulo)}</span>
+          ${streakBadge}
+        </div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:2px">
+          Rotina pessoal · ${esc((ROT_CAT_MAP[r.categoria] || ROT_CAT_MAP.outra).l)}
+          ${r.observacoes ? ` · ${esc(r.observacoes)}` : ''}
+        </div>
+      </div>
+      <button class="rot-edit-btn" data-rotid="${r.rotina_id}" title="Editar rotina"
+        style="background:transparent;border:none;color:var(--text-3);cursor:pointer;padding:6px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>
+      </button>
     </div>`
 }
 
@@ -362,6 +546,128 @@ function abrirNovo(dataPreFill) {
      <button class="btn bp" id="ev-save">Salvar</button>`)
   document.getElementById('ev-cancel').addEventListener('click', closeModal)
   document.getElementById('ev-save').addEventListener('click', () => salvar())
+}
+
+// Modal seletor: o que o user quer adicionar?
+function abrirSeletor(dataPreFill) {
+  const body = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="ag-pick-opt" id="pick-evento"
+        style="text-align:left;padding:16px 18px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);cursor:pointer;font-family:inherit;display:flex;gap:14px;align-items:center;transition:border-color 140ms">
+        <div style="font-size:28px;line-height:1">📅</div>
+        <div>
+          <div style="font-size:14px;font-weight:600">Evento pontual</div>
+          <div style="font-size:12px;color:var(--text-2);margin-top:2px">Reunião, conversa, compromisso com data e hora.</div>
+        </div>
+      </button>
+      <button class="ag-pick-opt" id="pick-rotina"
+        style="text-align:left;padding:16px 18px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);cursor:pointer;font-family:inherit;display:flex;gap:14px;align-items:center;transition:border-color 140ms">
+        <div style="font-size:28px;line-height:1">🔁</div>
+        <div>
+          <div style="font-size:14px;font-weight:600">Rotina pessoal</div>
+          <div style="font-size:12px;color:var(--text-2);margin-top:2px">Hábito que se repete (academia, leitura, estudo...). Marca como feito e acompanha o streak.</div>
+        </div>
+      </button>
+    </div>
+  `
+  openModal('Adicionar na agenda', body,
+    `<button class="btn bg" id="ag-pick-cancel">Cancelar</button>`)
+  document.getElementById('ag-pick-cancel').addEventListener('click', closeModal)
+  document.getElementById('pick-evento').addEventListener('click', () => { closeModal(); abrirNovo(dataPreFill) })
+  document.getElementById('pick-rotina').addEventListener('click', () => { closeModal(); abrirRotinaForm() })
+}
+
+// ── Rotinas pessoais — form ─────────────────────────────────────────────────
+
+function rotinaForm(r = {}) {
+  const cats = ROT_CATS.map(c =>
+    `<option value="${c.v}"${r.categoria === c.v ? ' selected' : ''}>${c.icone} ${c.l}</option>`
+  ).join('')
+  const diasSemana = Array.isArray(r.dias_semana) ? r.dias_semana : ['seg','ter','qua','qui','sex']
+  const diasChips = DIAS_KEY.map((k, i) => `
+    <label class="rot-day-chip">
+      <input type="checkbox" name="rot-dia" value="${k}" ${diasSemana.includes(k) ? 'checked' : ''}>
+      <span>${DIAS_ABREV[i]}</span>
+    </label>
+  `).join('')
+
+  return `
+    <div class="fg"><label class="fl">Nome *</label>
+      <input class="fi" id="rot-nome" value="${esc(r.nome)}" placeholder="Ex: Treino de manhã, Ler 30min, Meditar..." autofocus>
+    </div>
+    <div class="fg"><label class="fl">Categoria</label>
+      <select class="fsl" id="rot-cat">${cats}</select>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Ícone (emoji)</label>
+        <input class="fi" id="rot-icone" value="${esc(r.icone || '')}" placeholder="💪" maxlength="4">
+      </div>
+      <div class="fg"><label class="fl">Horário (opcional)</label>
+        <input class="fi" id="rot-hora" type="time" value="${formataHora(r.horario)}">
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Dias da semana</label>
+      <div class="rot-days">${diasChips}</div>
+    </div>
+    <div class="fg"><label class="fl">Observações (opcional)</label>
+      <textarea class="fta" id="rot-obs" placeholder="Ex: Foco em pernas / Livro atual / Pomodoro 25min">${esc(r.observacoes)}</textarea>
+    </div>`
+}
+
+function abrirRotinaForm(r) {
+  const isEdit = r && r.id
+  openModal(isEdit ? 'Editar rotina' : 'Nova rotina pessoal', rotinaForm(r || {}),
+    `<button class="btn bg" id="rot-cancel">Cancelar</button>
+     ${isEdit ? `<button class="btn bd" id="rot-del">Remover</button>` : ''}
+     <button class="btn bp" id="rot-save">Salvar</button>`)
+  document.getElementById('rot-cancel').addEventListener('click', closeModal)
+  document.getElementById('rot-save').addEventListener('click', () => salvarRotina(isEdit ? r.id : null))
+  if (isEdit) document.getElementById('rot-del').addEventListener('click', () => removerRotina(r.id))
+
+  // Auto-preenche ícone quando muda categoria
+  document.getElementById('rot-cat').addEventListener('change', (e) => {
+    const cat = ROT_CAT_MAP[e.target.value]
+    if (cat && !document.getElementById('rot-icone').value.trim()) {
+      document.getElementById('rot-icone').value = cat.icone
+    }
+  })
+}
+
+async function salvarRotina(id) {
+  const nome = document.getElementById('rot-nome').value.trim()
+  if (!nome) { toast('Nome obrigatório.', 'er'); return }
+  const dias = Array.from(document.querySelectorAll('input[name="rot-dia"]:checked')).map(el => el.value)
+  if (!dias.length) { toast('Escolha pelo menos um dia da semana.', 'er'); return }
+  const categoria = document.getElementById('rot-cat').value
+  const iconeRaw = document.getElementById('rot-icone').value.trim()
+  const cat = ROT_CAT_MAP[categoria] || ROT_CAT_MAP.outra
+  const d = {
+    nome,
+    categoria,
+    icone: iconeRaw || cat.icone,
+    cor: cat.cor,
+    dias_semana: dias,
+    horario: document.getElementById('rot-hora').value || null,
+    observacoes: document.getElementById('rot-obs').value.trim() || null,
+    ativa: true,
+  }
+  const { error } = id
+    ? await db.from('agenda_rotinas').update(d).eq('id', id)
+    : await db.from('agenda_rotinas').insert(d)
+  if (error) { toast('Erro: ' + error.message, 'er'); return }
+  toast(id ? 'Rotina atualizada.' : 'Rotina criada.')
+  closeModal()
+  render()
+}
+
+async function removerRotina(id) {
+  if (!confirm('Remover essa rotina? O histórico de checks também será apagado.')) return
+  const { error } = await db.from('agenda_rotinas').delete().eq('id', id)
+  if (error) { toast('Erro: ' + error.message, 'er'); return }
+  toast('Rotina removida.')
+  closeModal()
+  render()
 }
 
 function abrirEdicao(id) {
