@@ -9,27 +9,62 @@
 <link rel="icon" type="image/png" sizes="192x192" href="./favicon-192.png">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <meta name="theme-color" content="#0A0F0A">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="./assets/index-CSOdyQVd.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-BV0S4tMD.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@500,700,900&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="./assets/index-C_8QjKxf.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-O4rTmBk3.css">
 </head>
 <body>
 
 <!-- AUTH -->
-<div id="auth" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0A0F0A;padding:20px;z-index:9999">
-  <div style="width:100%;max-width:360px">
-    <div style="text-align:center;margin-bottom:28px">
-      <div style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#C1FF2A"></div>
+<div id="auth">
+  <div class="auth-bg">
+    <div class="auth-glow auth-glow-1"></div>
+    <div class="auth-glow auth-glow-2"></div>
+    <div class="auth-glow auth-glow-3"></div>
+    <div class="auth-grid"></div>
+  </div>
+
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="auth-logo">
+        <span class="auth-logo-dot"></span>
+        <span class="auth-logo-ring"></span>
+      </div>
+      <div class="auth-brand-name">Eleva <span>Digital</span></div>
+      <div class="auth-brand-tag">CRM · Acesso restrito</div>
     </div>
-    <input type="email" id="ae-email" placeholder="seu@email.com" autocomplete="username"
-      style="width:100%;padding:14px 16px;border-radius:10px;border:1px solid rgba(193,255,42,.22);background:#131C0E;color:#E8F5D8;font:inherit;font-size:15px;margin-bottom:10px;outline:none">
-    <input type="password" id="ae-pw" placeholder="••••••••••••" autocomplete="current-password"
-      style="width:100%;padding:14px 16px;border-radius:10px;border:1px solid rgba(193,255,42,.22);background:#131C0E;color:#E8F5D8;font:inherit;font-size:15px;margin-bottom:14px;outline:none">
-    <button id="ae-btn" type="button"
-      style="width:100%;padding:14px;border:none;border-radius:10px;background:#C1FF2A;color:#0A0F0A;font:inherit;font-size:15px;font-weight:700;cursor:pointer">
-      Entrar
-    </button>
-    <div id="ae-err" style="color:#FF5C5C;font-size:13px;text-align:center;margin-top:12px;min-height:18px"></div>
+
+    <form class="auth-form" id="auth-form" autocomplete="on">
+      <div class="auth-field">
+        <input type="email" id="ae-email" class="auth-input" placeholder=" " autocomplete="username" required>
+        <label for="ae-email" class="auth-label">E-mail</label>
+        <svg class="auth-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+      </div>
+
+      <div class="auth-field">
+        <input type="password" id="ae-pw" class="auth-input" placeholder=" " autocomplete="current-password" required>
+        <label for="ae-pw" class="auth-label">Senha</label>
+        <svg class="auth-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <button type="button" class="auth-eye" id="ae-eye" aria-label="Mostrar senha">
+          <svg class="auth-eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg class="auth-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 5.09A10.94 10.94 0 0 1 12 5c6.5 0 10 7 10 7a18.5 18.5 0 0 1-3.07 4.06"/><path d="M6.61 6.61A18.5 18.5 0 0 0 2 12s3.5 7 10 7a10.94 10.94 0 0 0 5.07-1.27"/><path d="M14.12 14.12A3 3 0 1 1 9.88 9.88"/><path d="m2 2 20 20"/></svg>
+        </button>
+      </div>
+
+      <button id="ae-btn" type="submit" class="auth-btn">
+        <span class="auth-btn-label">Entrar</span>
+        <svg class="auth-btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+        <span class="auth-btn-shimmer"></span>
+      </button>
+
+      <div id="ae-err" class="auth-err"></div>
+    </form>
+
+    <div class="auth-foot">v2.0 · seguro com Supabase Auth</div>
   </div>
 </div>
 
@@ -123,6 +158,9 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
       <h1 id="vtitle">Dashboard</h1>
+      <div class="engine-state" id="engine-state" title="Estado do motor de aquisição">
+        <span class="dot"></span><span class="lbl">PARADO</span>
+      </div>
       <div class="tb-acts" id="tbacts"></div>
     </div>
     <div class="content" id="content"></div>

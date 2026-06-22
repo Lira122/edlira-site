@@ -1,6 +1,19 @@
 import './style.css'
 import { closeModal } from './utils.js'
 import { signIn, signOut, getSession, bootstrapAdmin } from './auth.js'
+import { db, isDbReady } from './db.js'
+
+// ─── Engine state: pulso do motor de aquisição no topbar ─────────
+async function refreshEngineState() {
+  const el = document.getElementById('engine-state')
+  if (!el || !isDbReady()) return
+  try {
+    const { data } = await db.from('agentes').select('status')
+    const on = !data || !data.length || data.some(a => a.status === 'ativo')
+    el.classList.toggle('on', on)
+    el.querySelector('.lbl').textContent = on ? 'RODANDO' : 'PARADO'
+  } catch (_) { /* silencioso */ }
+}
 
 // View imports são lazy — só carregam após login.
 let VIEWS = null
@@ -76,34 +89,54 @@ async function showApp() {
   document.getElementById('auth').style.display = 'none'
   document.getElementById('app').classList.remove('h')
   go('dashboard')
+  refreshEngineState()
+  setInterval(refreshEngineState, 30000) // sincroniza a cada 30s
 }
 
 function setErr(msg) {
   const el = document.getElementById('ae-err')
+  const inputs = [document.getElementById('ae-email'), document.getElementById('ae-pw')]
   el.textContent = msg || ''
-  if (msg) setTimeout(() => { if (el.textContent === msg) el.textContent = '' }, 4000)
+  el.classList.toggle('on', !!msg)
+  if (msg) {
+    inputs.forEach(i => i.classList.add('err'))
+    setTimeout(() => inputs.forEach(i => i.classList.remove('err')), 420)
+    setTimeout(() => {
+      if (el.textContent === msg) { el.textContent = ''; el.classList.remove('on') }
+    }, 4000)
+  }
 }
 
 async function doLogin() {
   const email = document.getElementById('ae-email').value.trim()
   const password = document.getElementById('ae-pw').value
   const btn = document.getElementById('ae-btn')
+  const lbl = btn.querySelector('.auth-btn-label')
   if (!email || !password) return setErr('Preenche email e senha.')
   btn.disabled = true
-  btn.textContent = 'Entrando…'
+  btn.classList.add('loading')
+  if (lbl) lbl.textContent = 'Entrando'
   try {
     await signIn(email, password)
     await showApp()
   } catch (e) {
     setErr(e.message || 'Erro ao entrar.')
     btn.disabled = false
-    btn.textContent = 'Entrar'
+    btn.classList.remove('loading')
+    if (lbl) lbl.textContent = 'Entrar'
   }
 }
 
-document.getElementById('ae-btn').addEventListener('click', doLogin)
-document.getElementById('ae-email').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin() })
-document.getElementById('ae-pw').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin() })
+document.getElementById('auth-form').addEventListener('submit', e => { e.preventDefault(); doLogin() })
+
+// Toggle mostrar/ocultar senha
+document.getElementById('ae-eye').addEventListener('click', () => {
+  const pw  = document.getElementById('ae-pw')
+  const eye = document.getElementById('ae-eye')
+  const showing = pw.type === 'text'
+  pw.type = showing ? 'password' : 'text'
+  eye.classList.toggle('on', !showing)
+})
 document.getElementById('logout-link').addEventListener('click', e => { e.preventDefault(); signOut() })
 
 // Nav clicks (fecha drawer mobile ao escolher item)
