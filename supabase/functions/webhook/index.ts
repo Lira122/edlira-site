@@ -286,9 +286,11 @@ function formatBookingConfirmation(slotIso: string, meetingUrl: string | null): 
 // ─── UazAPI ──────────────────────────────────────────────────────────────────
 
 async function sendText(phone: string, text: string, delayMs = 0) {
+  // UazAPI dessa build interpreta o body como Latin-1 quando o charset não é
+  // declarado, o que corrompia acentos (é → Ã©, ã → Ã£). Forçar UTF-8 resolve.
   const res = await fetch(`${UAZAPI_URL}/send/text`, {
     method: 'POST',
-    headers: { 'token': UAZAPI_TOKEN, 'Content-Type': 'application/json' },
+    headers: { 'token': UAZAPI_TOKEN, 'Content-Type': 'application/json; charset=utf-8' },
     body: JSON.stringify({ number: phone, text, delay: delayMs })
   })
   if (!res.ok) console.error('[UazAPI] Erro ao enviar:', await res.text())

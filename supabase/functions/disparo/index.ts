@@ -133,7 +133,7 @@ function tier(obs: string): number {
 async function sendText(phone: string, text: string, delayMs = 0) {
   const res = await fetch(`${UAZAPI_URL}/send/text`, {
     method: 'POST',
-    headers: { 'token': UAZAPI_TOKEN, 'Content-Type': 'application/json' },
+    headers: { 'token': UAZAPI_TOKEN, 'Content-Type': 'application/json; charset=utf-8' },
     body: JSON.stringify({ number: phone, text, delay: delayMs }),
   })
   if (!res.ok) throw new Error(`UazAPI ${res.status}: ${(await res.text()).slice(0, 200)}`)

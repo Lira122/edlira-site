@@ -29,7 +29,7 @@ function dataMaisN(n: number) {
 async function sendText(phone: string, text: string) {
   const r = await fetch(`${UAZAPI_URL}/send/text`, {
     method: 'POST',
-    headers: { 'token': UAZAPI_TOKEN, 'Content-Type': 'application/json' },
+    headers: { 'token': UAZAPI_TOKEN, 'Content-Type': 'application/json; charset=utf-8' },
     body: JSON.stringify({ number: phone, text }),
   })
   if (!r.ok) throw new Error(`UazAPI ${r.status}: ${(await r.text()).slice(0, 200)}`)
