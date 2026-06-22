@@ -116,12 +116,27 @@ app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Rotas explícitas pras páginas legais (garante que a Vercel inclua os HTMLs no bundle)
+// Rotas explícitas pras páginas legais (garante que a Vercel inclua os HTMLs no bundle).
+// Aceita TANTO /pagina.html quanto /pagina (URL limpa, melhor pra SEO).
 ['privacidade', 'termos', 'exclusao-dados', 'como-funciona', 'painel'].forEach((name) => {
-  app.get(`/${name}.html`, (_req, res) => {
+  const serve = (_req, res) => {
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(path.join(__dirname, `${name}.html`));
-  });
+  };
+  app.get(`/${name}.html`, serve);
+  app.get(`/${name}`,      serve);
+});
+
+// SEO essentials — entrega robots.txt e sitemap.xml com Content-Type correto.
+// Tem que estar registrado explicitamente porque o express.static acima é registrado
+// DEPOIS dessas rotas e pode não priorizar esses dois arquivos no roteamento.
+app.get('/robots.txt', (_req, res) => {
+  res.type('text/plain');
+  res.sendFile(path.join(__dirname, 'robots.txt'));
+});
+app.get('/sitemap.xml', (_req, res) => {
+  res.type('application/xml');
+  res.sendFile(path.join(__dirname, 'sitemap.xml'));
 });
 
 // Error middleware do Express — pega exceptions de rota e não derruba o processo.
