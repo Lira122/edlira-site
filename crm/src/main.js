@@ -106,10 +106,21 @@ document.getElementById('ae-email').addEventListener('keydown', e => { if (e.key
 document.getElementById('ae-pw').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin() })
 document.getElementById('logout-link').addEventListener('click', e => { e.preventDefault(); signOut() })
 
-// Nav clicks
+// Nav clicks (fecha drawer mobile ao escolher item)
 document.getElementById('sb-nav').addEventListener('click', e => {
   const ni = e.target.closest('.ni')
-  if (ni) go(ni.dataset.v)
+  if (ni) { go(ni.dataset.v); document.body.classList.remove('sb-open') }
+})
+
+// Toggle drawer (mobile)
+document.getElementById('sb-toggle')?.addEventListener('click', () => {
+  document.body.classList.toggle('sb-open')
+})
+// Fecha drawer clicando no overlay (fora do menu)
+document.addEventListener('click', (e) => {
+  if (!document.body.classList.contains('sb-open')) return
+  if (e.target.closest('.sb') || e.target.closest('#sb-toggle')) return
+  document.body.classList.remove('sb-open')
 })
 
 // Global event delegation for data-go attributes (e.g. dashboard "Ver todos" button)
