@@ -208,10 +208,13 @@ async function renderResumao() {
       })
 
       // Monta preview da mensagem pro modal de confirmação
-      const nomeCli = (cli.nome || '').split(' ')[0] || ''
-      const head = nomeCli ? `Oi, ${nomeCli}! Fechando o dia aqui.` : `Oi! Fechando o dia aqui.`
+      // Usa saudação que vem da função (cliente.apelido_saudacao || primeiro nome real)
+      const head = cli.tipo === 'grupo'
+        ? `Boa noite, pessoal! Fechando o dia aqui.`
+        : (cli.saudacao ? `Oi, ${cli.saudacao}! Fechando o dia aqui.` : `Oi! Fechando o dia aqui.`)
       const corpo = tarefasOK.map(tid => `✓ ${apelidos[tid] || cli.tarefas.find(t => t.id === tid)?.titulo || ''}`).join('\n')
-      const previewMsg = `${head}\n\nHoje a gente avançou:\n${corpo}\n\nQualquer dúvida é só chamar.`
+      const rodape = `_Essa é uma mensagem automática gerada no fim do dia pelo nosso sistema._`
+      const previewMsg = `${head}\n\nHoje a gente avançou:\n${corpo}\n\nQualquer dúvida é só chamar.\n\n${rodape}`
 
       openModal(
         `Enviar pra ${cli.nome}?`,

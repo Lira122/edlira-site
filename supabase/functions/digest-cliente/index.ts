@@ -66,16 +66,16 @@ function rotuloTarefa(t: { titulo: string; apelido_cliente: string | null }): st
   return ap || t.titulo
 }
 
-function montarMensagem(nomeCliente: string, itens: string[], paraGrupo: boolean): string {
+function montarMensagem(saudacao: string, itens: string[], paraGrupo: boolean): string {
   let head: string
   if (paraGrupo) {
     head = `Boa noite, pessoal! Fechando o dia aqui.`
   } else {
-    const saud = primeiroNome(nomeCliente)
-    head = saud ? `Oi, ${saud}! Fechando o dia aqui.` : `Oi! Fechando o dia aqui.`
+    head = saudacao ? `Oi, ${saudacao}! Fechando o dia aqui.` : `Oi! Fechando o dia aqui.`
   }
   const corpo = itens.map((i) => `✓ ${i}`).join('\n')
-  return `${head}\n\nHoje a gente avançou:\n${corpo}\n\nQualquer dúvida é só chamar.`
+  const rodape = `_Essa é uma mensagem automática gerada no fim do dia pelo nosso sistema._`
+  return `${head}\n\nHoje a gente avançou:\n${corpo}\n\nQualquer dúvida é só chamar.\n\n${rodape}`
 }
 
 // Rótulo amigável do destino (mostra no preview do front)
@@ -133,8 +133,8 @@ Deno.serve(async (req: Request) => {
       : { data: [] as Array<{ id: string; cliente_id: string; jid_grupo: string | null; nome: string }> }
     const cliIds = [...new Set((projs || []).map((p) => p.cliente_id).filter(Boolean))]
     const { data: clis } = cliIds.length
-      ? await supabase.from('clientes').select('id, nome, empresa, whatsapp, status').in('id', cliIds)
-      : { data: [] as Array<{ id: string; nome: string; empresa: string | null; whatsapp: string; status: string }> }
+      ? await supabase.from('clientes').select('id, nome, empresa, whatsapp, status, apelido_saudacao').in('id', cliIds)
+      : { data: [] as Array<{ id: string; nome: string; empresa: string | null; whatsapp: string; status: string; apelido_saudacao: string | null }> }
 
     const projMap = Object.fromEntries((projs || []).map((p) => [p.id, p]))
     const cliMap  = Object.fromEntries((clis  || []).map((c) => [c.id, c]))
@@ -148,6 +148,7 @@ Deno.serve(async (req: Request) => {
       tipo: 'grupo' | 'dm'
       cliente_id: string
       cli_nome: string
+      saudacao: string         // apelido_saudacao || primeiro nome real
       nome_exibicao: string    // "Spetialist (grupo)" / "Adriane"
       itens: Item[]
     }
@@ -178,12 +179,14 @@ Deno.serve(async (req: Request) => {
       let bloco = porDestino.get(destino)
       if (!bloco) {
         const baseNome = cli.empresa || cli.nome
+        const saud = (cli.apelido_saudacao || '').trim() || primeiroNome(cli.nome)
         bloco = {
           bloco_id: destino,
           destino,
           tipo,
           cliente_id: cli.id,
           cli_nome: cli.nome,
+          saudacao: saud,
           nome_exibicao: tipo === 'grupo' ? `${baseNome} (grupo)` : baseNome,
           itens: [],
         }
@@ -206,9 +209,10 @@ Deno.serve(async (req: Request) => {
         destino: b.destino,
         destino_label: rotuloDestino(b.tipo, b.destino),
         nome: b.nome_exibicao,
+        saudacao: b.saudacao,
         whatsapp: b.destino,          // compat com UI atual (mostra o destino)
         tarefas: b.itens.map((i) => ({ id: i.id, titulo: i.titulo, apelido: i.apelido_db })),
-        preview_mensagem: montarMensagem(b.cli_nome, b.itens.map((i) => i.rotulo), b.tipo === 'grupo'),
+        preview_mensagem: montarMensagem(b.saudacao, b.itens.map((i) => i.rotulo), b.tipo === 'grupo'),
       }))
       return Response.json(
         { ok: true, hoje, modo: 'preview', tarefas_total: tars.length, tarefas_ignoradas: ignoradas.length, clientes },
@@ -235,7 +239,7 @@ Deno.serve(async (req: Request) => {
       const override = (apelidosOverride[i.id] || '').trim()
       return override || i.rotulo
     })
-    const msg = montarMensagem(bloco.cli_nome, rotulosFinais, bloco.tipo === 'grupo')
+    const msg = montarMensagem(bloco.saudacao, rotulosFinais, bloco.tipo === 'grupo')
 
     try {
       await sendToWhatsApp(bloco.destino, msg)
