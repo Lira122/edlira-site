@@ -234,7 +234,7 @@ async function renderResumao() {
           for (const tid of desmarcadas) {
             await db.from('tarefas').update({ notificar_cliente: false }).eq('id', tid)
           }
-          await invokeFn('digest-cliente', { cliente_id: cid, apelidos })
+          await invokeFn('digest-cliente', { bloco_id: cid, apelidos })
           toast(`Enviado pra ${cli.nome} ✓`)
           closeModal()
           renderResumao()
