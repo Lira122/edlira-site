@@ -238,9 +238,12 @@ function renderDespesas() {
   const rows = _despesas.length
     ? _despesas.map(d => {
         const cat = CAT_MAP[d.categoria] || CAT_MAP.outro
+        const tags = []
+        if (d.recorrente_id)   tags.push('<span class="desp-rec-tag" title="Gerada por recorrente">↻</span>')
+        if (d.parcelamento_id) tags.push(`<span class="desp-parc-tag" title="Parcelado">${d.parcela_num}/${d.parcelas_total}</span>`)
         return `<tr>
           <td class="tm">${fmtd(d.data)}</td>
-          <td class="tn">${esc(d.descricao)}${d.recorrente_id?'<span class="desp-rec-tag" title="Gerada por recorrente">↻</span>':''}</td>
+          <td class="tn">${esc(d.descricao)}${tags.join('')}</td>
           <td><span class="desp-cat-pill" style="background:${cat.cor}22;color:${cat.cor}">${cat.l}</span></td>
           <td style="font-weight:600;color:var(--danger)">${brl(d.valor)}</td>
           <td style="display:flex;gap:6px">
@@ -596,41 +599,124 @@ function despForm(d = {}) {
   const isNew = !d.id
   const hoje = new Date().toISOString().slice(0,10)
   const catOpts = CATS.map(c => `<option value="${c.k}"${(d.categoria||'outro')===c.k?' selected':''}>${c.l}</option>`).join('')
+  const jaParcelada = !!d.parcelamento_id
 
   openModal(isNew ? 'Nova despesa' : 'Editar despesa', `
     <div class="fg"><label class="fl">Descrição *</label>
-      <input class="fi" id="d-desc" value="${escAttr(d.descricao || '')}" placeholder="Ex: Fatura Nubank, Mensalidade Claude…"></div>
+      <input class="fi" id="d-desc" value="${escAttr(d.descricao || '')}" placeholder="Ex: Fatura Nubank, TV Samsung, Mensalidade Claude…"></div>
     <div class="frow" style="margin-top:11px">
       <div class="fg"><label class="fl">Categoria</label><select class="fsl" id="d-cat">${catOpts}</select></div>
-      <div class="fg"><label class="fl">Valor (R$) *</label><input class="fi" id="d-val" type="number" step="0.01" value="${d.valor || ''}"></div>
+      <div class="fg"><label class="fl">Valor ${isNew ? 'TOTAL' : ''} (R$) *</label><input class="fi" id="d-val" type="number" step="0.01" value="${d.valor || ''}"></div>
     </div>
-    <div class="fg" style="margin-top:11px"><label class="fl">Data *</label>
+    <div class="fg" style="margin-top:11px"><label class="fl">Data ${isNew ? 'da 1ª parcela' : ''} *</label>
       <input class="fi" type="date" id="d-data" value="${d.data || hoje}"></div>
+
+    ${isNew ? `
+    <div class="fg" style="margin-top:11px">
+      <label class="fl">Parcelas</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="fi" type="number" min="1" max="36" id="d-parc" value="1" style="width:90px">
+        <span style="font-size:12px;color:var(--text-3)" id="d-parc-preview">à vista</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:4px">Ex: TV em 10x — gera 10 lançamentos mensais a partir da data acima.</div>
+    </div>
+    ` : (jaParcelada ? `
+    <div style="margin-top:11px;padding:10px 12px;background:rgba(193,255,42,.06);border:1px solid rgba(193,255,42,.15);border-radius:6px;font-size:12px;color:var(--text-2)">
+      ↻ Parcela ${d.parcela_num}/${d.parcelas_total} de um parcelamento. Editar aqui afeta só esta parcela.
+    </div>
+    ` : '')}
   `, `
     ${isNew ? '' : '<button class="btn bd" id="d-del">Excluir</button>'}
+    ${jaParcelada ? '<button class="btn bd" id="d-del-grupo">Excluir TODAS as parcelas</button>' : ''}
     <button class="btn bg" id="m-cancel">Cancelar</button>
     <button class="btn bp" id="m-save">Salvar</button>
   `)
+
+  // Preview do parcelamento ao vivo
+  if (isNew) {
+    const parcInp = document.getElementById('d-parc')
+    const valInp  = document.getElementById('d-val')
+    const preview = document.getElementById('d-parc-preview')
+    const atualiza = () => {
+      const n = parseInt(parcInp.value) || 1
+      const v = parseFloat(valInp.value) || 0
+      if (n <= 1) preview.textContent = 'à vista'
+      else if (v > 0) preview.textContent = `${n}x de R$ ${(v/n).toFixed(2).replace('.', ',')}`
+      else preview.textContent = `${n}x`
+    }
+    parcInp.addEventListener('input', atualiza)
+    valInp.addEventListener('input', atualiza)
+  }
+
   document.getElementById('m-cancel').addEventListener('click', closeModal)
   if (!isNew) document.getElementById('d-del').addEventListener('click', async () => {
-    if (!confirm('Excluir?')) return
+    if (!confirm('Excluir essa despesa?')) return
     await delDesp(d.id); closeModal()
   })
+  if (jaParcelada) document.getElementById('d-del-grupo').addEventListener('click', async () => {
+    if (!confirm(`Excluir TODAS as ${d.parcelas_total} parcelas desse parcelamento?`)) return
+    await db.from('despesas').delete().eq('parcelamento_id', d.parcelamento_id)
+    toast('Parcelamento excluído'); closeModal(); render()
+  })
   document.getElementById('m-save').addEventListener('click', async () => {
-    const payload = {
-      descricao: document.getElementById('d-desc').value.trim(),
-      categoria: document.getElementById('d-cat').value,
-      valor:     parseFloat(document.getElementById('d-val').value) || 0,
-      data:      document.getElementById('d-data').value,
+    const descricao = document.getElementById('d-desc').value.trim()
+    const categoria = document.getElementById('d-cat').value
+    const valorTotal = parseFloat(document.getElementById('d-val').value) || 0
+    const dataIni  = document.getElementById('d-data').value
+    if (!descricao)  return toast('Descrição obrigatória', 'err')
+    if (!valorTotal) return toast('Valor obrigatório', 'err')
+    if (!dataIni)    return toast('Data obrigatória', 'err')
+
+    if (d.id) {
+      // EDIT — sem parcelamento, atualiza só esse row
+      const { error } = await db.from('despesas')
+        .update({ descricao, categoria, valor: valorTotal, data: dataIni })
+        .eq('id', d.id)
+      if (error) return toast('Erro: '+error.message, 'err')
+      closeModal(); toast('Salvo'); render()
+      return
     }
-    if (!payload.descricao) return toast('Descrição obrigatória', 'err')
-    if (!payload.valor)     return toast('Valor obrigatório', 'err')
-    if (!payload.data)      return toast('Data obrigatória', 'err')
-    const { error } = d.id
-      ? await db.from('despesas').update(payload).eq('id', d.id)
-      : await db.from('despesas').insert(payload)
+
+    // NEW — checa se é parcelado
+    const parcelas = Math.max(1, Math.min(36, parseInt(document.getElementById('d-parc').value) || 1))
+    if (parcelas === 1) {
+      const { error } = await db.from('despesas').insert({
+        descricao, categoria, valor: valorTotal, data: dataIni,
+      })
+      if (error) return toast('Erro: '+error.message, 'err')
+      closeModal(); toast('Despesa adicionada'); render()
+      return
+    }
+
+    // Parcelado: gera N rows com mesmo parcelamento_id
+    const parcelamento_id = crypto.randomUUID()
+    const valorParcela = Math.round((valorTotal / parcelas) * 100) / 100
+    const sobra = Math.round((valorTotal - valorParcela * parcelas) * 100) / 100
+    const [ano, mes, dia] = dataIni.split('-').map(Number)
+    const rows = []
+    for (let i = 0; i < parcelas; i++) {
+      // mês i a partir de dataIni
+      const novoMes0 = (mes - 1) + i
+      const novoAno  = ano + Math.floor(novoMes0 / 12)
+      const novoMes  = (novoMes0 % 12) + 1
+      const ultimoDia = new Date(novoAno, novoMes, 0).getDate()
+      const novoDia = Math.min(dia, ultimoDia)
+      const dataIso = `${novoAno}-${String(novoMes).padStart(2,'0')}-${String(novoDia).padStart(2,'0')}`
+      // ajusta sobra (centavos) na última parcela
+      const v = (i === parcelas - 1) ? (valorParcela + sobra) : valorParcela
+      rows.push({
+        descricao: `${descricao} (${i+1}/${parcelas})`,
+        categoria,
+        valor: v,
+        data: dataIso,
+        parcelamento_id,
+        parcela_num: i + 1,
+        parcelas_total: parcelas,
+      })
+    }
+    const { error } = await db.from('despesas').insert(rows)
     if (error) return toast('Erro: '+error.message, 'err')
-    closeModal(); toast('Salvo'); render()
+    closeModal(); toast(`${parcelas} parcelas criadas`); render()
   })
 }
 

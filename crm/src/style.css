@@ -1008,6 +1008,7 @@ body[data-view="pipeline"] .kcards { flex: 1; overflow-y: auto; min-height: 0; }
 .desp-rec-meta { font-size: 11px; color: var(--text-3); }
 .desp-rec-acts { display: flex; gap: 6px; margin-top: 4px; }
 .desp-rec-tag { display: inline-block; font-size: 10px; color: var(--accent); margin-left: 5px; font-weight: 700; }
+.desp-parc-tag { display: inline-block; font-size: 10px; color: var(--info); margin-left: 6px; padding: 1px 6px; border-radius: 8px; background: rgba(74,158,255,.12); font-weight: 600; vertical-align: middle; }
 
 /* Resumo (gráfico duplo receita x despesa) */
 .resumo-bg { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; }
