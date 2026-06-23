@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { logIAUsage } from '../_shared/usage-log.ts'
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -737,6 +738,8 @@ Mensagem do lead: ${userMessage}
 Retorne apenas JSON válido com os campos: messages (array), stage, action ("none" ou "book"), slot_iso (preenchido só quando action="book"), lead_data.`
   })
 
+  const modelo = 'anthropic/claude-sonnet-4.5'
+  const t0 = Date.now()
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -746,7 +749,7 @@ Retorne apenas JSON válido com os campos: messages (array), stage, action ("non
       'X-Title': 'Eleva Digital Chatbot'
     },
     body: JSON.stringify({
-      model: 'anthropic/claude-sonnet-4.5',
+      model: modelo,
       max_tokens: 600,
       temperature: 0.7,
       messages: [
@@ -756,8 +759,24 @@ Retorne apenas JSON válido com os campos: messages (array), stage, action ("non
     })
   })
 
-  const json = await res.json() as { choices?: Array<{ message?: { content?: string } }> }
+  const json = await res.json() as {
+    choices?: Array<{ message?: { content?: string } }>
+    usage?: { prompt_tokens?: number; completion_tokens?: number }
+    id?: string
+  }
   const rawText = json.choices?.[0]?.message?.content || ''
+
+  // Log de uso (fire-and-forget)
+  logIAUsage({
+    provider: 'openrouter',
+    modelo,
+    origem: 'webhook-sofia',
+    input_tokens: json.usage?.prompt_tokens ?? 0,
+    output_tokens: json.usage?.completion_tokens ?? 0,
+    latencia_ms: Date.now() - t0,
+    sucesso: res.ok && !!rawText,
+    request_id: json.id,
+  })
 
   let parsed: {
     messages: string[]
@@ -925,6 +944,8 @@ async function handlePersonalAssistant(phone: string, userMessage: string) {
     { role: 'user', content: `${contextBlock}\n\nLira: ${userMessage}` }
   ]
 
+  const modeloPA = 'anthropic/claude-sonnet-4.5'
+  const tPA = Date.now()
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -934,15 +955,30 @@ async function handlePersonalAssistant(phone: string, userMessage: string) {
       'X-Title': 'Eleva Digital PA'
     },
     body: JSON.stringify({
-      model: 'anthropic/claude-sonnet-4.5',
+      model: modeloPA,
       max_tokens: 1024,
       temperature: 0.5,
       messages
     })
   })
 
-  const json = await res.json() as { choices?: Array<{ message?: { content?: string } }> }
+  const json = await res.json() as {
+    choices?: Array<{ message?: { content?: string } }>
+    usage?: { prompt_tokens?: number; completion_tokens?: number }
+    id?: string
+  }
   const reply = json.choices?.[0]?.message?.content?.trim() || 'Não consegui processar. Tenta de novo.'
+
+  logIAUsage({
+    provider: 'openrouter',
+    modelo: modeloPA,
+    origem: 'webhook-pa-lira',
+    input_tokens: json.usage?.prompt_tokens ?? 0,
+    output_tokens: json.usage?.completion_tokens ?? 0,
+    latencia_ms: Date.now() - tPA,
+    sucesso: res.ok && !!json.choices?.[0]?.message?.content,
+    request_id: json.id,
+  })
 
   // Salva histórico
   const updatedMessages = [

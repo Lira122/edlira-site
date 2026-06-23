@@ -9,6 +9,7 @@
 //   - Respeita o liga/desliga do agente no painel
 // ════════════════════════════════════════════════════════════════
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { logIAUsage } from '../_shared/usage-log.ts'
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -90,6 +91,7 @@ async function gerarOpener(empresa: string, segmento: string, cidade: string, sa
 
   if (GROQ_API_KEY) {
     try {
+      const t0 = Date.now()
       const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
@@ -97,11 +99,23 @@ async function gerarOpener(empresa: string, segmento: string, cidade: string, sa
       })
       if (r.ok) {
         const j = await r.json()
+        logIAUsage({
+          provider: 'groq',
+          modelo: body.model,
+          origem: 'disparo-opener',
+          input_tokens: j.usage?.prompt_tokens ?? 0,
+          output_tokens: j.usage?.completion_tokens ?? 0,
+          latencia_ms: Date.now() - t0,
+          sucesso: true,
+          request_id: j.id,
+        })
         return limpa(j.choices[0].message.content)
       }
     } catch (_) { /* cai pro fallback */ }
   }
 
+  const orModel = 'meta-llama/llama-3.1-70b-instruct'
+  const tOR = Date.now()
   const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -110,9 +124,19 @@ async function gerarOpener(empresa: string, segmento: string, cidade: string, sa
       'HTTP-Referer': 'https://elevabrands.com.br',
       'X-Title': 'Eleva Digital Disparo',
     },
-    body: JSON.stringify({ ...body, model: 'meta-llama/llama-3.1-70b-instruct' }),
+    body: JSON.stringify({ ...body, model: orModel }),
   })
   const j = await r.json()
+  logIAUsage({
+    provider: 'openrouter',
+    modelo: orModel,
+    origem: 'disparo-opener-fallback',
+    input_tokens: j.usage?.prompt_tokens ?? 0,
+    output_tokens: j.usage?.completion_tokens ?? 0,
+    latencia_ms: Date.now() - tOR,
+    sucesso: r.ok,
+    request_id: j.id,
+  })
   return limpa(j.choices[0].message.content)
 }
 
