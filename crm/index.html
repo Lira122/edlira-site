@@ -20,20 +20,46 @@
 <!-- AUTH -->
 <div id="auth">
   <div class="auth-bg">
-    <div class="auth-glow auth-glow-1"></div>
-    <div class="auth-glow auth-glow-2"></div>
-    <div class="auth-glow auth-glow-3"></div>
+    <div class="auth-aurora auth-aurora-1"></div>
+    <div class="auth-aurora auth-aurora-2"></div>
+    <div class="auth-aurora auth-aurora-3"></div>
+    <div class="auth-aurora auth-aurora-4"></div>
     <div class="auth-grid"></div>
+    <div class="auth-noise"></div>
+    <div class="auth-spotlight" id="auth-spotlight"></div>
+    <div class="auth-particles">
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
   </div>
 
   <div class="auth-card">
+    <div class="auth-card-border"></div>
+    <div class="auth-card-scan"></div>
+
     <div class="auth-brand">
       <div class="auth-logo">
-        <span class="auth-logo-dot"></span>
-        <span class="auth-logo-ring"></span>
+        <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="lg-logo" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#E6FF7A"/>
+              <stop offset=".5" stop-color="#C5F82A"/>
+              <stop offset="1" stop-color="#7BC400"/>
+            </linearGradient>
+          </defs>
+          <circle cx="32" cy="32" r="30" stroke="rgba(197,248,42,.22)" stroke-width="1"/>
+          <circle cx="32" cy="32" r="22" stroke="rgba(197,248,42,.38)" stroke-width="1"/>
+          <path d="M32 8 L52 32 L32 56 L12 32 Z" fill="url(#lg-logo)"/>
+          <path d="M32 18 L42 32 L32 46 L22 32 Z" fill="#0A0F0A"/>
+          <circle cx="32" cy="32" r="4" fill="url(#lg-logo)"/>
+        </svg>
+        <span class="auth-logo-pulse"></span>
       </div>
       <div class="auth-brand-name">Eleva <span>Digital</span></div>
-      <div class="auth-brand-tag">CRM · Acesso restrito</div>
+      <div class="auth-brand-tag">
+        <span class="auth-brand-dot"></span>
+        CRM · Painel restrito
+      </div>
     </div>
 
     <form class="auth-form" id="auth-form" autocomplete="on">
@@ -54,7 +80,7 @@
       </div>
 
       <button id="ae-btn" type="submit" class="auth-btn">
-        <span class="auth-btn-label">Entrar</span>
+        <span class="auth-btn-label">Acessar painel</span>
         <svg class="auth-btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
         <span class="auth-btn-shimmer"></span>
       </button>
@@ -62,7 +88,19 @@
       <div id="ae-err" class="auth-err"></div>
     </form>
 
-    <div class="auth-foot">v2.0 · seguro com Supabase Auth</div>
+    <div class="auth-status">
+      <div class="auth-status-item"><span class="auth-status-led ok"></span><span class="auth-status-key">Auth</span><span class="auth-status-val">Online</span></div>
+      <div class="auth-status-divider"></div>
+      <div class="auth-status-item"><span class="auth-status-led ok"></span><span class="auth-status-key">API</span><span class="auth-status-val">Estável</span></div>
+      <div class="auth-status-divider"></div>
+      <div class="auth-status-item"><span class="auth-status-led pulse"></span><span class="auth-status-key">Motor</span><span class="auth-status-val">Rodando</span></div>
+    </div>
+
+    <div class="auth-foot">
+      <span>v2.0</span><span class="auth-foot-sep"></span>
+      <span>Supabase Auth</span><span class="auth-foot-sep"></span>
+      <span>SSL · ECDHE</span>
+    </div>
   </div>
 </div>
 
@@ -135,6 +173,12 @@
       <div class="ni" data-v="criativos">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         <span>Criativos IA</span>
+      </div>
+
+      <div class="sb-group">Conteúdo</div>
+      <div class="ni" data-v="blog">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <span>Blog</span>
       </div>
 
       <div class="sb-group">Configuração</div>

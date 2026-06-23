@@ -127,16 +127,52 @@ app.get('/', (_req, res) => {
   app.get(`/${name}`,      serve);
 });
 
-// SEO essentials — entrega robots.txt e sitemap.xml com Content-Type correto.
-// Tem que estar registrado explicitamente porque o express.static acima é registrado
-// DEPOIS dessas rotas e pode não priorizar esses dois arquivos no roteamento.
+// SEO essentials — entrega robots.txt com Content-Type correto.
 app.get('/robots.txt', (_req, res) => {
   res.type('text/plain');
   res.sendFile(path.join(__dirname, 'robots.txt'));
 });
-app.get('/sitemap.xml', (_req, res) => {
-  res.type('application/xml');
-  res.sendFile(path.join(__dirname, 'sitemap.xml'));
+
+// ─── BLOG (SSR + sitemap dinâmico) ─────────────────────────────────────
+const blog = require('./blog.js');
+
+// Sitemap dinâmico: inclui posts publicados em tempo real.
+app.get('/sitemap.xml', async (_req, res) => {
+  try {
+    const xml = await blog.renderSitemap();
+    res.set('Cache-Control', 'public, max-age=600'); // 10min cache
+    res.type('application/xml').send(xml);
+  } catch (err) {
+    console.error('[SITEMAP]', err);
+    res.status(500).type('application/xml').send('<?xml version="1.0"?><error/>');
+  }
+});
+
+// Lista de posts
+app.get('/blog', async (_req, res) => {
+  try {
+    const html = await blog.renderList();
+    res.set('Cache-Control', 'public, max-age=300, s-maxage=600'); // 5min browser, 10min CDN
+    res.type('text/html').send(html);
+  } catch (err) {
+    console.error('[BLOG LIST]', err);
+    res.status(500).send('Erro ao carregar blog');
+  }
+});
+
+// Post individual
+app.get('/blog/:slug', async (req, res) => {
+  const slug = String(req.params.slug || '').replace(/[^a-z0-9-]/gi, '').slice(0, 200);
+  if (!slug) return res.redirect(302, '/blog');
+  try {
+    const html = await blog.renderPost(slug);
+    if (!html) return res.status(404).redirect('/blog');
+    res.set('Cache-Control', 'public, max-age=300, s-maxage=600');
+    res.type('text/html').send(html);
+  } catch (err) {
+    console.error('[BLOG POST]', slug, err);
+    res.status(500).send('Erro ao carregar post');
+  }
 });
 
 // Error middleware do Express — pega exceptions de rota e não derruba o processo.

@@ -36,6 +36,7 @@ async function loadViews() {
     { render: renderEmpresa },
     { render: renderOnboarding },
     { render: renderProjetos },
+    { render: renderBlog },
   ] = await Promise.all([
     import('./views/dashboard.js'),
     import('./views/agenda.js'),
@@ -53,6 +54,7 @@ async function loadViews() {
     import('./views/empresa.js'),
     import('./views/onboarding.js'),
     import('./views/projetos.js'),
+    import('./views/blog.js'),
   ])
   VIEWS = {
     dashboard:    { title: 'Dashboard',    render: renderDash },
@@ -71,6 +73,7 @@ async function loadViews() {
     criativos:    { title: 'Criativos IA', render: renderCriativos },
     empresa:      { title: 'Empresa',      render: renderEmpresa },
     onboarding:   { title: 'Onboarding',   render: renderOnboarding },
+    blog:         { title: 'Blog',         render: renderBlog },
   }
   return VIEWS
 }
@@ -137,6 +140,22 @@ document.getElementById('ae-eye').addEventListener('click', () => {
   pw.type = showing ? 'password' : 'text'
   eye.classList.toggle('on', !showing)
 })
+
+// Spotlight segue o mouse — só enquanto a tela de login estiver visível
+;(() => {
+  const auth = document.getElementById('auth')
+  if (!auth) return
+  let raf = 0
+  document.addEventListener('mousemove', e => {
+    if (auth.classList.contains('h') || auth.style.display === 'none') return
+    if (raf) return
+    raf = requestAnimationFrame(() => {
+      auth.style.setProperty('--mx', e.clientX + 'px')
+      auth.style.setProperty('--my', e.clientY + 'px')
+      raf = 0
+    })
+  })
+})()
 document.getElementById('logout-link').addEventListener('click', e => { e.preventDefault(); signOut() })
 
 // Nav clicks (fecha drawer mobile ao escolher item)
