@@ -14,6 +14,7 @@ let _cfg     = null
 let _metas   = []
 let _aportes = []
 let _fat     = []
+let _selicTimer = null  // setInterval handle pra re-fetch periódico
 
 // Simulador — qual meta tá projetando + parâmetros
 let _sim = { metaId: null, aporte: 2000, meses: 60, taxa: 14.25 }
@@ -22,12 +23,16 @@ let _sim = { metaId: null, aporte: 2000, meses: 60, taxa: 14.25 }
 const CORES = ['#C5F82A', '#4A9EFF', '#A78BFA', '#F5A623', '#EC4899', '#34D399', '#FF6B35', '#06B6D4']
 const ICONES_SUG = ['🚀','💻','✈️','🏠','🚗','💍','📚','🎓','🎯','💰','🏖️','📱','🎸','🎮']
 
+// Re-checa a Selic a cada 6h (caso usuário deixe a aba aberta o dia todo)
+const SELIC_REFRESH_MS = 6 * 60 * 60 * 1000
+
 export async function render() {
   const c = document.getElementById('content')
   c.innerHTML = '<div class="empty">Carregando…</div>'
 
   await loadAll()
   await tentarAtualizarSelic()  // não-bloqueante, atualiza se conseguir
+  scheduleSelicRefresh()        // a cada 6h re-checa BCB enquanto a view tá aberta
 
   // Inicializa simulador apontando pra meta principal
   if (!_sim.metaId || !_metas.find(m => m.id === _sim.metaId)) {
@@ -39,6 +44,8 @@ export async function render() {
 
   c.innerHTML = render_layout()
   wire(c)
+  const chartHost = c.querySelector('.lib-sim-chart')
+  if (chartHost) wireChartHover(chartHost)
 }
 
 // ───────────────────────────── LOAD ─────────────────────────────────
@@ -62,22 +69,61 @@ async function loadAll() {
 
 // Puxa Selic atual do Banco Central. Se BCB não responder (CORS, fora do
 // ar), mantém o valor que tá na config_fin. Não bloqueia o render.
-async function tentarAtualizarSelic() {
+// Retorna true se atualizou de fato, false caso contrário.
+async function tentarAtualizarSelic({ manual = false } = {}) {
   try {
     const r = await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json')
-    if (!r.ok) return
+    if (!r.ok) { if (manual) toast('BCB respondeu ' + r.status, 'err'); return false }
     const arr = await r.json()
     const v = Number(arr?.[0]?.valor)
-    if (!isFinite(v) || v <= 0) return
-    const atual = Number(_cfg.selic_aa)
-    if (Math.abs(v - atual) > 0.01) {
-      _cfg.selic_aa = v
-      await db.from('config_fin').upsert({ id:'main', selic_aa: v, atualizado_em: new Date().toISOString() })
-      toast(`Selic atualizada: ${v.toFixed(2)}% a.a.`)
-    } else {
-      _cfg.selic_aa = v
-    }
-  } catch (_) { /* silencioso — offline ou CORS bloqueou */ }
+    if (!isFinite(v) || v <= 0) { if (manual) toast('Resposta inválida do BCB', 'err'); return false }
+
+    const atual    = Number(_cfg.selic_aa)
+    const mudou    = Math.abs(v - atual) > 0.01
+    const agora    = new Date().toISOString()
+    _cfg.selic_aa  = v
+    _cfg.atualizado_em = agora
+    await db.from('config_fin').upsert({ id:'main', selic_aa: v, atualizado_em: agora })
+
+    if (mudou) toast(`Selic atualizada: ${v.toFixed(2)}% a.a.`)
+    else if (manual) toast(`Selic confirmada: ${v.toFixed(2)}% a.a.`)
+
+    // Se a view tá visível, atualiza só o chip e re-projeta com a nova taxa
+    refreshSelicUI()
+    return true
+  } catch (_) {
+    if (manual) toast('Sem conexão com o BCB', 'err')
+    return false
+  }
+}
+
+// Agenda re-check periódico (idempotente — não cria múltiplos timers)
+function scheduleSelicRefresh() {
+  if (_selicTimer) clearInterval(_selicTimer)
+  _selicTimer = setInterval(() => { tentarAtualizarSelic() }, SELIC_REFRESH_MS)
+}
+
+// Atualiza só o chip da Selic no DOM (sem re-render completo)
+function refreshSelicUI() {
+  const chip = document.querySelector('.lib-chip-selic')
+  if (!chip) return
+  chip.innerHTML = chipSelicHTML()
+}
+
+function chipSelicHTML() {
+  const v = Number(_cfg.selic_aa).toFixed(2)
+  const ts = _cfg.atualizado_em ? formatRelativo(_cfg.atualizado_em) : 'não verificada'
+  return `<b>Selic</b> ${v}% a.a. <small>BCB · ${ts}</small>
+    <button class="lib-selic-refresh" id="lib-selic-refresh" title="Atualizar agora">↻</button>`
+}
+
+function formatRelativo(iso) {
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+  if (diff < 60)        return 'agora'
+  if (diff < 3600)      return `há ${Math.floor(diff/60)}min`
+  if (diff < 86400)     return `há ${Math.floor(diff/3600)}h`
+  if (diff < 86400*30)  return `há ${Math.floor(diff/86400)}d`
+  return new Date(iso).toLocaleDateString('pt-BR')
 }
 
 // ─────────────────────────── MATEMÁTICA ─────────────────────────────
@@ -218,7 +264,7 @@ function renderHero(meta) {
       <div class="lib-bar"><div class="lib-bar-fill" style="width:${pct.toFixed(2)}%"></div></div>
 
       <div class="lib-hero-chips">
-        <span class="lib-chip"><b>Selic</b> ${Number(_cfg.selic_aa).toFixed(2)}% a.a. <small>(BCB)</small></span>
+        <span class="lib-chip lib-chip-selic">${chipSelicHTML()}</span>
         <span class="lib-chip"><b>Aporte sug.</b> ${brl(sugAp)}/mês <small>(${Number(_cfg.aporte_pct_faturamento)}% do fat)</small></span>
         <span class="lib-chip"><b>Este mês</b> ${brl(apMes)} ${apMes >= sugAp ? '<span class="lib-ok">●</span>' : '<span class="lib-warn">●</span>'}</span>
         <span class="lib-chip"><b>Streak</b> ${streak} ${streak === 1 ? 'mês' : 'meses'} 🔥</span>
@@ -400,50 +446,221 @@ function renderRing(pct, cor) {
   </div>`
 }
 
+// ─────────────── CHART (smooth, glow, crosshair, meta marker) ──────
 function renderChart(pontos, meta) {
-  const W = 640, H = 220, PAD = { t: 14, r: 14, b: 24, l: 50 }
+  const W = 760, H = 280, PAD = { t: 28, r: 90, b: 32, l: 56 }
   const innerW = W - PAD.l - PAD.r
   const innerH = H - PAD.t - PAD.b
-  const maxY = Math.max(meta, ...pontos.map(p => p.saldo)) * 1.05
+  const maxY = Math.max(meta, ...pontos.map(p => p.saldo)) * 1.08
+
   const xs = (i) => PAD.l + (i / (pontos.length - 1)) * innerW
-  const ys = (v) => PAD.t + innerH - (v / maxY) * innerH
+  const ys = (v) => PAD.t + innerH - (Math.max(0, v) / maxY) * innerH
 
-  const path = (key) => pontos.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xs(i).toFixed(1)} ${ys(p[key]).toFixed(1)}`).join(' ')
-  const area = `${pontos.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xs(i).toFixed(1)} ${ys(p.saldo).toFixed(1)}`).join(' ')} L ${xs(pontos.length-1).toFixed(1)} ${ys(0).toFixed(1)} L ${PAD.l} ${ys(0).toFixed(1)} Z`
+  // Smooth path (Catmull-Rom convertido pra Bézier cúbica)
+  function smoothPath(key) {
+    const pts = pontos.map((p, i) => [xs(i), ys(p[key])])
+    if (pts.length < 2) return ''
+    let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`
+    const t = 0.18  // tensão da curva
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1] || pts[i]
+      const p1 = pts[i]
+      const p2 = pts[i + 1]
+      const p3 = pts[i + 2] || p2
+      const c1x = p1[0] + (p2[0] - p0[0]) * t
+      const c1y = p1[1] + (p2[1] - p0[1]) * t
+      const c2x = p2[0] - (p3[0] - p1[0]) * t
+      const c2y = p2[1] - (p3[1] - p1[1]) * t
+      d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`
+    }
+    return d
+  }
+  const saldoPath    = smoothPath('saldo')
+  const aportadoPath = smoothPath('aportado')
+  const jurosPath    = smoothPath('juros')
 
-  const yticks = [0, 0.25, 0.5, 0.75, 1].map(p => {
+  // Área embaixo do saldo
+  const lastX = xs(pontos.length - 1)
+  const baseY = ys(0)
+  const areaPath = `${saldoPath} L ${lastX.toFixed(1)} ${baseY.toFixed(1)} L ${PAD.l} ${baseY.toFixed(1)} Z`
+
+  // Y ticks — só 3, menos clutter
+  const yticks = [0, 0.5, 1].map(p => {
     const v = maxY * p
-    return `<g><line x1="${PAD.l}" x2="${W - PAD.r}" y1="${ys(v)}" y2="${ys(v)}" stroke="rgba(255,255,255,.05)" /><text x="${PAD.l - 8}" y="${ys(v) + 3}" font-size="9" fill="rgba(255,255,255,.35)" text-anchor="end" font-family="JetBrains Mono">${kfmt(v)}</text></g>`
+    return `<g>
+      <line x1="${PAD.l}" x2="${W - PAD.r}" y1="${ys(v)}" y2="${ys(v)}" stroke="rgba(255,255,255,.04)" stroke-dasharray="${p===0?'':'2 4'}"/>
+      <text x="${PAD.l - 10}" y="${ys(v) + 3}" font-size="10" fill="rgba(255,255,255,.4)" text-anchor="end" font-family="JetBrains Mono" font-weight="500">${kfmt(v)}</text>
+    </g>`
   }).join('')
 
-  const step = Math.max(1, Math.round(pontos.length / 8))
-  const xticks = pontos.filter((_, i) => i % step === 0).map((p, idx) => {
-    const i = idx * step
-    return `<text x="${xs(i)}" y="${H - 6}" font-size="9" fill="rgba(255,255,255,.35)" text-anchor="middle" font-family="JetBrains Mono">${p.mes}m</text>`
+  // X ticks — só extremos + meio
+  const xtMarcas = [0, Math.floor(pontos.length/2), pontos.length - 1]
+  const xticks = xtMarcas.map(i => {
+    const p = pontos[i]
+    return `<text x="${xs(i)}" y="${H - 10}" font-size="10" fill="rgba(255,255,255,.4)" text-anchor="middle" font-family="JetBrains Mono" font-weight="500">${p.mes}m</text>`
   }).join('')
 
-  const metaY = ys(meta)
-  const metaLine = meta <= maxY
-    ? `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${metaY}" y2="${metaY}" stroke="rgba(255,255,255,.35)" stroke-dasharray="4 4"/>
-       <text x="${W - PAD.r - 4}" y="${metaY - 5}" font-size="9" text-anchor="end" fill="rgba(255,255,255,.5)" font-family="JetBrains Mono">META ${kfmt(meta)}</text>`
-    : ''
+  // Linha da META + marcador no ponto que cruza
+  let metaViz = ''
+  let crossViz = ''
+  if (meta <= maxY) {
+    const metaY = ys(meta)
+    metaViz = `
+      <line x1="${PAD.l}" x2="${W - PAD.r}" y1="${metaY}" y2="${metaY}" stroke="rgba(255,255,255,.18)" stroke-dasharray="5 5" stroke-width="1"/>
+      <g transform="translate(${(W - PAD.r + 4)} ${metaY})">
+        <rect x="0" y="-9" width="78" height="18" rx="9" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.15)"/>
+        <text x="39" y="3.5" font-size="10" fill="rgba(255,255,255,.7)" text-anchor="middle" font-family="JetBrains Mono" font-weight="600">META ${kfmt(meta)}</text>
+      </g>`
+
+    // Acha o índice onde saldo cruza a meta
+    const idxCross = pontos.findIndex(p => p.saldo >= meta)
+    if (idxCross > 0) {
+      const cx = xs(idxCross), cy = ys(pontos[idxCross].saldo)
+      crossViz = `
+        <g class="lib-chart-cross" transform="translate(${cx} ${cy})">
+          <circle r="14" fill="none" stroke="#34D399" stroke-width="1.5" opacity=".4" class="lib-chart-cross-pulse"/>
+          <circle r="6"  fill="#34D399" stroke="#0A0F0A" stroke-width="2"/>
+          <g transform="translate(0 -22)">
+            <rect x="-58" y="-13" width="116" height="22" rx="11" fill="#34D399"/>
+            <text x="0" y="2" font-size="10.5" font-weight="700" fill="#0A0F0A" text-anchor="middle" font-family="JetBrains Mono">🎯 ${pontos[idxCross].mes}m · ${dataFutura(pontos[idxCross].mes).toUpperCase()}</text>
+          </g>
+        </g>`
+    }
+  }
+
+  // Valor final no fim de cada linha
+  const last = pontos[pontos.length - 1]
+  const endLabels = `
+    <g transform="translate(${(lastX + 8)} ${ys(last.saldo)})">
+      <text font-size="11" font-weight="700" fill="#C5F82A" font-family="JetBrains Mono" dy="3">${kfmt(last.saldo)}</text>
+    </g>
+    <g transform="translate(${(lastX + 8)} ${ys(last.aportado)})">
+      <text font-size="10" fill="#4A9EFF" font-family="JetBrains Mono" dy="3">${kfmt(last.aportado)}</text>
+    </g>
+    <g transform="translate(${(lastX + 8)} ${ys(last.juros)})">
+      <text font-size="10" fill="#A78BFA" font-family="JetBrains Mono" dy="3">${kfmt(last.juros)}</text>
+    </g>`
+
+  // Dados pro hover/crosshair (serializados em data-attrs)
+  const xsArr = pontos.map((_, i) => xs(i).toFixed(1)).join(',')
+  const saldoArr = pontos.map(p => Math.round(p.saldo)).join(',')
+  const apArr    = pontos.map(p => Math.round(p.aportado)).join(',')
+  const juArr    = pontos.map(p => Math.round(p.juros)).join(',')
 
   return `
-  <svg class="lib-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+  <svg class="lib-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"
+       data-w="${W}" data-h="${H}" data-pad-l="${PAD.l}" data-pad-r="${PAD.r}"
+       data-pad-t="${PAD.t}" data-pad-b="${PAD.b}"
+       data-xs="${xsArr}" data-saldo="${saldoArr}" data-aportado="${apArr}" data-juros="${juArr}"
+       data-meses="${pontos.map(p => p.mes).join(',')}">
     <defs>
-      <linearGradient id="lg-area" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#C5F82A" stop-opacity=".35"/>
-        <stop offset="1" stop-color="#C5F82A" stop-opacity="0"/>
+      <linearGradient id="lg-area-saldo" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#C5F82A" stop-opacity=".5"/>
+        <stop offset="50%"  stop-color="#C5F82A" stop-opacity=".15"/>
+        <stop offset="100%" stop-color="#C5F82A" stop-opacity="0"/>
       </linearGradient>
+      <linearGradient id="lg-stroke-saldo" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0"   stop-color="#E6FF7A"/>
+        <stop offset=".6" stop-color="#C5F82A"/>
+        <stop offset="1"   stop-color="#34D399"/>
+      </linearGradient>
+      <filter id="f-glow-saldo" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="3" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
     </defs>
+
     ${yticks}
-    ${metaLine}
-    <path d="${area}" fill="url(#lg-area)"/>
-    <path d="${path('aportado')}" fill="none" stroke="#4A9EFF" stroke-width="1.5" stroke-dasharray="3 3" opacity=".7"/>
-    <path d="${path('juros')}"    fill="none" stroke="#A78BFA" stroke-width="1.5" opacity=".75"/>
-    <path d="${path('saldo')}"    fill="none" stroke="#C5F82A" stroke-width="2.2"/>
+    ${metaViz}
+
+    <path d="${areaPath}" fill="url(#lg-area-saldo)" class="lib-chart-area"/>
+
+    <path d="${aportadoPath}" fill="none" stroke="#4A9EFF" stroke-width="1.5"
+          stroke-dasharray="4 4" opacity=".55" class="lib-chart-line"/>
+    <path d="${jurosPath}"    fill="none" stroke="#A78BFA" stroke-width="1.5"
+          opacity=".6" class="lib-chart-line"/>
+    <path d="${saldoPath}"    fill="none" stroke="url(#lg-stroke-saldo)" stroke-width="2.6"
+          stroke-linecap="round" stroke-linejoin="round"
+          filter="url(#f-glow-saldo)" class="lib-chart-line lib-chart-line-main"/>
+
+    ${crossViz}
+    ${endLabels}
     ${xticks}
-  </svg>`
+
+    <g class="lib-chart-hover" style="opacity:0;pointer-events:none">
+      <line class="lib-chart-vline" y1="${PAD.t}" y2="${PAD.t + innerH}"
+            stroke="rgba(255,255,255,.18)" stroke-width="1" stroke-dasharray="2 3"/>
+      <circle class="lib-chart-dot-s" r="5" fill="#C5F82A" stroke="#0A0F0A" stroke-width="2"/>
+      <circle class="lib-chart-dot-a" r="3.5" fill="#4A9EFF" stroke="#0A0F0A" stroke-width="2"/>
+      <circle class="lib-chart-dot-j" r="3.5" fill="#A78BFA" stroke="#0A0F0A" stroke-width="2"/>
+    </g>
+
+    <rect class="lib-chart-hit" x="${PAD.l}" y="${PAD.t}" width="${innerW}" height="${innerH}" fill="transparent"/>
+  </svg>
+  <div class="lib-chart-tooltip" style="opacity:0">
+    <div class="lib-tt-mes"></div>
+    <div class="lib-tt-row"><i style="background:#C5F82A"></i><span>Saldo</span><b class="lib-tt-s"></b></div>
+    <div class="lib-tt-row"><i style="background:#4A9EFF"></i><span>Aportado</span><b class="lib-tt-a"></b></div>
+    <div class="lib-tt-row"><i style="background:#A78BFA"></i><span>Juros</span><b class="lib-tt-j"></b></div>
+  </div>`
+}
+
+// Liga o hover do chart (crosshair + tooltip)
+function wireChartHover(host) {
+  const svg = host.querySelector('.lib-chart')
+  const tt  = host.querySelector('.lib-chart-tooltip')
+  if (!svg || !tt) return
+  const hover = svg.querySelector('.lib-chart-hover')
+  const hit   = svg.querySelector('.lib-chart-hit')
+  const vline = svg.querySelector('.lib-chart-vline')
+  const dS    = svg.querySelector('.lib-chart-dot-s')
+  const dA    = svg.querySelector('.lib-chart-dot-a')
+  const dJ    = svg.querySelector('.lib-chart-dot-j')
+
+  const xsArr    = svg.dataset.xs.split(',').map(Number)
+  const saldoArr = svg.dataset.saldo.split(',').map(Number)
+  const apArr    = svg.dataset.aportado.split(',').map(Number)
+  const juArr    = svg.dataset.juros.split(',').map(Number)
+  const mesesArr = svg.dataset.meses.split(',').map(Number)
+  const W = +svg.dataset.w, H = +svg.dataset.h
+  const PAD_T = +svg.dataset.padT, PAD_B = +svg.dataset.padB
+  const maxY = Math.max(...saldoArr) * 1.08
+  const innerH = H - PAD_T - PAD_B
+  const ys = v => PAD_T + innerH - (Math.max(0, v) / maxY) * innerH
+
+  hit.addEventListener('mousemove', e => {
+    const rect = svg.getBoundingClientRect()
+    const scale = W / rect.width
+    const svgX = (e.clientX - rect.left) * scale
+    // acha índice mais próximo
+    let best = 0, bestD = Infinity
+    for (let i = 0; i < xsArr.length; i++) {
+      const d = Math.abs(xsArr[i] - svgX)
+      if (d < bestD) { bestD = d; best = i }
+    }
+    const xPx = xsArr[best]
+    hover.style.opacity = 1
+    vline.setAttribute('x1', xPx); vline.setAttribute('x2', xPx)
+    dS.setAttribute('cx', xPx); dS.setAttribute('cy', ys(saldoArr[best]))
+    dA.setAttribute('cx', xPx); dA.setAttribute('cy', ys(apArr[best]))
+    dJ.setAttribute('cx', xPx); dJ.setAttribute('cy', ys(juArr[best]))
+
+    // posiciona tooltip (em px relativo ao host)
+    const left = (xPx / W) * rect.width
+    const place = left > rect.width / 2 ? 'left' : 'right'
+    tt.style.opacity = 1
+    tt.style.left = place === 'right' ? (left + 14) + 'px' : (left - 14 - tt.offsetWidth) + 'px'
+    tt.style.top  = Math.max(8, ys(saldoArr[best]) / H * rect.height - tt.offsetHeight / 2) + 'px'
+    tt.querySelector('.lib-tt-mes').textContent = `${mesesArr[best]}m · ${dataFutura(mesesArr[best])}`
+    tt.querySelector('.lib-tt-s').textContent = brl(saldoArr[best])
+    tt.querySelector('.lib-tt-a').textContent = brl(apArr[best])
+    tt.querySelector('.lib-tt-j').textContent = brl(juArr[best])
+  })
+
+  hit.addEventListener('mouseleave', () => {
+    hover.style.opacity = 0
+    tt.style.opacity = 0
+  })
 }
 
 function renderAportes() {
@@ -508,10 +725,28 @@ function wire(root) {
 
   // Delegação geral
   root.addEventListener('click', async e => {
-    const aporte = e.target.closest('[data-aporte]')
-    const sim    = e.target.closest('[data-sim]')
-    const edit   = e.target.closest('[data-meta-edit]')
-    const del    = e.target.closest('.lib-ap-del')
+    const aporte  = e.target.closest('[data-aporte]')
+    const sim     = e.target.closest('[data-sim]')
+    const edit    = e.target.closest('[data-meta-edit]')
+    const del     = e.target.closest('.lib-ap-del')
+    const refresh = e.target.closest('#lib-selic-refresh')
+
+    if (refresh) {
+      e.stopPropagation()
+      refresh.classList.add('spinning')
+      const ok = await tentarAtualizarSelic({ manual: true })
+      refresh.classList.remove('spinning')
+      if (ok) {
+        _sim.taxa = Number(_cfg.selic_aa)
+        // Re-render só o simulador se o usuário não tava no meio de mexer no slider
+        const s = document.getElementById('sim-taxa')
+        if (s && document.activeElement !== s) {
+          s.value = _sim.taxa
+          updateSim({ taxa: _sim.taxa })
+        }
+      }
+      return
+    }
 
     if (aporte) {
       aporteForm({ metaId: aporte.dataset.aporte || null })
@@ -562,6 +797,7 @@ function updateSim(patch) {
   if (chartHost) {
     const legend = chartHost.querySelector('.lib-chart-legend')
     chartHost.innerHTML = renderChart(projecao, alvo) + (legend ? legend.outerHTML : '')
+    wireChartHover(chartHost)
   }
 
   // Re-renderiza stats (projeção + falta pra meta)
