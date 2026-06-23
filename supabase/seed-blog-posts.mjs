@@ -488,6 +488,507 @@ Tráfego pago é pra agora. SEO é pra daqui 6 meses. Negócio local precisa dos
 
 Se você ainda tá em dúvida do que faz mais sentido pro seu caso específico, manda mensagem que a gente faz um diagnóstico gratuito. Em 30 minutos você sai com a sequência certa pro seu negócio.`,
   },
+
+  // ════════════════════════════════════════════════════════════════
+  //  RASCUNHOS (publicado: false) — você revisa no CRM antes de
+  //  publicar. Calendário editorial pras próximas semanas.
+  // ════════════════════════════════════════════════════════════════
+
+  {
+    slug: 'google-business-profile-guia-taubate',
+    titulo: 'Google Business Profile: o guia pra aparecer no mapa em Taubaté',
+    subtitulo: 'O cadastro de 15 minutos que pode trazer 30 clientes por mês de graça',
+    resumo: 'Como configurar e otimizar seu Google Business Profile pra negócio em Taubaté e Vale do Paraíba. Aparecer no Google Maps de graça quando buscam perto de você.',
+    keywords: 'google business profile taubate, google meu negocio, aparecer no google maps, seo local taubate, google business vale do paraiba',
+    tags: ['SEO Local', 'Google Business', 'Taubaté'],
+    autor: 'Lira',
+    publicado: false,
+    cover_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1200&q=80&auto=format&fit=crop',
+    cover_alt: 'Fachada de comércio local em rua movimentada',
+    conteudo: `Existe uma coisa de graça que a maioria dos negócios em Taubaté ignora e que poderia trazer 20 a 50 clientes por mês: o Google Business Profile (o antigo "Google Meu Negócio"). É o cadastro que faz seu comércio aparecer no Google Maps quando alguém busca "pizzaria perto de mim" ou "dentista em Taubaté".
+
+Se você ainda não tem ou tem mal configurado, esse post é seu plano de ação. Em 15 minutos você sai com tudo pronto.
+
+## Por que o Google Business é tão importante pra negócio local
+
+Pensa nessa busca: "lanchonete perto de mim". O Google mostra primeiro 3 resultados de **negócios físicos** (mapa, fotos, avaliações) antes de qualquer resultado de site. Essa caixa de 3 negócios concentra 70% dos cliques. Quem aparece ali ganha o cliente.
+
+Se você não tá no Google Business, você nem disputa essa posição. Tá deixando dinheiro na mesa.
+
+E o melhor: cadastrar é grátis. O Google não cobra pra te listar. Eles ganham quando você anuncia, mas a listagem orgânica é gratuita.
+
+## Passo a passo: como criar seu perfil
+
+### 1. Acessa o site oficial
+
+Entra em business.google.com. Loga com a conta Gmail do negócio (de preferência uma conta dedicada, não o seu Gmail pessoal).
+
+### 2. Procura seu negócio
+
+Digita o nome da empresa. Se já existir um cadastro (alguém pode ter criado antes), você pede pra reivindicar. Se não existir, clica em "Adicionar seu negócio".
+
+### 3. Preenche os dados básicos
+
+- **Nome:** exatamente como o negócio se chama. Sem palavras-chave forçadas tipo "Pizzaria Taubaté Melhor Preço". O Google pune isso.
+- **Categoria principal:** escolhe a mais específica possível. "Pizzaria" é melhor que "Restaurante". Você pode adicionar categorias secundárias depois.
+- **Endereço:** completo, com CEP.
+- **Telefone:** o WhatsApp Business funciona como número principal.
+- **Site:** se não tem, deixa o link do Instagram ou WhatsApp por enquanto.
+
+### 4. Verificação
+
+O Google manda um cartão postal com código pro seu endereço (chega em 7 a 14 dias) ou faz verificação por telefone/vídeo dependendo do caso. Sem verificação você não aparece nas buscas.
+
+## O que separa um perfil que vende de um perfil esquecido
+
+Cadastrar é só o começo. O que faz seu perfil render é a otimização. Aqui vai o que mais importa, em ordem:
+
+### Fotos (peso enorme)
+
+O Google e os clientes amam foto. Negócios com 10+ fotos recebem 2x mais cliques que os com 0 ou 1. Sobe:
+
+- 1 foto da fachada
+- 3 a 5 fotos do interior (ambiente, atendimento)
+- 5 a 10 fotos dos produtos/serviços
+- 1 foto do time (humaniza muito)
+
+Atualiza pelo menos 1 vez por mês com foto nova. O Google premia perfis ativos.
+
+### Avaliações (peso enorme também)
+
+Avaliação é o que mais converte. Cliente lê review antes de comprar. Negócios com nota acima de 4,5 e 30+ avaliações vendem 3x mais que os com nota 4 e 5 avaliações.
+
+**Como conseguir avaliações sem pagar por elas:**
+
+1. Manda um link direto pra avaliar no Google pra cada cliente satisfeito (formato: g.page/r/SUA-ID/review)
+2. Pede DEPOIS de uma experiência boa (não antes, não no meio)
+3. Facilita ao máximo: link no WhatsApp, QR code no balcão
+4. Responde TODAS as avaliações (positivas e negativas). Isso o Google adora.
+
+### Postagens semanais
+
+O Google Business permite que você poste atualizações tipo "post de Instagram" no seu perfil. Quase ninguém usa. Quem usa, sobe nas buscas. Posta 1x por semana: promoção, novidade, foto do dia.
+
+### Horário sempre atualizado
+
+Feriado, mudança de horário, dia que vai fechar mais cedo. Atualiza. Cliente chegando em loja fechada e Google dizendo que tá aberto é estrago de reputação. O Google deixa de te mostrar pra quem busca naquele horário.
+
+### Atributos específicos
+
+Marca todos os atributos que se aplicam: "aceita Pix", "tem Wi-Fi", "estacionamento", "atende delivery", "acessível pra cadeira de rodas". Cada um deles é uma busca a mais onde você pode aparecer.
+
+## O que NÃO fazer (cuidado, dá penalidade)
+
+- ❌ Colocar palavras-chave no nome do negócio (ex: "Padaria Pão Fresco Taubaté Avenida Tiradentes 24h")
+- ❌ Criar perfis duplicados
+- ❌ Comprar avaliações falsas (o Google detecta e suspende)
+- ❌ Endereço falso ou caixa postal
+- ❌ Usar foto do Google Imagens (precisa ser sua, original)
+
+Penalidade do Google = perfil suspenso = você some dos mapas. Recuperar leva semanas.
+
+## Resultado esperado
+
+Negócio local em Taubaté que parte do zero, faz cadastro completo, sobe 20 fotos, consegue 30 avaliações reais nos primeiros 3 meses e mantém o perfil ativo:
+
+- **Mês 1 a 2:** começa a aparecer pra buscas muito específicas (ex: "estética facial Taubaté Centro")
+- **Mês 3 a 4:** entra no top 10 de buscas relevantes da região
+- **Mês 6 em diante:** disputa o top 3 pra buscas do seu segmento
+
+Não é mágica. É consistência. E o ROI é absurdo porque o custo é zero.
+
+## Por onde começar agora
+
+Se você ainda não tem perfil, hoje é o dia. Se já tem mas tá largado:
+
+1. Bate uma foto da fachada
+2. Tira 5 fotos do interior
+3. Adiciona ou atualiza horário
+4. Pede 3 avaliações pra 3 clientes que você sabe que vão dar 5 estrelas
+5. Faz isso de novo na próxima semana
+
+Em 60 dias o perfil tá outro. Em 90 dias o telefone começa a tocar.
+
+Se você quer que a gente cuide do seu perfil junto com o resto do marketing, manda mensagem. O Google Business entra junto no plano sem cobrar a parte.`,
+  },
+
+  {
+    slug: 'quanto-tempo-demora-resultado-marketing-digital',
+    titulo: 'Quanto tempo demora pra ver resultado em marketing digital pro seu negócio',
+    subtitulo: 'O cronograma honesto que separa expectativa de realidade',
+    resumo: 'Quanto tempo realmente leva pra marketing digital trazer cliente novo? Cronograma honesto por estratégia, pra você saber o que esperar e quando reclamar.',
+    keywords: 'quanto tempo marketing digital demora, resultado marketing digital, marketing digital pequena empresa, agencia trafego pago, quando ver resultado',
+    tags: ['Estratégia', 'Expectativa', 'Cronograma'],
+    autor: 'Lira',
+    publicado: false,
+    cover_url: 'https://images.unsplash.com/photo-1506784983877-45594efa4cbe?w=1200&q=80&auto=format&fit=crop',
+    cover_alt: 'Calendário com planejamento mensal',
+    conteudo: `"Em quanto tempo eu vejo resultado?" é a primeira pergunta de 9 em 10 clientes que chegam pra mim. E é justa. Você vai investir dinheiro, tem que saber quando esperar retorno.
+
+O problema é que a resposta honesta não vende. Quem promete "30 dias" tá mentindo ou tem sorte. A realidade depende de qual estratégia você escolheu, e cada uma tem seu cronograma.
+
+Vou dar o cronograma real, baseado em centenas de campanhas que a gente já rodou.
+
+## Tráfego pago (Meta Ads e Google Ads)
+
+A modalidade mais rápida de gerar resultado. Mas "rápida" não é "instantânea".
+
+| Período | O que acontece |
+|---|---|
+| **Semana 1 a 2** | Campanha aprendendo. Custos altos, conversões irregulares. |
+| **Semana 3 a 4** | Algoritmo começa a entender. Primeiros leads começam a chegar consistentemente. |
+| **Mês 2** | Operação estabilizada. CPL conhecido, fluxo previsível. |
+| **Mês 3 em diante** | Otimização contínua. Escala possível. |
+
+**Importante:** os primeiros 14 dias o algoritmo TEM que ter liberdade pra testar. Se você fica mexendo (mudando público, criativo, orçamento) toda hora nesse período, ele nunca aprende. É como ensinar criança a andar e ficar empurrando ela toda hora.
+
+Se em 60 dias o tráfego pago não tá dando retorno mensurável, alguma coisa tá errada. Geralmente é uma dessas três:
+- Criativo ruim
+- Landing page ou WhatsApp não preparado
+- Público mal segmentado
+
+Não é "Instagram não funciona". É algum desses 3.
+
+## Google Business Profile (SEO local)
+
+Mais lento que tráfego pago, mas o resultado é orgânico e gratuito.
+
+| Período | O que acontece |
+|---|---|
+| **Mês 1** | Cadastro completo. Aparece em buscas com seu nome direto. |
+| **Mês 2 a 3** | Começa a aparecer em buscas relacionadas (ex: "pizzaria Centro Taubaté"). |
+| **Mês 4 a 6** | Sobe pro top 10 de buscas relevantes. |
+| **Mês 6 a 12** | Disputa top 3. Recebe chamadas consistentes. |
+
+Pra acelerar: 2 ou 3 avaliações novas por semana, mais 1 foto nova por semana, mais 1 postagem semanal.
+
+## SEO de blog
+
+O mais demorado mas o mais lucrativo no longo prazo. Cliente que chega via Google buscando algo específico converte muito.
+
+| Período | O que acontece |
+|---|---|
+| **Mês 1 a 3** | Escrever posts. Quase ninguém visita ainda. |
+| **Mês 4 a 6** | Posts começam a ranquear pra termos de cauda longa. Tráfego começa. |
+| **Mês 6 a 12** | Crescimento exponencial. Posts antigos rendem todo dia. |
+| **Mês 12 em diante** | Tráfego orgânico previsível, escalável, gratuito. |
+
+Atenção: o cronograma acima assume que você publica 4 a 8 posts por mês de qualidade. Publicar 1 post por mês não funciona.
+
+## Redes sociais orgânicas (Instagram/TikTok)
+
+O mais imprevisível. Pode estourar em uma semana ou nunca decolar.
+
+| Período | O que acontece |
+|---|---|
+| **Mês 1 a 3** | Testando o que funciona. Postando 4x/semana. |
+| **Mês 3 a 6** | Encontrou seu formato. Engajamento começa a crescer. |
+| **Mês 6 a 12** | Audiência consolidada. Vendas diretas começam. |
+
+A maior parte dos negócios desiste no mês 3 porque "não tá indo a lugar nenhum". Quem aguenta os 6 meses iniciais costuma colher por anos.
+
+## Marketing de WhatsApp (lista de transmissão, broadcast, automação)
+
+Resultado mais rápido se você já tem base de cliente. Quase nulo se não tem.
+
+| Período | O que acontece |
+|---|---|
+| **Semana 1** | Setup da automação, mensagens de boas-vindas. |
+| **Mês 1** | Primeiras vendas pra base existente. |
+| **Mês 2 a 3** | Fluxo de recompra estabilizado. |
+
+Esse é o canal mais subvalorizado. Quem tem 200+ clientes em base consegue gerar venda recorrente com mensagem semanal bem feita.
+
+## A combinação mais comum (e funcional)
+
+Pra negócio local em Taubaté ou Vale do Paraíba que começa hoje, o cronograma real combinando tudo:
+
+- **Mês 1:** tráfego pago liga. Google Business sendo cadastrado. WhatsApp Business configurado.
+- **Mês 2:** primeiros leads pagos chegam consistentes. Google Business começa a aparecer.
+- **Mês 3:** primeiros clientes vindo de orgânico (Google Maps). Tráfego pago otimizado.
+- **Mês 4 a 6:** redução do CPL no tráfego pago. Volume de chamadas orgânicas crescendo.
+- **Mês 6 em diante:** equilíbrio entre pago e orgânico. Custo de aquisição médio cai.
+
+Quem corta o investimento no mês 2 porque "não tá dando resultado" tá cortando justamente quando ia começar a render.
+
+## A pergunta certa não é "quanto demora"
+
+A pergunta certa é "quanto vai me custar até o primeiro retorno mensurável". E a resposta é:
+
+- **Tráfego pago:** 30 a 60 dias, R$ 3.000 a R$ 6.000 investidos
+- **Google Business:** 60 a 120 dias, custo zero (só tempo)
+- **SEO blog:** 6 a 12 meses, R$ 8.000 a R$ 20.000 investidos
+- **Redes sociais:** 90 a 180 dias, custo de produção de conteúdo
+
+Tem que ter caixa pra aguentar esse tempo. Senão escolhe só uma estratégia e foca nela.
+
+## Quando começar a se preocupar
+
+Se você tá fazendo direito e:
+
+- **Tráfego pago aos 60 dias** ainda tem CPL acima de R$ 100 pra produto de R$ 200: rever urgentemente.
+- **Google Business aos 90 dias** ainda não aparece em "[seu segmento] [sua cidade]": tem coisa errada no cadastro.
+- **SEO blog aos 6 meses** com zero post no top 10 do Google: a estratégia de palavra-chave tá errada.
+- **Redes sociais aos 6 meses** com menos de 100 seguidores reais: o conteúdo não tá batendo com o público certo.
+
+Antes desses prazos, mantém o curso. Marketing digital é maratona, não 100 metros rasos.
+
+Se quiser que a gente desenhe o cronograma realista pro seu negócio específico, agenda um diagnóstico gratuito. 30 minutos, sem compromisso.`,
+  },
+
+  {
+    slug: 'video-vertical-converte-mais-que-foto-2026',
+    titulo: 'Por que vídeo vertical converte mais que foto profissional em 2026',
+    subtitulo: 'O criativo que parece amador é o que mais vende. Entenda por quê.',
+    resumo: 'Vídeo curto e amador converte mais que foto profissional em anúncio? Sim. Mostro por que isso acontece e como aproveitar pro seu negócio local sem gastar com equipamento.',
+    keywords: 'video reels converte mais, criativo trafego pago, video vertical instagram ads, anuncio video celular, como gravar reels que vende',
+    tags: ['Criativo', 'Vídeo', 'Reels', 'Tráfego Pago'],
+    autor: 'Lira',
+    publicado: false,
+    cover_url: 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=1200&q=80&auto=format&fit=crop',
+    cover_alt: 'Pessoa gravando vídeo vertical com celular',
+    conteudo: `Fala uma verdade desconfortável: aquela foto profissional do seu produto, com iluminação perfeita, fundo branco e fotógrafo cobrando R$ 800 pela sessão, provavelmente converte menos que um vídeo de 15 segundos que você gravou no celular dentro da sua loja.
+
+Pra quem investiu em ensaio profissional, isso machuca. Mas é a realidade de 2026, e quem entende isso ganha muito dinheiro com pouco orçamento.
+
+Vou explicar por que isso acontece e o que fazer com essa informação.
+
+## Por que o "amador" ganha do "profissional"
+
+### 1. O algoritmo do Meta favorece vídeo
+
+Instagram e Facebook decidiram nos últimos 3 anos que o futuro deles é vídeo (Reels). Eles boostam organicamente conteúdo em vídeo e cobram mais barato pra promover vídeo. CPM de vídeo no Vale do Paraíba é 30% a 50% menor que CPM de foto.
+
+Tradução: mesmo orçamento, mais pessoas vendo.
+
+### 2. Vídeo vertical entrega mais informação
+
+Foto mostra UMA coisa. Vídeo de 15 segundos mostra:
+- O produto/serviço
+- O ambiente (sua loja, seu atendimento)
+- O preço/oferta
+- A pessoa por trás (você ou seu time)
+- A textura, movimento, uso real
+
+Em 15 segundos a pessoa "visita" seu negócio. Foto não faz isso.
+
+### 3. Amador parece honesto. Profissional parece anúncio.
+
+Esse é o ponto que mais machuca quem investiu em produção. Em 2026, as pessoas tão saturadas de anúncio polido. Quando rolam o feed e vêm:
+
+- Foto perfeita com tipografia bonita: "ah, anúncio". Rolam.
+- Vídeo de pessoa real falando direto pra câmera: "espera, deixa eu ver". Param.
+
+O cérebro humano reconhece anúncio em 0,4 segundos. Conteúdo que parece feito por uma pessoa do dia a dia passa o filtro.
+
+> Numa campanha de estética em Taubaté, a gente testou 3 criativos: foto polida (R$ 800 de produção), vídeo amador (cliente real falando), vídeo profissional (R$ 2.500 de produção). O vídeo amador teve CPL de R$ 14. A foto polida, R$ 47. O vídeo profissional, R$ 38.
+
+## Os 4 formatos de vídeo que mais convertem pra negócio local
+
+### 1. "Antes e depois" (campeão absoluto)
+
+Funciona pra estética, dentista, oficina, reforma, jardinagem, qualquer transformação visível. Em 15 segundos:
+
+- Foto/vídeo do "antes" com texto
+- Transição
+- Foto/vídeo do "depois" com texto
+- Frase final tipo "Quer um igual? Manda mensagem"
+
+Custo de produção: zero. Você tem o material todo no celular.
+
+### 2. "Tour pela loja" (peso emocional)
+
+Pessoa real (você ou alguém do time) andando pela loja, mostrando produtos, falando direto pra câmera. Tipo "Oi, sou a Júlia, e essa é a nossa nova coleção de inverno. Olha esse casaco aqui que chegou hoje, sente como é macio". 30 a 45 segundos.
+
+Esse formato cria vínculo. Quando a pessoa vê você na loja, ela "te conhece" antes de chegar.
+
+### 3. "Cliente real depoimento" (autoridade instantânea)
+
+Cliente seu real, falando da experiência. 30 segundos no máximo. Sem roteiro decorado (fica falso). Pode ser gravado pelo próprio cliente em casa, mandado por WhatsApp.
+
+Dica: pede pro cliente falar "qual era meu problema antes" e "o que aconteceu depois". Esse é o roteiro de prova social mais forte que existe.
+
+### 4. "Bastidores" (humaniza)
+
+Mostra como o produto é feito, como o atendimento funciona, como você prepara as coisas. 20 a 30 segundos. Funciona muito pra negócios artesanais, gastronomia, beleza.
+
+Esse formato faz a pessoa pensar "olha, eles fazem com cuidado". Aumenta valor percebido sem dizer "qualidade".
+
+## O setup técnico que basta
+
+Você NÃO precisa de:
+- Câmera profissional
+- Microfone caro
+- Iluminação de estúdio
+- Editor de vídeo complexo
+- Curso de filmagem
+
+Você PRECISA de:
+- Celular dos últimos 3 anos (qualquer iPhone 11+ ou Android intermediário 2022+)
+- Luz natural (gravar perto de uma janela)
+- Apoio simples pro celular (R$ 30 num tripé de mesa)
+- Aplicativo CapCut (grátis) pra cortar e legendar
+
+Total de investimento em equipamento: R$ 30. Pra sempre.
+
+## Os 3 erros mais comuns que matam o vídeo
+
+### 1. Querer fazer "produção"
+
+Pessoa pega o celular, começa a filmar, fica insegura, refilma 8 vezes, edita pesado, joga texto bonito. Quando termina, parece anúncio. Volta o filtro.
+
+Faz uma tomada. Se ficou OK, é OK. Naturalidade vence perfeição.
+
+### 2. Texto sem legenda
+
+83% dos vídeos no Instagram são vistos SEM SOM. Se você fala 30 segundos e não tem legenda na tela, ninguém escuta. Sempre legendar (CapCut faz automático).
+
+### 3. Não chamar pra ação
+
+Vídeo lindo, sem pedir nada no final. Pessoa assiste, gosta, sai do feed. Nunca chamou pelo WhatsApp.
+
+Termina TODO vídeo com chamada clara: "Manda mensagem que a gente te atende", "Comenta aí abaixo e eu te respondo", "Salva pra não esquecer". Sem isso, vídeo é entretenimento, não venda.
+
+## Mas a foto profissional não serve pra nada?
+
+Serve. Pra catálogo no site, pra cardápio, pra capa do Instagram, pra prints de divulgação. Em contexto controlado onde a pessoa já tá interessada e quer ver o produto, foto bonita ajuda.
+
+O que não funciona é foto polida pra atrair quem ainda não te conhece. Pra atrair, vídeo vertical autêntico ganha hoje. E vai continuar ganhando enquanto Instagram e TikTok continuarem priorizando esse formato (provavelmente por muitos anos ainda).
+
+## Um plano simples pra começar
+
+Semana 1:
+- Grava 5 vídeos de 15 a 30 segundos (1 "antes e depois", 1 tour, 1 bastidores, 2 mostrando produto)
+- Posta 1 por dia no Reels
+- Olha qual teve mais visualizações
+
+Semana 2:
+- Pega o que mais funcionou
+- Boost com R$ 50 (vai pra muito mais gente)
+- Replica o formato com outros produtos
+
+Semana 3 em diante:
+- Mantém ritmo de 5 vídeos por semana
+- Identifica o "estilo" que funciona pra sua loja
+- Escala o orçamento nos que viralizam
+
+Em 60 dias você tem um motor de criativo rodando sem depender de fotógrafo. E vai pagar menos por cliente novo do que pagou ano passado.
+
+Quer que a gente cuide dos criativos do seu negócio? A gente filma na sua loja, edita, posta e roda anúncio. Manda mensagem que conversa.`,
+  },
+
+  {
+    slug: 'gestao-trafego-pago-sozinho-ou-agencia',
+    titulo: 'Fazer tráfego pago sozinho ou contratar agência: vale a pena DIY?',
+    subtitulo: 'Faz a conta dos dois lados antes de decidir.',
+    resumo: 'Cuidar do tráfego pago sozinho economiza R$ 1.500 por mês ou queima R$ 5.000 em aprendizado? Análise honesta com a conta dos dois lados.',
+    keywords: 'gestao trafego pago sozinho, agencia ou faz sozinho, curso trafego pago, como aprender meta ads, vale a pena contratar agencia',
+    tags: ['Estratégia', 'Decisão', 'Tráfego Pago'],
+    autor: 'Lira',
+    publicado: false,
+    cover_url: 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=1200&q=80&auto=format&fit=crop',
+    cover_alt: 'Pessoa trabalhando em laptop em escritório',
+    conteudo: `"Lira, fiz um curso de tráfego pago. Acho que consigo cuidar disso sozinho." Ouço isso toda semana. Às vezes a pessoa tem razão. Na maioria das vezes, não. Mas a decisão é dela, e não tem certo absoluto.
+
+Vou fazer a conta dos dois lados, com transparência total (mesmo que isso me coloque do lado errado da escolha em alguns casos).
+
+## O caso pra fazer sozinho
+
+Cuidar do próprio tráfego pago pode fazer sentido se você:
+
+- **Tem tempo de verdade.** Não "tempo livre". Tempo dedicado. Mínimo 4 horas por semana.
+- **Gosta do processo.** Você não vai persistir se for sofrer. Tráfego pago precisa de testes, leitura de números, ajustes. Quem não curte, abandona em 2 meses.
+- **Tem orçamento baixo (R$ 500 a R$ 1.500/mês de mídia).** Nesse range, pagar R$ 1.500 pra agência cuidar de R$ 500 de mídia não faz sentido econômico.
+- **Vai escalar devagar.** Sem pressa de crescer 50% em 3 meses.
+- **Tem o produto/atendimento já bem afinado.** Tráfego não conserta produto ruim.
+
+Se você marcou os 5, vai sozinho. Faz curso, estuda, testa. Em 6 a 12 meses você fica bom.
+
+## O caso pra contratar agência
+
+Faz mais sentido terceirizar se você:
+
+- **Já tem operação rodando** e o tempo seu vale mais cuidando do negócio.
+- **Quer escalar rápido** (mais de R$ 3.000 de mídia/mês justifica gestão dedicada).
+- **Não gosta de mexer com números** e prefere focar no que você é bom.
+- **Quer aprender com curva mais curta.** Agência boa traz aprendizado de outros clientes (sem entregar dados, mas entregando padrões).
+- **Não tem tempo de verdade.** Você "ia cuidar de noite" e na prática nunca cuida.
+
+## A conta real do "fazer sozinho"
+
+Vou ser honesto. Vou contar o que vai acontecer se você decidir gerenciar.
+
+### Primeiro mês: curva de aprendizado
+
+Você vai gastar 12 a 20 horas estudando, configurando, criando primeiras campanhas. Vai cometer 3 a 5 erros básicos (segmentação errada, não negativar palavra, criativo ruim). CPL inicial vai ser 2x a 3x maior que poderia ser.
+
+**Custo escondido:** se seu salário-hora é R$ 50, 20 horas dá R$ 1.000 de tempo seu. Mais orçamento queimado em aprendizado: outros R$ 800 a R$ 1.500.
+
+Total real do primeiro mês: R$ 1.800 a R$ 2.500.
+
+### Segundo mês: estabilizando
+
+Você começou a entender. Aprendeu a olhar relatório, fez ajustes. CPL caindo. Ainda gasta umas 6 a 8 horas no mês. Resultado começa a aparecer.
+
+Custo: tempo seu mais mídia.
+
+### Terceiro mês em diante: piloto automático ou desistência
+
+Aqui acontece a bifurcação. Quem aguentou os 2 primeiros meses entra em modo "operação". Gasta 4 horas por mês mantendo, resultado consistente. Vale a pena.
+
+Quem desistiu, geralmente é nesse momento. Cansou, achou complicado, voltou pra "vou postar no Instagram orgânico mesmo". Resultado: gastou R$ 5.000 pra terminar sem nada.
+
+**Taxa de desistência real:** 60% dos donos de negócio que tentam gerir o próprio tráfego pago largam antes do 4º mês.
+
+## A conta real de contratar agência
+
+Vou ser igualmente honesto.
+
+### O que você paga
+
+R$ 900 a R$ 2.500 por mês de gestão. Mais o orçamento de mídia. Total: R$ 1.500 a R$ 5.500/mês saindo do bolso.
+
+### O que você recebe (de uma agência boa)
+
+- Setup profissional desde o dia 1 (sem desperdício de aprendizado)
+- Relatório semanal claro
+- Otimização contínua (a agência cuida disso na rotina dela)
+- Acesso a padrões de outros clientes (não os dados, mas o conhecimento)
+- Tempo seu liberado pra cuidar do produto e atendimento
+
+### Os riscos
+
+Nem toda agência entrega. Tem agência ruim que cobra caro. Por isso o post anterior sobre como escolher agência é importante. Se cair com agência ruim, é pior que fazer sozinho. Pior gastar R$ 1.500 sem retorno do que gastar R$ 800 com você mesmo.
+
+## A tabela de decisão simples
+
+| Cenário | Recomendação |
+|---|---|
+| Orçamento de mídia até R$ 800/mês | Faz sozinho. Custo da agência come o lucro. |
+| Orçamento de R$ 800 a R$ 2.500/mês, com tempo e vontade | Faz sozinho se gosta. Senão, agência. |
+| Orçamento de R$ 2.500 a R$ 5.000/mês | Agência quase sempre vale. |
+| Acima de R$ 5.000/mês de mídia | Agência sempre vale. |
+
+## O meio-termo que muitos esquecem
+
+Existe uma terceira opção que poucos falam: **mentoria pontual**.
+
+Em vez de assinar agência mensal, você contrata 2 a 4 horas de consultoria pra montar o setup inicial. Depois, gerencia sozinho. A cada 60 ou 90 dias, faz uma sessão de revisão. Custa R$ 300 a R$ 800 por sessão.
+
+Esse modelo funciona pra quem quer aprender, mas não quer começar errando do zero.
+
+## A pergunta final
+
+Em última instância, a pergunta não é "agência ou eu mesmo". É qual é o seu maior gargalo agora:
+
+- Se é dinheiro: faz sozinho, mas separa R$ 300 pra uma mentoria inicial.
+- Se é tempo: contrata agência mesmo no começo.
+- Se é conhecimento: estuda 1 mês, depois decide com mais clareza.
+
+Não existe escolha errada se você for honesto sobre seus recursos. Existe escolha errada quando você tenta fazer sozinho sem tempo, ou quando contrata agência sem orçamento pra mídia ficar consistente.
+
+Se quiser conversar 30 minutos comigo sobre o seu caso específico, marca diagnóstico gratuito. Não vou empurrar agência. Se for melhor pra você fazer sozinho, vou falar.`,
+  },
 ]
 
 async function main() {
