@@ -1499,6 +1499,79 @@ body[data-view="pipeline"] .kcards { flex: 1; overflow-y: auto; min-height: 0; }
 .lib-sim-quick {
   display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;
 }
+
+/* ── Fases de aporte (multi-step simulator) ───────────────────── */
+.lib-fases {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px;
+  background: rgba(255,255,255,.02);
+  border: 1px solid rgba(255,255,255,.05);
+  border-radius: 10px;
+}
+.lib-fases-head { display: flex; justify-content: space-between; align-items: baseline; }
+.lib-fases-head label {
+  font-family: var(--ff-mono, monospace);
+  font-size: 10px; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: .14em;
+}
+.lib-fases-hint {
+  font-size: 10.5px; color: var(--text-3);
+  font-style: italic;
+}
+.lib-fases-list { display: flex; flex-direction: column; gap: 6px; }
+.lib-fase {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  background: rgba(167,139,250,.04);
+  border: 1px solid rgba(167,139,250,.12);
+  border-radius: 8px;
+}
+.lib-fase:first-child {
+  background: rgba(197,248,42,.04);
+  border-color: rgba(197,248,42,.15);
+}
+.lib-fase-when, .lib-fase-val {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text-2);
+}
+.lib-fase-when small, .lib-fase-val small {
+  color: var(--text-3); font-size: 10.5px;
+}
+.lib-fase-tag {
+  font-family: var(--ff-mono, monospace);
+  font-size: 10px; font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase; letter-spacing: .14em;
+  padding: 2px 8px;
+  background: rgba(197,248,42,.1);
+  border-radius: 6px;
+}
+.lib-fase-inicio, .lib-fase-aporte {
+  background: rgba(0,0,0,.3);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 6px;
+  padding: 5px 8px;
+  color: var(--text);
+  font: inherit; font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  width: 90px;
+  outline: none;
+}
+.lib-fase-inicio { width: 60px; }
+.lib-fase-inicio:focus, .lib-fase-aporte:focus { border-color: var(--accent); }
+.lib-fase-del {
+  background: rgba(255,92,92,.08);
+  border: 1px solid rgba(255,92,92,.2);
+  color: var(--danger);
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  cursor: pointer; font-size: 14px; line-height: 1;
+  transition: background 140ms;
+}
+.lib-fase-del:hover { background: rgba(255,92,92,.18); }
 .lib-qk {
   font-family: var(--ff-mono, monospace);
   font-size: 11px;

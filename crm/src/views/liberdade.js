@@ -16,8 +16,15 @@ let _aportes = []
 let _fat     = []
 let _selicTimer = null  // setInterval handle pra re-fetch periódico
 
-// Simulador — qual meta tá projetando + parâmetros
-let _sim = { metaId: null, aporte: 2000, meses: 60, taxa: 14.25 }
+// Simulador — qual meta + parâmetros + FASES (aporte muda ao longo do tempo)
+// fases: [{ inicio: 0, aporte: 2500 }, { inicio: 6, aporte: 4000 }]
+// Significa: do mês 0 ao 5 = R$2500, do mês 6 em diante = R$4000.
+let _sim = {
+  metaId: null,
+  meses:  60,
+  taxa:   14.25,
+  fases: [{ inicio: 0, aporte: 2000 }],
+}
 
 // Cores predefinidas pra picker de meta
 const CORES = ['#C5F82A', '#4A9EFF', '#A78BFA', '#F5A623', '#EC4899', '#34D399', '#FF6B35', '#06B6D4']
@@ -39,8 +46,9 @@ export async function render() {
     const principal = _metas.find(m => m.principal) || _metas[0]
     _sim.metaId = principal?.id || null
   }
-  _sim.aporte = Math.max(_sim.aporte, sugestaoAporteMensal())
-  _sim.taxa   = Number(_cfg.selic_aa) || 14.25
+  if (!_sim.fases?.length) _sim.fases = [{ inicio: 0, aporte: 2000 }]
+  _sim.fases[0].aporte = Math.max(_sim.fases[0].aporte, sugestaoAporteMensal())
+  _sim.taxa = Number(_cfg.selic_aa) || 14.25
 
   c.innerHTML = render_layout()
   wire(c)
@@ -127,26 +135,44 @@ function formatRelativo(iso) {
 }
 
 // ─────────────────────────── MATEMÁTICA ─────────────────────────────
-function projetar({ pv, pmt, taxaAA, meses }) {
+// Aporte do mês `m` (0-indexed): pega a última fase com inicio <= m
+function pmtNoMes(fases, m) {
+  if (!fases?.length) return 0
+  const ord = [...fases].sort((a, b) => a.inicio - b.inicio)
+  let pmt = 0
+  for (const f of ord) {
+    if (f.inicio <= m) pmt = Number(f.aporte) || 0
+  }
+  return pmt
+}
+
+function projetar({ pv, fases, taxaAA, meses }) {
   const i = Math.pow(1 + taxaAA/100, 1/12) - 1
   const pontos = []
   let saldo = pv
+  let aportadoAcum = pv
   for (let m = 0; m <= meses; m++) {
-    if (m > 0) saldo = saldo * (1 + i) + pmt
-    pontos.push({ mes: m, saldo, aportado: pv + pmt * m, juros: saldo - pv - pmt * m })
+    if (m > 0) {
+      const pmt = pmtNoMes(fases, m - 1)  // aporte feito no início do mês m
+      saldo = saldo * (1 + i) + pmt
+      aportadoAcum += pmt
+    }
+    pontos.push({ mes: m, saldo, aportado: aportadoAcum, juros: saldo - aportadoAcum })
   }
   return pontos
 }
-function mesesAteMeta({ pv, pmt, taxaAA, meta }) {
+
+function mesesAteMeta({ pv, fases, taxaAA, meta }) {
   if (pv >= meta) return 0
   const i = Math.pow(1 + taxaAA/100, 1/12) - 1
-  // Se nem o juros do PV cobre, precisa de pmt > 0 pra crescer
-  if (pmt <= 0 && pv * (1 + i) <= pv) return null
   let saldo = pv, m = 0
   while (m < 1200) {
+    const pmt = pmtNoMes(fases, m)
     saldo = saldo * (1 + i) + pmt
     m++
     if (saldo >= meta) return m
+    // Se aporte é zero e juros não crescem o saldo, sai
+    if (pmt === 0 && saldo <= pv * 1.0001 && m > 12) return null
   }
   return null
 }
@@ -249,7 +275,7 @@ function renderHero(meta) {
   const sugAp = sugestaoAporteMensal()
   const apMes = aportesMesAtual(meta.id)
   const streak = streakAportes(meta.id)
-  const mAte  = mesesAteMeta({ pv: saldo, pmt: sugAp, taxaAA: Number(_cfg.selic_aa), meta: alvo })
+  const mAte  = mesesAteMeta({ pv: saldo, fases: [{inicio:0, aporte: sugAp}], taxaAA: Number(_cfg.selic_aa), meta: alvo })
 
   return `
   <div class="lib-hero" style="--meta-color:${meta.cor || '#C5F82A'}">
@@ -287,7 +313,7 @@ function renderMetaCard(meta) {
   const pct   = Math.min(100, (saldo / alvo) * 100)
   const cor   = meta.cor || '#C5F82A'
   const sugAp = sugestaoAporteMensal()
-  const mAte  = mesesAteMeta({ pv: saldo, pmt: sugAp, taxaAA: Number(_cfg.selic_aa), meta: alvo })
+  const mAte  = mesesAteMeta({ pv: saldo, fases: [{inicio:0, aporte: sugAp}], taxaAA: Number(_cfg.selic_aa), meta: alvo })
   const concluida = saldo >= alvo
 
   return `
@@ -320,11 +346,11 @@ function renderStats(meta) {
   if (!meta) return ''
   const saldo = saldoMeta(meta)
   const alvo  = Number(meta.valor_alvo)
-  const projecao = projetar({ pv: saldo, pmt: _sim.aporte, taxaAA: _sim.taxa, meses: _sim.meses })
+  const projecao = projetar({ pv: saldo, fases: _sim.fases, taxaAA: _sim.taxa, meses: _sim.meses })
   const final = projecao[projecao.length - 1]
-  const totalAp = saldo + _sim.aporte * _sim.meses
-  const jurosAc = final.saldo - totalAp
-  const mAte = mesesAteMeta({ pv: saldo, pmt: _sim.aporte, taxaAA: _sim.taxa, meta: alvo })
+  const totalAp = final.aportado
+  const jurosAc = final.juros
+  const mAte = mesesAteMeta({ pv: saldo, fases: _sim.fases, taxaAA: _sim.taxa, meta: alvo })
 
   return `
   <div class="lib-stats" id="lib-stats">
@@ -355,8 +381,23 @@ function renderSimulator(meta) {
   if (!meta) return ''
   const saldo = saldoMeta(meta)
   const alvo  = Number(meta.valor_alvo)
-  const projecao = projetar({ pv: saldo, pmt: _sim.aporte, taxaAA: _sim.taxa, meses: _sim.meses })
+  const projecao = projetar({ pv: saldo, fases: _sim.fases, taxaAA: _sim.taxa, meses: _sim.meses })
   const sugAp = sugestaoAporteMensal() || 1000
+
+  // Renderiza as fases — fase 0 fica fixa em "Início (mês 0)"
+  const fasesHTML = _sim.fases.map((f, idx) => `
+    <div class="lib-fase" data-fase-idx="${idx}">
+      <div class="lib-fase-when">
+        ${idx === 0
+          ? `<span class="lib-fase-tag">Início</span>`
+          : `<input type="number" class="lib-fase-inicio" min="1" max="${_sim.meses}" step="1" value="${f.inicio}"> <small>em diante</small>`}
+      </div>
+      <div class="lib-fase-val">
+        <input type="number" class="lib-fase-aporte" min="0" step="100" value="${f.aporte}"> <small>R$/mês</small>
+      </div>
+      ${idx > 0 ? `<button class="lib-fase-del" title="Remover fase">×</button>` : ''}
+    </div>
+  `).join('')
 
   return `
   <div class="lib-block">
@@ -376,13 +417,25 @@ function renderSimulator(meta) {
 
     <div class="lib-sim">
       <div class="lib-sim-controls">
-        <div class="lib-slider">
-          <div class="lib-slider-row">
-            <label>Aporte mensal</label>
-            <span class="lib-slider-v">${brl(_sim.aporte)}</span>
+        <!-- Fases de aporte -->
+        <div class="lib-fases">
+          <div class="lib-fases-head">
+            <label>Fases de aporte</label>
+            <span class="lib-fases-hint">Aporta R$X até o mês N, depois aumenta/diminui</span>
           </div>
-          <input type="range" id="sim-aporte" min="0" max="20000" step="100" value="${_sim.aporte}">
+          <div class="lib-fases-list" id="lib-fases-list">
+            ${fasesHTML}
+          </div>
+          <button type="button" class="btn bg bsm" id="lib-fase-add">+ Adicionar fase</button>
+          <div class="lib-sim-quick" style="margin-top:8px">
+            <small style="color:var(--text-3);font-family:var(--ff-mono);font-size:10px;text-transform:uppercase;letter-spacing:.12em;align-self:center;margin-right:4px">Aplicar na fase 1:</small>
+            <button class="lib-qk" data-pmt="${sugAp}">${brl(sugAp)}</button>
+            <button class="lib-qk" data-pmt="2000">R$ 2k</button>
+            <button class="lib-qk" data-pmt="5000">R$ 5k</button>
+            <button class="lib-qk" data-pmt="10000">R$ 10k</button>
+          </div>
         </div>
+
         <div class="lib-slider">
           <div class="lib-slider-row">
             <label>Taxa anual</label>
@@ -397,17 +450,10 @@ function renderSimulator(meta) {
           </div>
           <input type="range" id="sim-meses" min="6" max="240" step="1" value="${_sim.meses}">
         </div>
-
-        <div class="lib-sim-quick">
-          <button class="lib-qk" data-pmt="${sugAp}">Sug. ${brl(sugAp)}</button>
-          <button class="lib-qk" data-pmt="2000">R$ 2k</button>
-          <button class="lib-qk" data-pmt="5000">R$ 5k</button>
-          <button class="lib-qk" data-pmt="10000">R$ 10k</button>
-        </div>
       </div>
 
       <div class="lib-sim-chart">
-        ${renderChart(projecao, alvo)}
+        ${renderChart(projecao, alvo, _sim.fases)}
         <div class="lib-chart-legend">
           <span><i style="background:var(--accent)"></i>Saldo total</span>
           <span><i style="background:#4A9EFF"></i>Aportado</span>
@@ -447,8 +493,8 @@ function renderRing(pct, cor) {
 }
 
 // ─────────────── CHART (smooth, glow, crosshair, meta marker) ──────
-function renderChart(pontos, meta) {
-  const W = 760, H = 280, PAD = { t: 28, r: 90, b: 32, l: 56 }
+function renderChart(pontos, meta, fases = null) {
+  const W = 760, H = 290, PAD = { t: 38, r: 90, b: 32, l: 56 }
   const innerW = W - PAD.l - PAD.r
   const innerH = H - PAD.t - PAD.b
   const maxY = Math.max(meta, ...pontos.map(p => p.saldo)) * 1.08
@@ -499,6 +545,21 @@ function renderChart(pontos, meta) {
     const p = pontos[i]
     return `<text x="${xs(i)}" y="${H - 10}" font-size="10" fill="rgba(255,255,255,.4)" text-anchor="middle" font-family="JetBrains Mono" font-weight="500">${p.mes}m</text>`
   }).join('')
+
+  // Linhas verticais nas transições de fase (mês N em diante = R$Y)
+  let fasesViz = ''
+  if (fases && fases.length > 1) {
+    fasesViz = fases.slice(1).map(f => {
+      if (f.inicio <= 0 || f.inicio >= pontos.length) return ''
+      const x = xs(f.inicio)
+      return `
+        <line x1="${x}" x2="${x}" y1="${PAD.t}" y2="${PAD.t + innerH}" stroke="rgba(167,139,250,.45)" stroke-dasharray="3 3" stroke-width="1"/>
+        <g transform="translate(${x} ${PAD.t - 14})">
+          <rect x="-44" y="-10" width="88" height="18" rx="9" fill="rgba(167,139,250,.18)" stroke="rgba(167,139,250,.5)"/>
+          <text x="0" y="3" font-size="9.5" font-weight="700" fill="#C7B3FB" text-anchor="middle" font-family="JetBrains Mono">→ ${kfmt(f.aporte)}/m</text>
+        </g>`
+    }).join('')
+  }
 
   // Linha da META + marcador no ponto que cruza
   let metaViz = ''
@@ -571,6 +632,7 @@ function renderChart(pontos, meta) {
     </defs>
 
     ${yticks}
+    ${fasesViz}
     ${metaViz}
 
     <path d="${areaPath}" fill="url(#lg-area-saldo)" class="lib-chart-area"/>
@@ -714,14 +776,50 @@ function wire(root) {
   root.querySelectorAll('#lib-add-meta, #lib-add-meta-2').forEach(el =>
     el.addEventListener('click', () => metaForm()))
 
-  // Sliders
-  root.querySelector('#sim-aporte')?.addEventListener('input', e => updateSim({ aporte: +e.target.value }))
-  root.querySelector('#sim-taxa')  ?.addEventListener('input', e => updateSim({ taxa:   +e.target.value }))
-  root.querySelector('#sim-meses') ?.addEventListener('input', e => updateSim({ meses:  +e.target.value }))
-  root.querySelector('#sim-meta')  ?.addEventListener('change', e => { _sim.metaId = e.target.value; render() })
+  // Sliders restantes (taxa + prazo)
+  root.querySelector('#sim-taxa') ?.addEventListener('input', e => updateSim({ taxa:  +e.target.value }))
+  root.querySelector('#sim-meses')?.addEventListener('input', e => updateSim({ meses: +e.target.value }))
+  root.querySelector('#sim-meta') ?.addEventListener('change', e => { _sim.metaId = e.target.value; render() })
 
+  // Inputs das fases (delegado pra capturar fases criadas depois também)
+  root.querySelector('#lib-fases-list')?.addEventListener('input', e => {
+    const row = e.target.closest('.lib-fase'); if (!row) return
+    const idx = +row.dataset.faseIdx
+    if (!_sim.fases[idx]) return
+    if (e.target.classList.contains('lib-fase-aporte')) {
+      _sim.fases[idx].aporte = Math.max(0, +e.target.value || 0)
+      updateSim({})
+    } else if (e.target.classList.contains('lib-fase-inicio')) {
+      _sim.fases[idx].inicio = Math.max(1, Math.min(_sim.meses, +e.target.value || 1))
+      updateSim({})
+    }
+  })
+
+  // + Adicionar fase
+  root.querySelector('#lib-fase-add')?.addEventListener('click', () => {
+    const ultima = _sim.fases[_sim.fases.length - 1]
+    const novaInicio = Math.min(_sim.meses, (ultima?.inicio || 0) + 12)
+    const novoAporte = Math.round((ultima?.aporte || 2000) * 1.5)
+    _sim.fases.push({ inicio: novaInicio, aporte: novoAporte })
+    render()
+    setTimeout(() => document.querySelector('.lib-fase:last-child .lib-fase-aporte')?.focus(), 50)
+  })
+
+  // Remover fase
+  root.querySelector('#lib-fases-list')?.addEventListener('click', e => {
+    const del = e.target.closest('.lib-fase-del'); if (!del) return
+    const row = del.closest('.lib-fase'); const idx = +row.dataset.faseIdx
+    if (idx === 0) return  // fase 1 não remove
+    _sim.fases.splice(idx, 1)
+    render()
+  })
+
+  // Quick buttons aplicam na fase 0 (a inicial)
   root.querySelectorAll('.lib-qk').forEach(b =>
-    b.addEventListener('click', () => updateSim({ aporte: +b.dataset.pmt })))
+    b.addEventListener('click', () => {
+      _sim.fases[0].aporte = +b.dataset.pmt
+      render()
+    }))
 
   // Delegação geral
   root.addEventListener('click', async e => {
@@ -738,7 +836,6 @@ function wire(root) {
       refresh.classList.remove('spinning')
       if (ok) {
         _sim.taxa = Number(_cfg.selic_aa)
-        // Re-render só o simulador se o usuário não tava no meio de mexer no slider
         const s = document.getElementById('sim-taxa')
         if (s && document.activeElement !== s) {
           s.value = _sim.taxa
@@ -789,22 +886,22 @@ function updateSim(patch) {
   const meta = _metas.find(m => m.id === _sim.metaId) || _metas.find(m => m.principal) || _metas[0]
   if (!meta) return
 
-  // Atualiza textos dos sliders
-  c.querySelectorAll('.lib-slider-v')[0].textContent = brl(_sim.aporte)
-  c.querySelectorAll('.lib-slider-v')[1].textContent = _sim.taxa.toFixed(2) + '% a.a.'
-  c.querySelectorAll('.lib-slider-v')[2].textContent = `${_sim.meses} meses (${(_sim.meses/12).toFixed(1)} anos)`
+  // Sliders restantes (taxa e meses) — usam ordem do DOM
+  const sliderVs = c.querySelectorAll('.lib-slider-v')
+  if (sliderVs[0]) sliderVs[0].textContent = _sim.taxa.toFixed(2) + '% a.a.'
+  if (sliderVs[1]) sliderVs[1].textContent = `${_sim.meses} meses (${(_sim.meses/12).toFixed(1)} anos)`
 
   // Re-renderiza chart
   const saldo = saldoMeta(meta)
   const alvo  = Number(meta.valor_alvo)
-  const projecao = projetar({ pv: saldo, pmt: _sim.aporte, taxaAA: _sim.taxa, meses: _sim.meses })
+  const projecao = projetar({ pv: saldo, fases: _sim.fases, taxaAA: _sim.taxa, meses: _sim.meses })
   const final = projecao[projecao.length - 1]
-  const totalAp = saldo + _sim.aporte * _sim.meses
+  const totalAp = final.aportado
 
   const chartHost = c.querySelector('.lib-sim-chart')
   if (chartHost) {
     const legend = chartHost.querySelector('.lib-chart-legend')
-    chartHost.innerHTML = renderChart(projecao, alvo) + (legend ? legend.outerHTML : '')
+    chartHost.innerHTML = renderChart(projecao, alvo, _sim.fases) + (legend ? legend.outerHTML : '')
     wireChartHover(chartHost)
   }
 
@@ -812,7 +909,7 @@ function updateSim(patch) {
   const stats = c.querySelectorAll('#lib-stats .lib-stat-val')
   const subs  = c.querySelectorAll('#lib-stats .lib-stat-sub')
   if (stats[2]) { stats[2].textContent = brl(final.saldo); subs[2].textContent = 'Juros: ' + brl(final.saldo - totalAp) }
-  const mAte = mesesAteMeta({ pv: saldo, pmt: _sim.aporte, taxaAA: _sim.taxa, meta: alvo })
+  const mAte = mesesAteMeta({ pv: saldo, fases: _sim.fases, taxaAA: _sim.taxa, meta: alvo })
   if (stats[3]) { stats[3].textContent = brl(Math.max(0, alvo - saldo)); subs[3].textContent = mAte != null ? `Bate em ${dataFutura(mAte)}` : 'Aumente o aporte' }
 }
 
