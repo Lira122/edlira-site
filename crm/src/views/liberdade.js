@@ -7,7 +7,7 @@
 // Source of truth: tabelas metas_fin, aportes_fin, config_fin
 // Schema: supabase/liberdade-financeira-v2.sql
 // ═══════════════════════════════════════════════════════════════════
-import { db, CFG } from '../db.js'
+import { db, CFG, selectAll } from '../db.js'
 import { brl, toast, openModal, closeModal, fmtd, MES } from '../utils.js'
 
 let _cfg     = null
@@ -71,16 +71,18 @@ export async function render() {
 
 // ───────────────────────────── LOAD ─────────────────────────────────
 async function loadAll() {
+  // selectAll evita o limite de 1000 linhas/query do Supabase
+  // (importante pra despesas e caixinhas_mov que podem crescer muito)
   const [cfgRes, metasRes, apoRes, fatRes, dRes, drRes, rrRes, cxRes, cmRes] = await Promise.all([
     db.from('config_fin').select('*').eq('id', 'main').maybeSingle(),
     db.from('metas_fin').select('*').neq('status', 'arquivada').order('principal', { ascending: false }).order('ordem'),
-    db.from('aportes_fin').select('*').order('data', { ascending: false }),
-    db.from('faturamento').select('*').order('ano', { ascending: false }).order('mes', { ascending: false }),
-    db.from('despesas').select('*').order('data', { ascending: false }),
-    db.from('despesas_recorrentes').select('*').order('criado_em', { ascending: false }),
-    db.from('receitas_recorrentes').select('*').order('criado_em', { ascending: false }),
+    selectAll('aportes_fin', { order: { column: 'data', ascending: false } }),
+    selectAll('faturamento'),
+    selectAll('despesas', { order: { column: 'data', ascending: false } }),
+    selectAll('despesas_recorrentes', { order: { column: 'criado_em', ascending: false } }),
+    selectAll('receitas_recorrentes', { order: { column: 'criado_em', ascending: false } }),
     db.from('caixinhas').select('*').eq('ativa', true).order('ordem'),
-    db.from('caixinhas_mov').select('*').order('data', { ascending: false }),
+    selectAll('caixinhas_mov', { order: { column: 'data', ascending: false } }),
   ])
 
   if (cfgRes.error)   toast('config_fin: ' + cfgRes.error.message, 'err')
@@ -398,6 +400,7 @@ function contextoIA() {
       qtd: despFuturasTodas.length,
       horizonte_meses: horizonteMeses,
       ultima_data: despFuturasTodas[despFuturasTodas.length - 1]?.data || null,
+      meses_com_lancamento: Object.keys(despFuturasPorMes).sort(),  // ex: ["2026-07","2026-08",...,"2027-05"]
       por_mes: despFuturasPorMes,  // chave = "AAAA-MM" → {total, qtd, itens: [descrição texto]}
       lista_completa: despFuturasTodas,  // descrição + categoria + valor + data de cada UMA
     },
@@ -461,6 +464,12 @@ Regras:
 - Não invente dados que não estão no contexto. Se faltar, pergunta
 - Respostas curtas e práticas (2-4 parágrafos), a não ser que ele peça detalhe
 - Pode ser provocativo se ele tiver gastando mais do que faturando ou aportando pouco
+
+⚠️ IMPORTANTE — HORIZONTE DE PROJEÇÃO:
+Quando o usuário pedir fluxo mensal ou projeção, vá ATÉ \`despesas_futuras_agendadas.ultima_data\` (não corte em 6 meses por hábito).
+- A lista \`despesas_futuras_agendadas.meses_com_lancamento\` mostra TODOS os meses que têm despesa agendada. ITERE POR TODOS ELES — não pule nenhum.
+- Hoje o usuário tem ${ctx.despesas_futuras_agendadas.qtd} despesas futuras cadastradas, indo até **${ctx.despesas_futuras_agendadas.ultima_data || 'nenhuma'}** (horizonte de ${ctx.despesas_futuras_agendadas.horizonte_meses} meses)
+- Se ele tem despesas até maio/2027, mostre a tabela até maio/2027. Não pare em dezembro só porque é "ano corrente"
 
 VOCÊ PODE AGIR NO SISTEMA. Inclua blocos quando fizer sentido — cada um vira um botão "Aplicar" no chat:
 
@@ -529,6 +538,9 @@ async function enviarMsg(text) {
   renderChatOnly()
 
   try {
+    // Sempre recarrega dados antes de mandar — pega despesas/aportes adicionados
+    // depois do chat ter sido aberto (evita IA com info desatualizada)
+    await loadAll()
     const resposta = await callAI(text.trim())
     _chat.msgs.push({ role: 'assistant', content: resposta })
   } catch (e) {
