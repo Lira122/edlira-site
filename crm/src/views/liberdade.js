@@ -7,13 +7,18 @@
 // Source of truth: tabelas metas_fin, aportes_fin, config_fin
 // Schema: supabase/liberdade-financeira-v2.sql
 // ═══════════════════════════════════════════════════════════════════
-import { db } from '../db.js'
+import { db, CFG } from '../db.js'
 import { brl, toast, openModal, closeModal, fmtd, MES } from '../utils.js'
 
 let _cfg     = null
 let _metas   = []
 let _aportes = []
 let _fat     = []
+let _desp    = []   // despesas pontuais
+let _despRec = []   // despesas recorrentes (assinaturas, contas fixas)
+let _recRec  = []   // receitas recorrentes
+let _cxs     = []   // caixinhas (definição)
+let _cxsMov  = []   // caixinhas movimentações (gastos reais)
 let _selicTimer = null  // setInterval handle pra re-fetch periódico
 
 // Simulador — qual meta + parâmetros + FASES (aporte muda ao longo do tempo)
@@ -32,6 +37,13 @@ const ICONES_SUG = ['🚀','💻','✈️','🏠','🚗','💍','📚','🎓','�
 
 // Re-checa a Selic a cada 6h (caso usuário deixe a aba aberta o dia todo)
 const SELIC_REFRESH_MS = 6 * 60 * 60 * 1000
+
+// Chat IA — conversa persiste durante a sessão (volta vazia ao trocar de view)
+let _chat = {
+  open: false,
+  msgs: [],         // [{ role: 'user'|'assistant', content: '...' }]
+  loading: false,
+}
 
 export async function render() {
   const c = document.getElementById('content')
@@ -52,17 +64,23 @@ export async function render() {
 
   c.innerHTML = render_layout()
   wire(c)
+  wireChat(c)
   const chartHost = c.querySelector('.lib-sim-chart')
   if (chartHost) wireChartHover(chartHost)
 }
 
 // ───────────────────────────── LOAD ─────────────────────────────────
 async function loadAll() {
-  const [cfgRes, metasRes, apoRes, fatRes] = await Promise.all([
+  const [cfgRes, metasRes, apoRes, fatRes, dRes, drRes, rrRes, cxRes, cmRes] = await Promise.all([
     db.from('config_fin').select('*').eq('id', 'main').maybeSingle(),
     db.from('metas_fin').select('*').neq('status', 'arquivada').order('principal', { ascending: false }).order('ordem'),
     db.from('aportes_fin').select('*').order('data', { ascending: false }),
     db.from('faturamento').select('*').order('ano', { ascending: false }).order('mes', { ascending: false }),
+    db.from('despesas').select('*').order('data', { ascending: false }),
+    db.from('despesas_recorrentes').select('*').order('criado_em', { ascending: false }),
+    db.from('receitas_recorrentes').select('*').order('criado_em', { ascending: false }),
+    db.from('caixinhas').select('*').eq('ativa', true).order('ordem'),
+    db.from('caixinhas_mov').select('*').order('data', { ascending: false }),
   ])
 
   if (cfgRes.error)   toast('config_fin: ' + cfgRes.error.message, 'err')
@@ -73,6 +91,11 @@ async function loadAll() {
   _metas   = metasRes.data || []
   _aportes = apoRes.data || []
   _fat     = fatRes.data || []
+  _desp    = (dRes  && !dRes.error)  ? (dRes.data  || []) : []
+  _despRec = (drRes && !drRes.error) ? (drRes.data || []) : []
+  _recRec  = (rrRes && !rrRes.error) ? (rrRes.data || []) : []
+  _cxs     = (cxRes && !cxRes.error) ? (cxRes.data || []) : []
+  _cxsMov  = (cmRes && !cmRes.error) ? (cmRes.data || []) : []
 }
 
 // Puxa Selic atual do Banco Central. Se BCB não responder (CORS, fora do
@@ -230,6 +253,264 @@ function streakAportes(metaId) {
   return n
 }
 
+// ───────────────────────────── CHAT IA ──────────────────────────────
+// Monta um snapshot estruturado do contexto financeiro pra IA usar
+function contextoIA() {
+  const principal = _metas.find(m => m.principal) || _metas[0]
+  const metaSim   = _metas.find(m => m.id === _sim.metaId) || principal
+  const today     = new Date().toISOString().slice(0,10)
+  const hoje      = new Date()
+
+  // ── Metas ────────────────────────────────
+  const metasInfo = _metas.map(m => {
+    const sm = saldoMeta(m)
+    return {
+      nome: m.nome, alvo: Number(m.valor_alvo), saldo_atual: sm,
+      progresso_pct: +((sm / Number(m.valor_alvo)) * 100).toFixed(1),
+      principal: m.principal === true,
+      prazo_meses: m.prazo_meses || null,
+    }
+  })
+
+  // ── Aportes (últimos 12) ────────────────
+  const ultimosAportes = _aportes.slice(0, 12).map(a => ({
+    data: a.data, valor: Number(a.valor),
+    meta: _metas.find(x=>x.id===a.meta_id)?.nome || null,
+    fonte: a.fonte, obs: a.observacao,
+  }))
+
+  // ── Faturamento ÚLTIMOS 6 MESES (mês a mês) ─
+  const fat6m = []
+  for (let k = 0; k <= 5; k++) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - k, 1)
+    const m = d.getMonth() + 1, y = d.getFullYear()
+    const v = _fat.filter(f => f.mes === m && f.ano === y).reduce((s, f) => s + Number(f.valor || 0), 0)
+    fat6m.push({ mes: `${y}-${String(m).padStart(2,'0')}`, valor: +v.toFixed(2) })
+  }
+
+  // ── Despesas POR CATEGORIA últimos 3 meses ─
+  const ym3m = []
+  for (let k = 0; k <= 2; k++) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - k, 1)
+    ym3m.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`)
+  }
+  const desp3m = _desp.filter(d => ym3m.some(ym => (d.data||'').startsWith(ym)))
+  const despPorCat = {}
+  for (const d of desp3m) {
+    const cat = d.categoria || 'outro'
+    despPorCat[cat] = (despPorCat[cat] || 0) + Number(d.valor || 0)
+  }
+  const totalDesp3m = Object.values(despPorCat).reduce((s, v) => s + v, 0)
+
+  // ── Contas/despesas recorrentes ativas ──
+  const recorrentesAtivas = _despRec.filter(r => r.ativa).map(r => ({
+    descricao: r.descricao, valor: Number(r.valor), categoria: r.categoria, dia: r.dia_vencimento || null,
+  }))
+  const totalRecMensal = recorrentesAtivas.reduce((s, r) => s + r.valor, 0)
+  const receitasRec = _recRec.filter(r => r.ativa).map(r => ({
+    descricao: r.descricao, valor: Number(r.valor),
+  }))
+
+  // ── Caixinhas (saldos atuais) ───────────
+  const m = hoje.getMonth() + 1, y = hoje.getFullYear()
+  const caixinhasInfo = _cxs.map(c => {
+    const mStr = `${y}-${String(m).padStart(2,'0')}`
+    const usadoMes = _cxsMov.filter(x => x.caixinha_id === c.id && (x.data||'').startsWith(mStr))
+      .reduce((s, x) => s + Number(x.valor || 0), 0)
+    const saldoMesAtual = c.tipo === 'gasto'
+      ? Number(c.valor_mensal) - usadoMes
+      : null  // reserva: complexo de calcular, dou só o usado
+    return {
+      nome: c.nome, tipo: c.tipo,
+      valor_mensal: Number(c.valor_mensal),
+      usado_mes_atual: +usadoMes.toFixed(2),
+      saldo_mes_atual: saldoMesAtual !== null ? +saldoMesAtual.toFixed(2) : null,
+    }
+  })
+
+  return {
+    hoje: today,
+    selic_aa: Number(_cfg.selic_aa),
+    selic_atualizada_em: _cfg.atualizado_em,
+    faturamento: {
+      medio_6m: +fatMedio6m().toFixed(2),
+      mes_atual: +fatMesAtual().toFixed(2),
+      ultimos_6_meses: fat6m,
+      pct_alvo_aporte: Number(_cfg.aporte_pct_faturamento),
+      aporte_sugerido_mensal: sugestaoAporteMensal(),
+    },
+    despesas: {
+      total_ultimos_3_meses: +totalDesp3m.toFixed(2),
+      media_mensal_3m: +(totalDesp3m / 3).toFixed(2),
+      por_categoria_3m: Object.fromEntries(Object.entries(despPorCat).map(([k,v]) => [k, +v.toFixed(2)])),
+    },
+    contas_fixas_mensais: {
+      total: +totalRecMensal.toFixed(2),
+      lista: recorrentesAtivas,
+    },
+    receitas_recorrentes: receitasRec,
+    metas: metasInfo,
+    aportes: {
+      total_geral: +_aportes.reduce((s, a) => s + Number(a.valor || 0), 0).toFixed(2),
+      qtd_total: _aportes.length,
+      ultimos_12: ultimosAportes,
+    },
+    caixinhas: caixinhasInfo,
+    simulador_atual: {
+      meta_em_foco: metaSim?.nome,
+      taxa_aa: _sim.taxa,
+      prazo_meses: _sim.meses,
+      fases: _sim.fases,
+    },
+  }
+}
+
+async function callAI(userMsg) {
+  const orKey = CFG.OR_KEY
+  if (!orKey) throw new Error('Chave da IA não disponível. Faça login de novo.')
+
+  const ctx = contextoIA()
+  const sistema = `Você é um planejador financeiro pessoal direto, brasileiro, sem firula. Conversa com o usuário sobre as finanças dele dentro do CRM "Eleva Digital". Linguagem informal, tipo amigo que entende de finanças. Seja sincero quando os números não fecham.
+
+Você tem acesso COMPLETO ao contexto financeiro dele em JSON abaixo, atualizado AGORA:
+
+\`\`\`json
+${JSON.stringify(ctx, null, 2)}
+\`\`\`
+
+Explicação dos campos:
+- **faturamento**: receita do negócio. \`medio_6m\` = média mensal últimos 6 meses; \`ultimos_6_meses\` = mês a mês
+- **despesas**: gastos pontuais (não-recorrentes). Vem agregado em \`por_categoria_3m\` (ia, infra, marketing, operacional, pessoal, outro)
+- **contas_fixas_mensais**: assinaturas e contas que se repetem todo mês (despesas recorrentes ativas) — \`total\` é o quanto sai fixo todo mês
+- **receitas_recorrentes**: receitas que entram todo mês (clientes recorrentes, etc)
+- **metas**: objetivos de poupança/investimento (a "principal" = liberdade financeira R$100k)
+- **aportes**: histórico de aportes já feitos pras metas
+- **caixinhas**: envelope budgeting (tipo Will) — \`gasto\` = reseta no mês, \`reserva\` = acumula; \`saldo_mes_atual\` mostra quanto sobrou da caixinha esse mês
+- **simulador_atual**: o que ele tá projetando agora no simulador (fases de aporte, taxa, prazo)
+
+Regras:
+- Valores em **R$** com vírgula (R$ 1.234,56)
+- Taxa Selic atual: ${ctx.selic_aa}% a.a. (referência conservadora de juros)
+- LUCRO LÍQUIDO REAL ≈ faturamento.mes_atual − contas_fixas_mensais.total − (despesas pontuais do mês). Use isso pra avaliar capacidade de aporte real
+- Faz contas de cabeça com números reais (juros compostos: FV = PV·(1+i)^n + PMT·((1+i)^n−1)/i com i mensal)
+- Quando você quiser **sugerir uma mudança de fases pro simulador**, inclua um bloco assim no final:
+\`\`\`apply-fases
+[{"inicio": 0, "aporte": 2500}, {"inicio": 6, "aporte": 4000}]
+\`\`\`
+  Vai aparecer botão "Aplicar" pra ele adotar na hora.
+- Quando ele "viajar na maionese" (cenários hipotéticos), entra na brincadeira e faz a conta. Ex: "e se eu vender meu carro e jogar 30k?" → simula
+- Não invente dados que não estão no contexto. Se faltar, pergunta
+- Respostas curtas e práticas (2-4 parágrafos), a não ser que ele peça detalhe
+- Pode ser provocativo se ele tiver gastando mais do que faturando ou aportando pouco do faturamento`
+
+  const modelos = [
+    'anthropic/claude-sonnet-4.6',
+    'anthropic/claude-haiku-4.5',
+    'meta-llama/llama-3.3-70b-instruct',
+  ]
+
+  const messages = [
+    { role: 'system', content: sistema },
+    ..._chat.msgs.slice(-10).map(m => ({ role: m.role, content: m.content })),
+    { role: 'user', content: userMsg },
+  ]
+
+  let lastErr = ''
+  for (const model of modelos) {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${orKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, messages, max_tokens: 800, temperature: 0.6 }),
+    })
+    if (res.ok) {
+      const json = await res.json()
+      return json?.choices?.[0]?.message?.content?.trim() || '(sem resposta)'
+    }
+    if (res.status === 404) { lastErr = `${model} indisponível`; continue }
+    const body = await res.text().catch(() => '')
+    throw new Error(`OpenRouter ${res.status}: ${body.slice(0, 200)}`)
+  }
+  throw new Error(lastErr || 'Nenhum modelo disponível')
+}
+
+async function enviarMsg(text) {
+  if (!text.trim() || _chat.loading) return
+  _chat.msgs.push({ role: 'user', content: text.trim() })
+  _chat.loading = true
+  renderChatOnly()
+
+  try {
+    const resposta = await callAI(text.trim())
+    _chat.msgs.push({ role: 'assistant', content: resposta })
+  } catch (e) {
+    _chat.msgs.push({ role: 'assistant', content: '⚠️ Erro: ' + e.message })
+  } finally {
+    _chat.loading = false
+    renderChatOnly()
+  }
+}
+
+// Re-renderiza só o drawer (sem mexer no resto da página)
+function renderChatOnly() {
+  const host = document.getElementById('lib-chat')
+  if (!host) return
+  const fresh = renderChatDrawer().match(/<div id="lib-chat"[\s\S]*<\/div>/)?.[0] || ''
+  host.outerHTML = fresh
+  wireChat(document.getElementById('content'))
+  // scroll pro final
+  const body = document.getElementById('lib-chat-body')
+  if (body) body.scrollTop = body.scrollHeight
+}
+
+function wireChat(root) {
+  // FAB toggle
+  root.querySelector('#lib-fab')?.addEventListener('click', () => {
+    _chat.open = true; renderChatOnly()
+    setTimeout(() => document.getElementById('lib-chat-text')?.focus(), 250)
+  })
+  root.querySelector('#lib-chat-close')?.addEventListener('click', () => { _chat.open = false; renderChatOnly() })
+  root.querySelector('#lib-chat-clear')?.addEventListener('click', () => {
+    if (confirm('Limpar conversa?')) { _chat.msgs = []; renderChatOnly() }
+  })
+
+  // Submit
+  const form = root.querySelector('#lib-chat-input')
+  const ta   = root.querySelector('#lib-chat-text')
+  form?.addEventListener('submit', e => {
+    e.preventDefault()
+    const v = ta.value; ta.value = ''; ta.style.height = 'auto'
+    enviarMsg(v)
+  })
+  ta?.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit() }
+  })
+  // Auto-grow textarea
+  ta?.addEventListener('input', () => {
+    ta.style.height = 'auto'
+    ta.style.height = Math.min(140, ta.scrollHeight) + 'px'
+  })
+
+  // Sugestões iniciais
+  root.querySelectorAll('.lib-chat-sug-btn').forEach(b =>
+    b.addEventListener('click', () => enviarMsg(b.dataset.sug)))
+
+  // Aplicar sugestão de fases
+  root.querySelectorAll('.lib-chat-apply').forEach(el => {
+    const btn = el.querySelector('.btn')
+    btn?.addEventListener('click', () => {
+      try {
+        const fases = JSON.parse(el.dataset.apply)
+        _sim.fases = fases.sort((a,b) => a.inicio - b.inicio)
+        toast('Fases aplicadas no simulador 🎯')
+        render()
+        setTimeout(() => document.querySelector('.lib-sim')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100)
+      } catch (e) {
+        toast('Erro ao aplicar: ' + e.message, 'err')
+      }
+    })
+  })
+}
+
 // ───────────────────────────── LAYOUT ───────────────────────────────
 function render_layout() {
   const principal = _metas.find(m => m.principal) || _metas[0]
@@ -256,7 +537,114 @@ function render_layout() {
     ${renderStats(metaSim)}
     ${renderSimulator(metaSim)}
     ${renderAportes()}
+
+    ${renderChatFab()}
+    ${renderChatDrawer()}
   </div>`
+}
+
+function renderChatFab() {
+  return `
+  <button class="lib-fab" id="lib-fab" title="Conversar com a IA financeira">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+    </svg>
+    <span>IA financeira</span>
+    <span class="lib-fab-pulse"></span>
+  </button>`
+}
+
+function renderChatDrawer() {
+  if (!_chat.open) return '<div id="lib-chat" class="lib-chat"></div>'
+  const msgsHTML = _chat.msgs.length
+    ? _chat.msgs.map(m => renderMsg(m)).join('')
+    : `<div class="lib-chat-empty">
+        <div class="lib-chat-empty-ico">💭</div>
+        <div class="lib-chat-empty-tit">Viaja na maionese aí</div>
+        <div class="lib-chat-empty-sub">Eu sei tudo do seu contexto: faturamento, metas, fases, aportes, caixinhas. Pergunta o que quiser.</div>
+        <div class="lib-chat-sug">
+          <button class="lib-chat-sug-btn" data-sug="Quanto preciso aportar pra bater 100k em 2 anos?">⚡ Quanto pra 100k em 2 anos?</button>
+          <button class="lib-chat-sug-btn" data-sug="Vale mais a pena focar tudo na Liberdade ou dividir com o Macbook?">🎯 Focar ou dividir entre metas?</button>
+          <button class="lib-chat-sug-btn" data-sug="Que % do meu faturamento eu deveria estar aportando pra ser realista?">💰 Quanto do faturamento aportar?</button>
+          <button class="lib-chat-sug-btn" data-sug="Se eu der R$10k de entrada na minha meta e mantiver o aporte atual, quando bato?">🚀 E se eu der entrada agora?</button>
+        </div>
+      </div>`
+
+  return `
+  <div id="lib-chat" class="lib-chat open">
+    <div class="lib-chat-head">
+      <div class="lib-chat-head-left">
+        <div class="lib-chat-avatar">🤖</div>
+        <div>
+          <div class="lib-chat-title">Planejador IA</div>
+          <div class="lib-chat-sub">${_chat.loading ? '<span class="lib-chat-typing">pensando…</span>' : 'sabe tudo do seu contexto'}</div>
+        </div>
+      </div>
+      <div class="lib-chat-head-acts">
+        ${_chat.msgs.length ? `<button class="lib-chat-clear" id="lib-chat-clear" title="Limpar conversa">↻</button>` : ''}
+        <button class="lib-chat-close" id="lib-chat-close" title="Fechar">×</button>
+      </div>
+    </div>
+    <div class="lib-chat-body" id="lib-chat-body">${msgsHTML}</div>
+    <form class="lib-chat-input" id="lib-chat-input">
+      <textarea id="lib-chat-text" placeholder="Manda a real... ex: e se eu aumentar pra 5k a partir do mês 6?" rows="1" ${_chat.loading?'disabled':''}></textarea>
+      <button type="submit" class="lib-chat-send" ${_chat.loading?'disabled':''}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </form>
+  </div>`
+}
+
+function renderMsg(m) {
+  // Parse pra detectar tag de sugestão de fases
+  const sug = parseSugFases(m.content)
+  const cleanContent = sug ? m.content.replace(/```apply-fases[\s\S]*?```/g, '').trim() : m.content
+  const html = mdLite(cleanContent)
+  const role = m.role === 'user' ? 'user' : 'ai'
+
+  let applyBtn = ''
+  if (sug) {
+    const desc = sug.map(f => `${f.inicio === 0 ? 'Início' : `mês ${f.inicio}+`}: ${brl(f.aporte)}`).join(' · ')
+    applyBtn = `
+      <div class="lib-chat-apply" data-apply='${escapeAttr(JSON.stringify(sug))}'>
+        <div class="lib-chat-apply-info">
+          <div class="lib-chat-apply-lbl">💡 Sugestão pro simulador</div>
+          <div class="lib-chat-apply-desc">${desc}</div>
+        </div>
+        <button class="btn bp bsm">Aplicar</button>
+      </div>`
+  }
+
+  return `<div class="lib-msg ${role}">
+    ${role === 'ai' ? '<div class="lib-msg-avatar">🤖</div>' : ''}
+    <div class="lib-msg-bubble">
+      ${html}
+      ${applyBtn}
+    </div>
+  </div>`
+}
+
+// Markdown light — quebra linha, **negrito**, *itálico*, listas simples, código `inline`
+function mdLite(s) {
+  return escapeHtml(s)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.+<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
+    .replace(/\n/g, '<br>')
+}
+function escapeAttr(s) { return String(s).replace(/'/g, '&#39;').replace(/"/g, '&quot;') }
+
+// Procura ```apply-fases [{...}] ``` na resposta — se achar, devolve array de fases
+function parseSugFases(text) {
+  const m = text.match(/```apply-fases\s*([\s\S]*?)```/)
+  if (!m) return null
+  try {
+    const arr = JSON.parse(m[1].trim())
+    if (!Array.isArray(arr) || !arr.every(f => Number.isFinite(+f.inicio) && Number.isFinite(+f.aporte))) return null
+    return arr.map(f => ({ inicio: +f.inicio, aporte: +f.aporte }))
+  } catch (_) { return null }
 }
 
 function renderEmpty() {
@@ -790,7 +1178,14 @@ function wire(root) {
       _sim.fases[idx].aporte = Math.max(0, +e.target.value || 0)
       updateSim({})
     } else if (e.target.classList.contains('lib-fase-inicio')) {
-      _sim.fases[idx].inicio = Math.max(1, Math.min(_sim.meses, +e.target.value || 1))
+      // Permite mês > prazo: estica o prazo automaticamente pra a fase ser visível
+      const novo = Math.max(1, +e.target.value || 1)
+      _sim.fases[idx].inicio = novo
+      if (novo + 6 > _sim.meses) {
+        _sim.meses = Math.min(240, novo + 24)
+        render()  // re-render full pra atualizar slider prazo
+        return
+      }
       updateSim({})
     }
   })
@@ -798,9 +1193,11 @@ function wire(root) {
   // + Adicionar fase
   root.querySelector('#lib-fase-add')?.addEventListener('click', () => {
     const ultima = _sim.fases[_sim.fases.length - 1]
-    const novaInicio = Math.min(_sim.meses, (ultima?.inicio || 0) + 12)
+    const novaInicio = (ultima?.inicio || 0) + 12  // sem cap — fase nova começa 12m depois da última
     const novoAporte = Math.round((ultima?.aporte || 2000) * 1.5)
     _sim.fases.push({ inicio: novaInicio, aporte: novoAporte })
+    // Se a fase nova passa do prazo, estica o prazo pra dar pra ver o efeito
+    if (novaInicio + 6 > _sim.meses) _sim.meses = Math.min(240, novaInicio + 24)
     render()
     setTimeout(() => document.querySelector('.lib-fase:last-child .lib-fase-aporte')?.focus(), 50)
   })
