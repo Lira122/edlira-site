@@ -693,7 +693,7 @@ function renderAportesList() {
       ${list.map(a => {
         const meta = _metas.find(x => x.id === a.meta_id)
         return `
-        <div class="lib-ap-row">
+        <div class="lib-ap-row" data-ap-edit="${a.id}" title="Clica pra editar">
           <div class="lib-ap-data">${fmtd(a.data)}</div>
           <div class="lib-ap-meta">${meta
             ? `<span class="lib-ap-tag" style="background:${hexA(meta.cor || '#C5F82A', .15)};color:${meta.cor || '#C5F82A'}">${meta.icone || '🎯'} ${escapeHtml(meta.nome)}</span>`
@@ -765,12 +765,20 @@ function wire(root) {
       return
     }
     if (del) {
+      // Evita que o click no X também dispare o edit da row
+      e.stopPropagation()
       if (!confirm('Excluir esse aporte?')) return
       const { error } = await db.from('aportes_fin').delete().eq('id', del.dataset.aid)
       if (error) return toast('Erro: ' + error.message, 'err')
       toast('Aporte removido')
       render()
       return
+    }
+    // Click na row do aporte = abre form de edição
+    const apEdit = e.target.closest('[data-ap-edit]')
+    if (apEdit) {
+      const a = _aportes.find(x => x.id === apEdit.dataset.apEdit)
+      if (a) aporteForm({ aporte: a })
     }
   })
 }
@@ -809,41 +817,52 @@ function updateSim(patch) {
 }
 
 // ─────────────────────────── FORMS ──────────────────────────────────
-function aporteForm({ metaId = null } = {}) {
-  const hoje = new Date().toISOString().slice(0,10)
-  const sug  = sugestaoAporteMensal()
-  const metaIdPick = metaId || _metas.find(m => m.principal)?.id || _metas[0]?.id || ''
+function aporteForm({ metaId = null, aporte = null } = {}) {
+  const hoje    = new Date().toISOString().slice(0,10)
+  const sug     = sugestaoAporteMensal()
+  const isEdit  = !!aporte
+  const metaIdPick = isEdit ? (aporte.meta_id || '') : (metaId || _metas.find(m => m.principal)?.id || _metas[0]?.id || '')
+  const valor   = isEdit ? aporte.valor : (sug || '')
+  const data    = isEdit ? aporte.data  : hoje
+  const fonte   = isEdit ? (aporte.fonte || 'manual') : 'manual'
+  const obs     = isEdit ? (aporte.observacao || '') : ''
 
-  openModal('Registrar aporte', `
+  const fonteOpts = ['manual','faturamento','bonus','outro']
+    .map(f => `<option value="${f}"${f===fonte?' selected':''}>${f === 'manual' ? 'Manual' : f === 'faturamento' ? 'Faturamento' : f === 'bonus' ? 'Bônus / Extra' : 'Outro'}</option>`)
+    .join('')
+
+  openModal(isEdit ? 'Editar aporte' : 'Registrar aporte', `
     <div class="fg"><label class="fl">Para qual meta?</label>
       <select class="fsl" id="ap-meta">
         ${_metas.map(m => `<option value="${m.id}"${m.id === metaIdPick ? ' selected' : ''}>${m.icone || '🎯'} ${escapeHtml(m.nome)}</option>`).join('')}
-        <option value="">— Sem meta específica —</option>
+        <option value=""${metaIdPick === '' ? ' selected' : ''}>— Sem meta específica —</option>
       </select>
     </div>
     <div class="fg"><label class="fl">Valor</label>
-      <input class="fi" type="number" id="ap-val" placeholder="0,00" step="0.01" value="${sug || ''}">
-      ${sug ? `<div class="lib-hint">Sugestão: ${brl(sug)} (${_cfg.aporte_pct_faturamento}% do faturamento médio)</div>` : ''}
+      <input class="fi" type="number" id="ap-val" placeholder="0,00" step="0.01" value="${valor}">
+      ${!isEdit && sug ? `<div class="lib-hint">Sugestão: ${brl(sug)} (${_cfg.aporte_pct_faturamento}% do faturamento médio)</div>` : ''}
     </div>
-    <div class="fg"><label class="fl">Data</label>
-      <input class="fi" type="date" id="ap-data" value="${hoje}">
+    <div class="fg"><label class="fl">Data ${isEdit ? '<small style="color:var(--text-3);font-weight:400">(mude pra mover de mês)</small>' : ''}</label>
+      <input class="fi" type="date" id="ap-data" value="${data}">
     </div>
     <div class="fg"><label class="fl">Fonte</label>
-      <select class="fsl" id="ap-fonte">
-        <option value="manual">Manual</option>
-        <option value="faturamento">Faturamento</option>
-        <option value="bonus">Bônus / Extra</option>
-        <option value="outro">Outro</option>
-      </select>
+      <select class="fsl" id="ap-fonte">${fonteOpts}</select>
     </div>
     <div class="fg"><label class="fl">Observação (opcional)</label>
-      <input class="fi" type="text" id="ap-obs" placeholder="Ex: Cliente Desjoyaux">
+      <input class="fi" type="text" id="ap-obs" placeholder="Ex: Cliente Desjoyaux" value="${escapeHtml(obs)}">
     </div>
   `, `
+    ${isEdit ? `<button class="btn bd bsm" id="ap-del" style="margin-right:auto">Excluir</button>` : ''}
     <button class="btn bg" id="ap-cancel">Cancelar</button>
-    <button class="btn bp" id="ap-save">Salvar aporte</button>
+    <button class="btn bp" id="ap-save">${isEdit ? 'Salvar alteração' : 'Salvar aporte'}</button>
   `)
   document.getElementById('ap-cancel').addEventListener('click', closeModal)
+  document.getElementById('ap-del')?.addEventListener('click', async () => {
+    if (!confirm('Excluir esse aporte?')) return
+    const { error } = await db.from('aportes_fin').delete().eq('id', aporte.id)
+    if (error) return toast('Erro: ' + error.message, 'err')
+    closeModal(); toast('Aporte removido'); render()
+  })
   document.getElementById('ap-save').addEventListener('click', async () => {
     const v = parseFloat(document.getElementById('ap-val').value) || 0
     if (v <= 0) return toast('Valor inválido', 'err')
@@ -854,9 +873,11 @@ function aporteForm({ metaId = null } = {}) {
       observacao: document.getElementById('ap-obs').value.trim() || null,
       meta_id:    document.getElementById('ap-meta').value || null,
     }
-    const { error } = await db.from('aportes_fin').insert(d)
+    const { error } = isEdit
+      ? await db.from('aportes_fin').update(d).eq('id', aporte.id)
+      : await db.from('aportes_fin').insert(d)
     if (error) return toast('Erro: ' + error.message, 'err')
-    closeModal(); toast('Aporte registrado 🚀')
+    closeModal(); toast(isEdit ? 'Aporte atualizado' : 'Aporte registrado 🚀')
     render()
   })
 }
