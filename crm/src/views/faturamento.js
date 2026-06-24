@@ -16,6 +16,7 @@ let _fat         = []
 let _despesas    = []
 let _recDespesas = []
 let _recReceitas = []
+let _aportes     = []  // aportes_fin — descontados do lucro mensal no Resumo
 let _clis        = []
 let _view        = 'receita'
 let _delegationAttached = false
@@ -81,17 +82,20 @@ function attachDelegation() {
 }
 
 async function loadAll() {
-  const [f, d, rd, rr, cli] = await Promise.all([
+  const [f, d, rd, rr, ap, cli] = await Promise.all([
     db.from('faturamento').select('*').order('ano', { ascending: false }).order('mes', { ascending: false }),
     selectAll('despesas',             { order: { column: 'data', ascending: false } }),
     selectAll('despesas_recorrentes', { order: { column: 'criado_em', ascending: false } }),
     selectAll('receitas_recorrentes', { order: { column: 'criado_em', ascending: false } }),
+    db.from('aportes_fin').select('data,valor').order('data', { ascending: false }),
     selectAll('clientes', { columns: 'id,nome,empresa,status' }),
   ])
   _fat         = f.data || []
   _despesas    = d.data || []
   _recDespesas = rd.data || []
   _recReceitas = rr.data || []
+  // aportes_fin pode não existir se o schema não foi aplicado — tolera
+  _aportes     = (ap && !ap.error) ? (ap.data || []) : []
   _clis        = cli.data || []
 }
 
@@ -362,10 +366,20 @@ function projecaoMes(mesAlvo, anoAlvo) {
     }
   }
 
+  // Aportes_fin do mês — abate do lucro como "comprometido em investimento"
+  const aportes = _aportes
+    .filter(a => (a.data || '').startsWith(mStr))
+    .reduce((s, a) => s + Number(a.valor || 0), 0)
+
+  const lucroProj = (recReal + recPend) - (desReal + desPend)
+  const sobra     = lucroProj - aportes  // disponível após aportes
+
   return {
     recReal, recPend, recProj: recReal + recPend,
     desReal, desPend, desProj: desReal + desPend,
-    lucroProj: (recReal + recPend) - (desReal + desPend),
+    lucroProj,
+    aportes,
+    sobra,
     isPast,
   }
 }
@@ -466,7 +480,7 @@ function renderResumo() {
     <!-- Destaque: mês em foco (o selecionado no picker) -->
     <div class="cw" style="margin-bottom:18px;border:1px solid rgba(193,255,42,.2)">
       <div class="ct" style="color:var(--accent)">${mesSel.isPast ? 'Realizado' : 'Projeção'} — ${MESF[mesSel.mes-1]} ${ano}${mesSel.hoje ? ' · atual' : ''}</div>
-      <div class="sg" style="grid-template-columns:repeat(4,1fr);margin-bottom:0;margin-top:12px">
+      <div class="sg" style="grid-template-columns:repeat(3,1fr);margin-bottom:0;margin-top:12px">
         <div class="sc" style="background:var(--bg-alt)">
           <div class="sl">Receita ${mesSel.isPast?'realizada':'prevista'}</div>
           <div class="sv" style="color:var(--accent)">${brl(mesSel.recProj)}</div>
@@ -478,12 +492,27 @@ function renderResumo() {
           ${mesSel.desPend > 0 ? `<div class="ss">${brl(mesSel.desReal)} pago · ${brl(mesSel.desPend)} a pagar</div>` : ''}
         </div>
         <div class="sc" style="background:var(--bg-alt)">
-          <div class="sl">Lucro ${mesSel.isPast?'realizado':'projetado'}</div>
+          <div class="sl">Lucro bruto</div>
           <div class="sv" style="color:${mesSel.lucroProj>=0?'var(--ok)':'var(--danger)'}">${brl(mesSel.lucroProj)}</div>
+          <div class="ss">Margem ${mesSel.recProj>0?Math.round(mesSel.lucroProj/mesSel.recProj*100)+'%':'—'}</div>
         </div>
-        <div class="sc" style="background:var(--bg-alt)">
-          <div class="sl">Margem</div>
-          <div class="sv">${mesSel.recProj>0?Math.round(mesSel.lucroProj/mesSel.recProj*100)+'%':'—'}</div>
+      </div>
+
+      <!-- Linha 2: o que sobra pra você depois dos aportes -->
+      <div class="sg" style="grid-template-columns:repeat(2,1fr);margin:10px 0 0">
+        <div class="sc" style="background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.15)">
+          <div class="sl">Comprometido em investimento</div>
+          <div class="sv" style="color:#A78BFA">${brl(mesSel.aportes)}</div>
+          <div class="ss">${mesSel.aportes > 0
+            ? `${aportesCount(mesSel.mes, ano)} aporte${aportesCount(mesSel.mes, ano)===1?'':'s'} em Liberdade`
+            : 'nenhum aporte registrado'}</div>
+        </div>
+        <div class="sc" style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.18)">
+          <div class="sl">Sobrou pra você</div>
+          <div class="sv" style="color:${mesSel.sobra>=0?'#34D399':'var(--danger)'}">${brl(mesSel.sobra)}</div>
+          <div class="ss">${mesSel.lucroProj > 0
+            ? `${Math.round(mesSel.aportes / mesSel.lucroProj * 100)}% do lucro indo pra investimento`
+            : 'lucro insuficiente'}</div>
         </div>
       </div>
     </div>
@@ -546,11 +575,22 @@ function renderResumo() {
 
 // Card pequeno usado em "Próximos meses"
 function cardMes(d, anoCard) {
+  const showSobra = d.aportes > 0
   return `<div class="sc" style="${d.cur?'border-color:rgba(197,248,42,.3)':''}">
     <div class="sl">${MESF[d.mes-1]}${d.cur ? ' · atual' : ''}</div>
     <div class="sv" style="color:${d.lucroProj>=0?'var(--ok)':'var(--danger)'}">${brl(d.lucroProj)}</div>
     <div class="ss">${brl(d.recProj)} − ${brl(d.desProj)}</div>
+    ${showSobra ? `<div class="ss" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--line)">
+      <span style="color:#A78BFA">−${brl(d.aportes)}</span> aporte
+      <div style="color:${d.sobra>=0?'#34D399':'var(--danger)'};font-weight:600;margin-top:2px">${brl(d.sobra)} sobra</div>
+    </div>` : ''}
   </div>`
+}
+
+// Conta quantos aportes no mês (pra texto auxiliar)
+function aportesCount(mes, ano) {
+  const mStr = `${ano}-${String(mes).padStart(2,'0')}`
+  return _aportes.filter(a => (a.data || '').startsWith(mStr)).length
 }
 
 // ════════ FORMS ══════════════════════════════════════════════════════════
