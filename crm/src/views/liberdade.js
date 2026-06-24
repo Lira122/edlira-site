@@ -279,34 +279,44 @@ function contextoIA() {
     fonte: a.fonte, obs: a.observacao,
   }))
 
-  // ── Faturamento ÚLTIMOS 6 MESES (mês a mês) ─
-  const fat6m = []
-  for (let k = 0; k <= 5; k++) {
+  // ── Faturamento ÚLTIMOS 12 MESES + futuros lançados (mês a mês) ──
+  const fat12m = []
+  for (let k = 0; k <= 11; k++) {
     const d = new Date(hoje.getFullYear(), hoje.getMonth() - k, 1)
     const m = d.getMonth() + 1, y = d.getFullYear()
     const v = _fat.filter(f => f.mes === m && f.ano === y).reduce((s, f) => s + Number(f.valor || 0), 0)
-    fat6m.push({ mes: `${y}-${String(m).padStart(2,'0')}`, valor: +v.toFixed(2) })
+    fat12m.push({ mes: `${y}-${String(m).padStart(2,'0')}`, valor: +v.toFixed(2) })
   }
+  // Faturamento JÁ LANÇADO pros próximos meses (raros, mas se tiver, mostra)
+  const fatFuturo = _fat
+    .filter(f => {
+      const fDate = new Date(f.ano, f.mes - 1, 1)
+      return fDate > new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+    })
+    .map(f => ({ mes: `${f.ano}-${String(f.mes).padStart(2,'0')}`, valor: +Number(f.valor).toFixed(2), desc: f.descricao || null }))
 
-  // ── Despesas PASSADAS últimos 3 meses por categoria ──
+  // ── Despesas PASSADAS últimos 12 meses por mês + por categoria ──
   const hojeStr = today
-  const ym3m = []
-  for (let k = 0; k <= 2; k++) {
+  const ym12m = []
+  for (let k = 0; k <= 11; k++) {
     const d = new Date(hoje.getFullYear(), hoje.getMonth() - k, 1)
-    ym3m.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`)
+    ym12m.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`)
   }
-  const desp3m = _desp.filter(d => ym3m.some(ym => (d.data||'').startsWith(ym)) && (d.data || '') <= hojeStr)
+  const desp12m = _desp.filter(d => ym12m.some(ym => (d.data||'').startsWith(ym)) && (d.data || '') <= hojeStr)
   const despPorCat = {}
-  for (const d of desp3m) {
+  const despPassadasPorMes = {}
+  for (const d of desp12m) {
     const cat = d.categoria || 'outro'
     despPorCat[cat] = (despPorCat[cat] || 0) + Number(d.valor || 0)
+    const ym = (d.data || '').slice(0,7)
+    despPassadasPorMes[ym] = (despPassadasPorMes[ym] || 0) + Number(d.valor || 0)
   }
-  const totalDesp3m = Object.values(despPorCat).reduce((s, v) => s + v, 0)
+  const totalDesp12m = Object.values(despPorCat).reduce((s, v) => s + v, 0)
+  for (const k of Object.keys(despPassadasPorMes)) despPassadasPorMes[k] = +despPassadasPorMes[k].toFixed(2)
 
-  // ── Despesas FUTURAS (próximos 6 meses) ── ❗ o que estava faltando
-  const limiteFuturo = new Date(hoje.getFullYear(), hoje.getMonth() + 7, 0).toISOString().slice(0,10)
-  const despFuturas = _desp
-    .filter(d => (d.data || '') > hojeStr && (d.data || '') <= limiteFuturo)
+  // ── Despesas FUTURAS TODAS (sem limite — tudo agendado pra frente) ──
+  const despFuturasTodas = _desp
+    .filter(d => (d.data || '') > hojeStr)
     .sort((a, b) => (a.data || '').localeCompare(b.data || ''))
     .map(d => ({
       data: d.data,
@@ -314,9 +324,9 @@ function contextoIA() {
       categoria: d.categoria || 'outro',
       valor: Number(d.valor || 0),
     }))
-  // Agrupa por mês pra IA enxergar a curva
+  // Agrupa por mês pra ver a curva
   const despFuturasPorMes = {}
-  for (const d of despFuturas) {
+  for (const d of despFuturasTodas) {
     const ym = d.data.slice(0,7)
     if (!despFuturasPorMes[ym]) despFuturasPorMes[ym] = { total: 0, qtd: 0, itens: [] }
     despFuturasPorMes[ym].total += d.valor
@@ -324,7 +334,13 @@ function contextoIA() {
     despFuturasPorMes[ym].itens.push(`${d.data}: ${d.descricao} (${d.categoria}) — R$${d.valor.toFixed(2)}`)
   }
   for (const k of Object.keys(despFuturasPorMes)) despFuturasPorMes[k].total = +despFuturasPorMes[k].total.toFixed(2)
-  const totalDespFuturas = despFuturas.reduce((s, d) => s + d.valor, 0)
+  const totalDespFuturas = despFuturasTodas.reduce((s, d) => s + d.valor, 0)
+  // Horizonte: do mês atual até a despesa futura mais distante (em meses)
+  let horizonteMeses = 0
+  if (despFuturasTodas.length) {
+    const ultimaData = new Date(despFuturasTodas[despFuturasTodas.length - 1].data)
+    horizonteMeses = (ultimaData.getFullYear() - hoje.getFullYear()) * 12 + (ultimaData.getMonth() - hoje.getMonth())
+  }
 
   // ── Contas/despesas recorrentes ativas (cobram todo mês) ──
   const recorrentesAtivas = _despRec.filter(r => r.ativa).map(r => ({
@@ -334,9 +350,11 @@ function contextoIA() {
   const receitasRec = _recRec.filter(r => r.ativa).map(r => ({
     descricao: r.descricao, valor: Number(r.valor),
   }))
+  const totalReceitasRec = receitasRec.reduce((s, r) => s + r.valor, 0)
 
-  // ── Compromisso TOTAL próximos 6 meses (contas fixas × 6 + despesas futuras agendadas) ──
-  const compromissoTotal6m = +(totalRecMensal * 6 + totalDespFuturas).toFixed(2)
+  // ── Compromisso TOTAL no horizonte futuro (até a última despesa agendada) ──
+  const mesesProjetar = Math.max(6, horizonteMeses)
+  const compromissoFuturoTotal = +(totalRecMensal * mesesProjetar + totalDespFuturas).toFixed(2)
 
   // ── Caixinhas (saldos atuais) — com IDs pra IA poder mandar update ──
   const m = hoje.getMonth() + 1, y = hoje.getFullYear()
@@ -364,28 +382,36 @@ function contextoIA() {
     faturamento: {
       medio_6m: +fatMedio6m().toFixed(2),
       mes_atual: +fatMesAtual().toFixed(2),
-      ultimos_6_meses: fat6m,
+      ultimos_12_meses: fat12m,
+      futuro_lancado: fatFuturo,  // raro mas se tiver, mostra
       pct_alvo_aporte: Number(_cfg.aporte_pct_faturamento),
       aporte_sugerido_mensal: sugestaoAporteMensal(),
     },
     despesas_passadas: {
-      total_ultimos_3_meses: +totalDesp3m.toFixed(2),
-      media_mensal_3m: +(totalDesp3m / 3).toFixed(2),
-      por_categoria_3m: Object.fromEntries(Object.entries(despPorCat).map(([k,v]) => [k, +v.toFixed(2)])),
+      total_ultimos_12_meses: +totalDesp12m.toFixed(2),
+      media_mensal_12m: +(totalDesp12m / 12).toFixed(2),
+      por_categoria_12m: Object.fromEntries(Object.entries(despPorCat).map(([k,v]) => [k, +v.toFixed(2)])),
+      por_mes_12m: despPassadasPorMes,
     },
     despesas_futuras_agendadas: {
-      total_proximos_6_meses: +totalDespFuturas.toFixed(2),
-      qtd: despFuturas.length,
-      por_mes: despFuturasPorMes,
-      lista_completa: despFuturas,  // descricao + categoria + valor + data de cada uma
+      total: +totalDespFuturas.toFixed(2),
+      qtd: despFuturasTodas.length,
+      horizonte_meses: horizonteMeses,
+      ultima_data: despFuturasTodas[despFuturasTodas.length - 1]?.data || null,
+      por_mes: despFuturasPorMes,  // chave = "AAAA-MM" → {total, qtd, itens: [descrição texto]}
+      lista_completa: despFuturasTodas,  // descrição + categoria + valor + data de cada UMA
     },
     contas_fixas_mensais: {
       total: +totalRecMensal.toFixed(2),
       lista: recorrentesAtivas,
-      total_projetado_6m: +(totalRecMensal * 6).toFixed(2),
+      total_projetado_no_horizonte: +(totalRecMensal * mesesProjetar).toFixed(2),
+      meses_projetados: mesesProjetar,
     },
-    compromisso_total_proximos_6m: compromissoTotal6m,
-    receitas_recorrentes: receitasRec,
+    receitas_recorrentes: {
+      total_mensal: +totalReceitasRec.toFixed(2),
+      lista: receitasRec,
+    },
+    compromisso_futuro_total: compromissoFuturoTotal,
     metas: metasInfo,
     aportes: {
       total_geral: +_aportes.reduce((s, a) => s + Number(a.valor || 0), 0).toFixed(2),
@@ -416,12 +442,12 @@ ${JSON.stringify(ctx, null, 2)}
 \`\`\`
 
 Explicação dos campos:
-- **faturamento**: receita do negócio. \`medio_6m\` = média mensal; \`ultimos_6_meses\` = mês a mês detalhado
-- **despesas_passadas**: gastos pontuais (não-recorrentes) já efetuados, agregados em \`por_categoria_3m\`
-- **despesas_futuras_agendadas**: gastos pontuais AGENDADOS pros próximos 6 meses — \`lista_completa\` tem descrição/data/valor/categoria de cada um, \`por_mes\` mostra a curva mensal. USE ISSO pra avaliar se o aporte planejado cabe junto com esses compromissos
-- **contas_fixas_mensais**: assinaturas/contas recorrentes — \`total\` é o que sai fixo todo mês; \`total_projetado_6m\` = ×6
-- **compromisso_total_proximos_6m**: soma de contas fixas (×6) + despesas futuras agendadas — é o "fluxo de saída garantido" pros próximos 6 meses
-- **receitas_recorrentes**: o que entra todo mês (clientes mensais)
+- **faturamento**: receita do negócio. \`medio_6m\` = média mensal; \`ultimos_12_meses\` = mês a mês detalhado; \`futuro_lancado\` = receitas já confirmadas pra meses futuros (raras)
+- **despesas_passadas**: gastos pontuais já efetuados nos últimos 12 meses. \`por_categoria_12m\` (ia, infra, marketing, operacional, pessoal, outro); \`por_mes_12m\` mostra curva mensal
+- **despesas_futuras_agendadas**: TODOS os gastos pontuais agendados pra frente (sem limite). \`horizonte_meses\` = até onde vai a previsão; \`ultima_data\` = data da despesa mais distante; \`lista_completa\` com cada item; \`por_mes\` com curva. SE O USUÁRIO TEM CONTAS LANÇADAS ATÉ JANEIRO, ELAS ESTÃO TODAS AQUI
+- **contas_fixas_mensais**: assinaturas/contas recorrentes que cobram TODO mês. \`total\` é o fixo mensal; \`total_projetado_no_horizonte\` = total × meses_projetados (alcance do horizonte de despesas futuras)
+- **receitas_recorrentes**: o que entra todo mês (clientes mensais) — \`total_mensal\` + lista
+- **compromisso_futuro_total**: soma de contas fixas no horizonte + despesas futuras agendadas — TOTAL DE SAÍDA GARANTIDA até a última despesa lançada
 - **metas**: objetivos de poupança ("principal" = norte da pessoa, geralmente liberdade financeira)
 - **aportes**: histórico de aportes já feitos pras metas
 - **caixinhas**: envelope budgeting (tipo Will) — \`gasto\` = reseta no mês, \`reserva\` = acumula. Cada caixinha tem \`id\` — use o id quando for sugerir update/movimentação
