@@ -19,6 +19,7 @@ let _despRec = []   // despesas recorrentes (assinaturas, contas fixas)
 let _recRec  = []   // receitas recorrentes
 let _cxs     = []   // caixinhas (definição)
 let _cxsMov  = []   // caixinhas movimentações (gastos reais)
+let _planos  = []   // planos_fin (snapshot persistente de estratégia por meta)
 let _selicTimer = null  // setInterval handle pra re-fetch periódico
 
 // Simulador — qual meta + parâmetros + FASES (aporte muda ao longo do tempo)
@@ -73,7 +74,7 @@ export async function render() {
 async function loadAll() {
   // selectAll evita o limite de 1000 linhas/query do Supabase
   // (importante pra despesas e caixinhas_mov que podem crescer muito)
-  const [cfgRes, metasRes, apoRes, fatRes, dRes, drRes, rrRes, cxRes, cmRes] = await Promise.all([
+  const [cfgRes, metasRes, apoRes, fatRes, dRes, drRes, rrRes, cxRes, cmRes, plRes] = await Promise.all([
     db.from('config_fin').select('*').eq('id', 'main').maybeSingle(),
     db.from('metas_fin').select('*').neq('status', 'arquivada').order('principal', { ascending: false }).order('ordem'),
     selectAll('aportes_fin', { order: { column: 'data', ascending: false } }),
@@ -83,6 +84,7 @@ async function loadAll() {
     selectAll('receitas_recorrentes', { order: { column: 'criado_em', ascending: false } }),
     db.from('caixinhas').select('*').eq('ativa', true).order('ordem'),
     selectAll('caixinhas_mov', { order: { column: 'data', ascending: false } }),
+    db.from('planos_fin').select('*').eq('ativo', true),
   ])
 
   if (cfgRes.error)   toast('config_fin: ' + cfgRes.error.message, 'err')
@@ -98,6 +100,43 @@ async function loadAll() {
   _recRec  = (rrRes && !rrRes.error) ? (rrRes.data || []) : []
   _cxs     = (cxRes && !cxRes.error) ? (cxRes.data || []) : []
   _cxsMov  = (cmRes && !cmRes.error) ? (cmRes.data || []) : []
+  _planos  = (plRes && !plRes.error) ? (plRes.data || []) : []
+}
+
+// ─────────────────────── PLANOS (persistência) ──────────────────────
+function planoDeMeta(metaId) {
+  return _planos.find(p => p.meta_id === metaId)
+}
+
+// Salva (ou atualiza) o plano ativo de uma meta usando _sim como snapshot
+async function salvarPlano({ metaId, nome, fases, taxaAA, meses, pvInicial, alvo, projFinal }) {
+  if (!metaId) throw new Error('meta_id obrigatório')
+  // Desativa qualquer plano ativo anterior pra essa meta
+  await db.from('planos_fin').update({ ativo: false, atualizado_em: new Date().toISOString() })
+    .eq('meta_id', metaId).eq('ativo', true)
+
+  const d = {
+    meta_id:      metaId,
+    nome:         nome || 'Plano ' + new Date().toISOString().slice(0,10),
+    fases,
+    taxa_aa:      taxaAA,
+    meses_total:  meses,
+    pv_inicial:   pvInicial,
+    valor_alvo:   alvo,
+    proj_final:   projFinal,
+    ativo:        true,
+    atualizado_em: new Date().toISOString(),
+  }
+  const { error } = await db.from('planos_fin').insert(d)
+  if (error) throw error
+}
+
+// Aporte esperado no mês atual conforme o plano (mês = nº de meses desde criado_em)
+function aporteEsperadoPlanoMes(plano, refDate = new Date()) {
+  const criado = new Date(plano.criado_em)
+  const m = (refDate.getFullYear() - criado.getFullYear()) * 12 + (refDate.getMonth() - criado.getMonth())
+  if (m < 0 || m >= plano.meses_total) return 0
+  return pmtNoMes(plano.fases, m)
 }
 
 // Puxa Selic atual do Banco Central. Se BCB não responder (CORS, fora do
@@ -591,7 +630,13 @@ VOCÊ PODE AGIR NO SISTEMA. Inclua blocos quando fizer sentido — cada um vira 
 {"id": "uuid-aqui", "nome": "Gasolina"}
 \`\`\`
 
-Use IDs reais do contexto (caixinhas[].id). Use APENAS quando o usuário pedir explicitamente ou quando você tiver uma sugestão clara de reorganização. Não polua a resposta com muitos blocos — 1 a 3 por mensagem no máximo.`
+6. **Salvar PLANO** (estratégia de longo prazo vinculada a uma meta — fica persistido pra tracking):
+\`\`\`apply-plano-save
+{"meta_id": "uuid-da-meta", "nome": "Plano agressivo 100k", "fases": [{"inicio":0,"aporte":2500},{"inicio":3,"aporte":4000}], "taxa_aa": 14.25, "meses": 24}
+\`\`\`
+   Use isso quando o usuário disser "salvar como plano", "vamos com esse plano", ou aprovar uma estratégia que você sugeriu. Plano fica visível no card da meta com tracking mês a mês. Cada meta tem só 1 plano ativo (salvar novo desativa o anterior).
+
+Use IDs reais do contexto. Use APENAS quando o usuário pedir explicitamente ou quando você tiver uma sugestão clara. Não polua com muitos blocos — 1-3 por mensagem.`
 
   const modelos = [
     'anthropic/claude-sonnet-4.6',
@@ -776,6 +821,31 @@ async function aplicarAcao(act) {
       renderChatOnly()
       return
     }
+    case 'plano-save': {
+      if (!p.meta_id || !Array.isArray(p.fases) || !p.fases.length) throw new Error('meta_id e fases obrigatórios')
+      const meta = _metas.find(m => m.id === p.meta_id)
+      if (!meta) throw new Error('Meta não encontrada')
+      const pv = saldoMeta(meta)
+      const alvo = Number(meta.valor_alvo)
+      const taxa = +p.taxa_aa || _sim.taxa || 14.25
+      const meses = +p.meses || 24
+      const projecao = projetar({ pv, fases: p.fases, taxaAA: taxa, meses })
+      const projFinal = projecao[projecao.length - 1]?.saldo || null
+      await salvarPlano({
+        metaId: p.meta_id,
+        nome: p.nome || 'Plano IA',
+        fases: p.fases.map(f => ({ inicio: +f.inicio, aporte: +f.aporte })),
+        taxaAA: taxa,
+        meses,
+        pvInicial: pv,
+        alvo,
+        projFinal: projFinal != null ? +projFinal.toFixed(2) : null,
+      })
+      toast(`Plano "${p.nome || 'IA'}" salvo 📋`)
+      await loadAll()
+      render()
+      return
+    }
     default:
       throw new Error('Tipo de ação desconhecido: ' + act.tipo)
   }
@@ -938,6 +1008,14 @@ function describeAction(act) {
       const p = act.payload || {}
       return { label: `🗑️ Excluir caixinha`, desc: `"${p.nome || cx(p.id)?.nome || 'caixinha'}" — movimentações também serão removidas`, cls: 'bd', btn: 'Excluir' }
     }
+    case 'plano-save': {
+      const p = act.payload || {}
+      const meta = _metas.find(m => m.id === p.meta_id)
+      const fasesDesc = Array.isArray(p.fases)
+        ? p.fases.map(f => `${(+f.inicio)===0 ? 'M0' : 'M'+(+f.inicio)+'+'}: ${brl(+f.aporte)}`).join(' · ')
+        : '?'
+      return { label: `📋 Salvar plano "${p.nome || 'sem nome'}"`, desc: `Meta: ${meta?.icone || '🎯'} ${meta?.nome || '?'} · ${p.meses}m · ${p.taxa_aa}% · ${fasesDesc}`, btn: 'Salvar plano' }
+    }
     default:
       return { label: act.tipo, desc: JSON.stringify(act.payload).slice(0, 80) }
   }
@@ -991,6 +1069,8 @@ function renderHero(meta) {
         <span class="lib-chip"><b>Este mês</b> ${brl(apMes)} ${apMes >= sugAp ? '<span class="lib-ok">●</span>' : '<span class="lib-warn">●</span>'}</span>
         <span class="lib-chip"><b>Streak</b> ${streak} ${streak === 1 ? 'mês' : 'meses'} 🔥</span>
       </div>
+
+      ${renderPlanoCard(meta)}
     </div>
 
     <div class="lib-hero-right">
@@ -998,6 +1078,59 @@ function renderHero(meta) {
       <div class="lib-hero-acts">
         <button class="btn bp" data-aporte="${meta.id}">+ Aporte aqui</button>
         <button class="btn bg bsm" data-meta-edit="${meta.id}">⚙ Editar</button>
+      </div>
+    </div>
+  </div>`
+}
+
+function renderPlanoCard(meta) {
+  const plano = planoDeMeta(meta.id)
+  if (!plano) {
+    return `<div class="lib-plano-empty">
+      <span>📋 Sem plano ativo —</span>
+      <button class="lib-plano-link" data-plano-novo="${meta.id}">salvar simulação atual como plano</button>
+    </div>`
+  }
+  const aporteEsp = aporteEsperadoPlanoMes(plano)
+  const apMes = aportesMesAtual(meta.id)
+  const aderencia = aporteEsp > 0 ? Math.min(100, (apMes / aporteEsp) * 100) : 100
+  const aderenciaClass = aderencia >= 100 ? 'ok' : aderencia >= 70 ? 'warn' : 'late'
+
+  const criado = new Date(plano.criado_em)
+  const mesesDecorridos = (new Date().getFullYear() - criado.getFullYear()) * 12 + (new Date().getMonth() - criado.getMonth())
+  const mesesRest = Math.max(0, plano.meses_total - mesesDecorridos)
+
+  // Recalcula ETA real baseado no saldo atual + fases restantes
+  const saldoAtual = saldoMeta(meta)
+  const mAteMeta = mesesAteMeta({ pv: saldoAtual, fases: plano.fases, taxaAA: Number(plano.taxa_aa), meta: Number(plano.valor_alvo) })
+
+  const fasesDesc = (plano.fases || [])
+    .map(f => `<span class="lib-plano-fase">${(+f.inicio)===0 ? 'M0' : 'M'+(+f.inicio)+'+'} <b>${brl(+f.aporte)}</b></span>`)
+    .join('<span class="lib-plano-fase-sep">›</span>')
+
+  return `
+  <div class="lib-plano">
+    <div class="lib-plano-head">
+      <div class="lib-plano-tit">
+        <span class="lib-plano-ico">📋</span>
+        <span class="lib-plano-nome">${escapeHtml(plano.nome)}</span>
+        <span class="lib-plano-meta">criado ${fmtd(plano.criado_em.slice(0,10))} · ${mesesDecorridos}/${plano.meses_total}m</span>
+      </div>
+      <button class="lib-plano-edit" data-plano-del="${plano.id}" title="Remover plano">×</button>
+    </div>
+    <div class="lib-plano-fases">${fasesDesc}</div>
+    <div class="lib-plano-stats">
+      <div class="lib-plano-stat">
+        <div class="lib-plano-stat-lbl">Aporte esperado este mês</div>
+        <div class="lib-plano-stat-val">${brl(aporteEsp)}</div>
+      </div>
+      <div class="lib-plano-stat">
+        <div class="lib-plano-stat-lbl">Aporte feito este mês</div>
+        <div class="lib-plano-stat-val ${aderenciaClass}">${brl(apMes)} <small>(${aderencia.toFixed(0)}%)</small></div>
+      </div>
+      <div class="lib-plano-stat">
+        <div class="lib-plano-stat-lbl">ETA atual</div>
+        <div class="lib-plano-stat-val">${mAteMeta != null ? `${mAteMeta}m · ${dataFutura(mAteMeta)}` : '—'}</div>
       </div>
     </div>
   </div>`
@@ -1030,6 +1163,7 @@ function renderMetaCard(meta) {
       ${concluida
         ? '<span class="lib-done-tag">✓ Atingida</span>'
         : `<span>${mAte != null ? `${mAte}m no ritmo` : 'sem prazo'}</span>`}
+      ${planoDeMeta(meta.id) ? `<span class="lib-plano-flag" title="Plano ativo">📋</span>` : ''}
     </div>
     <div class="lib-meta-acts">
       <button class="btn bp bsm" data-aporte="${meta.id}">+ Aporte</button>
@@ -1109,6 +1243,7 @@ function renderSimulator(meta) {
           ` : ''}
         </div>
       </div>
+      <button class="btn bp bsm" id="lib-salvar-plano" title="Salvar essas fases como plano persistente">📋 Salvar como plano</button>
     </div>
 
     <div class="lib-sim">
@@ -1526,13 +1661,58 @@ function wire(root) {
       render()
     }))
 
+  // Botão "Salvar como plano"
+  root.querySelector('#lib-salvar-plano')?.addEventListener('click', async () => {
+    const meta = _metas.find(m => m.id === _sim.metaId) || _metas.find(m => m.principal) || _metas[0]
+    if (!meta) return toast('Sem meta selecionada', 'err')
+    const nome = prompt('Nome do plano:', `Plano ${new Date().toLocaleDateString('pt-BR')}`)
+    if (!nome) return
+    try {
+      const pv = saldoMeta(meta)
+      const proj = projetar({ pv, fases: _sim.fases, taxaAA: _sim.taxa, meses: _sim.meses })
+      await salvarPlano({
+        metaId: meta.id,
+        nome,
+        fases: _sim.fases.map(f => ({ inicio: +f.inicio, aporte: +f.aporte })),
+        taxaAA: _sim.taxa,
+        meses: _sim.meses,
+        pvInicial: pv,
+        alvo: Number(meta.valor_alvo),
+        projFinal: +proj[proj.length-1].saldo.toFixed(2),
+      })
+      toast('Plano salvo 📋')
+      await loadAll(); render()
+    } catch (err) {
+      toast('Erro: ' + err.message, 'err')
+    }
+  })
+
   // Delegação geral
   root.addEventListener('click', async e => {
-    const aporte  = e.target.closest('[data-aporte]')
-    const sim     = e.target.closest('[data-sim]')
-    const edit    = e.target.closest('[data-meta-edit]')
-    const del     = e.target.closest('.lib-ap-del')
-    const refresh = e.target.closest('#lib-selic-refresh')
+    const aporte   = e.target.closest('[data-aporte]')
+    const sim      = e.target.closest('[data-sim]')
+    const edit     = e.target.closest('[data-meta-edit]')
+    const del      = e.target.closest('.lib-ap-del')
+    const refresh  = e.target.closest('#lib-selic-refresh')
+    const planoDel = e.target.closest('[data-plano-del]')
+    const planoNov = e.target.closest('[data-plano-novo]')
+
+    if (planoDel) {
+      e.stopPropagation()
+      if (!confirm('Remover esse plano? O tracking deixa de aparecer.')) return
+      const { error } = await db.from('planos_fin').update({ ativo: false, atualizado_em: new Date().toISOString() }).eq('id', planoDel.dataset.planoDel)
+      if (error) return toast('Erro: ' + error.message, 'err')
+      toast('Plano removido'); await loadAll(); render()
+      return
+    }
+    if (planoNov) {
+      // Atalho: copia fases atuais do simulador como plano da meta (vai usar o que tá lá)
+      const metaId = planoNov.dataset.planoNovo
+      _sim.metaId = metaId
+      render()
+      setTimeout(() => document.getElementById('lib-salvar-plano')?.click(), 100)
+      return
+    }
 
     if (refresh) {
       e.stopPropagation()

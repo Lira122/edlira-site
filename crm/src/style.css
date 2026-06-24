@@ -1573,6 +1573,113 @@ body[data-view="pipeline"] .kcards { flex: 1; overflow-y: auto; min-height: 0; }
 }
 .lib-fase-del:hover { background: rgba(255,92,92,.18); }
 
+/* ═══════════════════ PLANO (estratégia salva por meta) ═══════════════ */
+.lib-plano {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(167,139,250,.08) 0%, rgba(74,158,255,.04) 100%);
+  border: 1px solid rgba(167,139,250,.25);
+  border-radius: 12px;
+}
+.lib-plano-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-bottom: 10px;
+}
+.lib-plano-tit { display: flex; align-items: baseline; gap: 8px; flex: 1; min-width: 0; flex-wrap: wrap; }
+.lib-plano-ico { font-size: 14px; }
+.lib-plano-nome {
+  font-size: 14px; font-weight: 700; color: var(--text);
+  letter-spacing: -.01em;
+}
+.lib-plano-meta {
+  font-family: var(--ff-mono, monospace);
+  font-size: 10.5px; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: .12em;
+}
+.lib-plano-edit {
+  background: none; border: 1px solid rgba(255,255,255,.06);
+  color: var(--text-3); cursor: pointer;
+  width: 24px; height: 24px; border-radius: 6px;
+  font-size: 14px; line-height: 1;
+  transition: background 140ms, color 140ms;
+}
+.lib-plano-edit:hover { background: rgba(255,92,92,.1); color: var(--danger); border-color: rgba(255,92,92,.3); }
+
+.lib-plano-fases {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 8px 10px;
+  background: rgba(0,0,0,.2);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-family: var(--ff-mono, monospace);
+}
+.lib-plano-fase {
+  font-size: 11px; color: var(--text-2);
+  text-transform: uppercase; letter-spacing: .08em;
+}
+.lib-plano-fase b { color: #C7B3FB; font-weight: 700; font-size: 12px; margin-left: 2px; }
+.lib-plano-fase-sep { color: var(--text-3); font-size: 11px; }
+
+.lib-plano-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.lib-plano-stat {
+  background: rgba(0,0,0,.18);
+  border-radius: 8px;
+  padding: 9px 11px;
+}
+.lib-plano-stat-lbl {
+  font-family: var(--ff-mono, monospace);
+  font-size: 9.5px; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: .12em;
+  margin-bottom: 4px;
+}
+.lib-plano-stat-val {
+  font-family: var(--ff-display, 'Inter', sans-serif);
+  font-size: 14px; font-weight: 700; color: var(--text);
+  letter-spacing: -.01em; font-variant-numeric: tabular-nums;
+}
+.lib-plano-stat-val small {
+  font-size: 10.5px; font-weight: 500; color: var(--text-3); margin-left: 4px;
+}
+.lib-plano-stat-val.ok   { color: #34D399; }
+.lib-plano-stat-val.warn { color: var(--warn); }
+.lib-plano-stat-val.late { color: var(--danger); }
+
+/* Empty state — "Sem plano ativo" */
+.lib-plano-empty {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,.02);
+  border: 1px dashed rgba(255,255,255,.1);
+  border-radius: 10px;
+  font-size: 12px; color: var(--text-3);
+  flex-wrap: wrap;
+}
+.lib-plano-link {
+  background: none; border: none;
+  color: var(--accent); cursor: pointer;
+  font: inherit; font-size: 12px; font-weight: 600;
+  text-decoration: underline;
+  padding: 0;
+}
+.lib-plano-link:hover { opacity: .85; }
+
+/* Flag pequena no card de outras metas */
+.lib-plano-flag {
+  display: inline-block;
+  font-size: 12px;
+  margin-left: 4px;
+  filter: drop-shadow(0 0 4px rgba(167,139,250,.5));
+}
+
+@media (max-width: 560px) {
+  .lib-plano-stats { grid-template-columns: 1fr; }
+}
+
 /* ═══════════════════ CHAT IA (drawer lateral) ═══════════════════ */
 /* FAB flutuante */
 .lib-fab {
