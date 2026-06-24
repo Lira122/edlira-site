@@ -288,13 +288,14 @@ function contextoIA() {
     fat6m.push({ mes: `${y}-${String(m).padStart(2,'0')}`, valor: +v.toFixed(2) })
   }
 
-  // ── Despesas POR CATEGORIA últimos 3 meses ─
+  // ── Despesas PASSADAS últimos 3 meses por categoria ──
+  const hojeStr = today
   const ym3m = []
   for (let k = 0; k <= 2; k++) {
     const d = new Date(hoje.getFullYear(), hoje.getMonth() - k, 1)
     ym3m.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`)
   }
-  const desp3m = _desp.filter(d => ym3m.some(ym => (d.data||'').startsWith(ym)))
+  const desp3m = _desp.filter(d => ym3m.some(ym => (d.data||'').startsWith(ym)) && (d.data || '') <= hojeStr)
   const despPorCat = {}
   for (const d of desp3m) {
     const cat = d.categoria || 'outro'
@@ -302,7 +303,30 @@ function contextoIA() {
   }
   const totalDesp3m = Object.values(despPorCat).reduce((s, v) => s + v, 0)
 
-  // ── Contas/despesas recorrentes ativas ──
+  // ── Despesas FUTURAS (próximos 6 meses) ── ❗ o que estava faltando
+  const limiteFuturo = new Date(hoje.getFullYear(), hoje.getMonth() + 7, 0).toISOString().slice(0,10)
+  const despFuturas = _desp
+    .filter(d => (d.data || '') > hojeStr && (d.data || '') <= limiteFuturo)
+    .sort((a, b) => (a.data || '').localeCompare(b.data || ''))
+    .map(d => ({
+      data: d.data,
+      descricao: d.descricao || '(sem descrição)',
+      categoria: d.categoria || 'outro',
+      valor: Number(d.valor || 0),
+    }))
+  // Agrupa por mês pra IA enxergar a curva
+  const despFuturasPorMes = {}
+  for (const d of despFuturas) {
+    const ym = d.data.slice(0,7)
+    if (!despFuturasPorMes[ym]) despFuturasPorMes[ym] = { total: 0, qtd: 0, itens: [] }
+    despFuturasPorMes[ym].total += d.valor
+    despFuturasPorMes[ym].qtd++
+    despFuturasPorMes[ym].itens.push(`${d.data}: ${d.descricao} (${d.categoria}) — R$${d.valor.toFixed(2)}`)
+  }
+  for (const k of Object.keys(despFuturasPorMes)) despFuturasPorMes[k].total = +despFuturasPorMes[k].total.toFixed(2)
+  const totalDespFuturas = despFuturas.reduce((s, d) => s + d.valor, 0)
+
+  // ── Contas/despesas recorrentes ativas (cobram todo mês) ──
   const recorrentesAtivas = _despRec.filter(r => r.ativa).map(r => ({
     descricao: r.descricao, valor: Number(r.valor), categoria: r.categoria, dia: r.dia_vencimento || null,
   }))
@@ -311,7 +335,10 @@ function contextoIA() {
     descricao: r.descricao, valor: Number(r.valor),
   }))
 
-  // ── Caixinhas (saldos atuais) ───────────
+  // ── Compromisso TOTAL próximos 6 meses (contas fixas × 6 + despesas futuras agendadas) ──
+  const compromissoTotal6m = +(totalRecMensal * 6 + totalDespFuturas).toFixed(2)
+
+  // ── Caixinhas (saldos atuais) — com IDs pra IA poder mandar update ──
   const m = hoje.getMonth() + 1, y = hoje.getFullYear()
   const caixinhasInfo = _cxs.map(c => {
     const mStr = `${y}-${String(m).padStart(2,'0')}`
@@ -319,10 +346,12 @@ function contextoIA() {
       .reduce((s, x) => s + Number(x.valor || 0), 0)
     const saldoMesAtual = c.tipo === 'gasto'
       ? Number(c.valor_mensal) - usadoMes
-      : null  // reserva: complexo de calcular, dou só o usado
+      : null
     return {
+      id: c.id,
       nome: c.nome, tipo: c.tipo,
       valor_mensal: Number(c.valor_mensal),
+      icone: c.icone, cor: c.cor,
       usado_mes_atual: +usadoMes.toFixed(2),
       saldo_mes_atual: saldoMesAtual !== null ? +saldoMesAtual.toFixed(2) : null,
     }
@@ -339,15 +368,23 @@ function contextoIA() {
       pct_alvo_aporte: Number(_cfg.aporte_pct_faturamento),
       aporte_sugerido_mensal: sugestaoAporteMensal(),
     },
-    despesas: {
+    despesas_passadas: {
       total_ultimos_3_meses: +totalDesp3m.toFixed(2),
       media_mensal_3m: +(totalDesp3m / 3).toFixed(2),
       por_categoria_3m: Object.fromEntries(Object.entries(despPorCat).map(([k,v]) => [k, +v.toFixed(2)])),
     },
+    despesas_futuras_agendadas: {
+      total_proximos_6_meses: +totalDespFuturas.toFixed(2),
+      qtd: despFuturas.length,
+      por_mes: despFuturasPorMes,
+      lista_completa: despFuturas,  // descricao + categoria + valor + data de cada uma
+    },
     contas_fixas_mensais: {
       total: +totalRecMensal.toFixed(2),
       lista: recorrentesAtivas,
+      total_projetado_6m: +(totalRecMensal * 6).toFixed(2),
     },
+    compromisso_total_proximos_6m: compromissoTotal6m,
     receitas_recorrentes: receitasRec,
     metas: metasInfo,
     aportes: {
@@ -379,29 +416,55 @@ ${JSON.stringify(ctx, null, 2)}
 \`\`\`
 
 Explicação dos campos:
-- **faturamento**: receita do negócio. \`medio_6m\` = média mensal últimos 6 meses; \`ultimos_6_meses\` = mês a mês
-- **despesas**: gastos pontuais (não-recorrentes). Vem agregado em \`por_categoria_3m\` (ia, infra, marketing, operacional, pessoal, outro)
-- **contas_fixas_mensais**: assinaturas e contas que se repetem todo mês (despesas recorrentes ativas) — \`total\` é o quanto sai fixo todo mês
-- **receitas_recorrentes**: receitas que entram todo mês (clientes recorrentes, etc)
-- **metas**: objetivos de poupança/investimento (a "principal" = liberdade financeira R$100k)
+- **faturamento**: receita do negócio. \`medio_6m\` = média mensal; \`ultimos_6_meses\` = mês a mês detalhado
+- **despesas_passadas**: gastos pontuais (não-recorrentes) já efetuados, agregados em \`por_categoria_3m\`
+- **despesas_futuras_agendadas**: gastos pontuais AGENDADOS pros próximos 6 meses — \`lista_completa\` tem descrição/data/valor/categoria de cada um, \`por_mes\` mostra a curva mensal. USE ISSO pra avaliar se o aporte planejado cabe junto com esses compromissos
+- **contas_fixas_mensais**: assinaturas/contas recorrentes — \`total\` é o que sai fixo todo mês; \`total_projetado_6m\` = ×6
+- **compromisso_total_proximos_6m**: soma de contas fixas (×6) + despesas futuras agendadas — é o "fluxo de saída garantido" pros próximos 6 meses
+- **receitas_recorrentes**: o que entra todo mês (clientes mensais)
+- **metas**: objetivos de poupança ("principal" = norte da pessoa, geralmente liberdade financeira)
 - **aportes**: histórico de aportes já feitos pras metas
-- **caixinhas**: envelope budgeting (tipo Will) — \`gasto\` = reseta no mês, \`reserva\` = acumula; \`saldo_mes_atual\` mostra quanto sobrou da caixinha esse mês
-- **simulador_atual**: o que ele tá projetando agora no simulador (fases de aporte, taxa, prazo)
+- **caixinhas**: envelope budgeting (tipo Will) — \`gasto\` = reseta no mês, \`reserva\` = acumula. Cada caixinha tem \`id\` — use o id quando for sugerir update/movimentação
+- **simulador_atual**: o que ele tá projetando agora (fases de aporte, taxa, prazo)
 
 Regras:
 - Valores em **R$** com vírgula (R$ 1.234,56)
-- Taxa Selic atual: ${ctx.selic_aa}% a.a. (referência conservadora de juros)
-- LUCRO LÍQUIDO REAL ≈ faturamento.mes_atual − contas_fixas_mensais.total − (despesas pontuais do mês). Use isso pra avaliar capacidade de aporte real
-- Faz contas de cabeça com números reais (juros compostos: FV = PV·(1+i)^n + PMT·((1+i)^n−1)/i com i mensal)
-- Quando você quiser **sugerir uma mudança de fases pro simulador**, inclua um bloco assim no final:
+- Taxa Selic atual: ${ctx.selic_aa}% a.a.
+- LUCRO LÍQUIDO REAL = faturamento.mes_atual − contas_fixas_mensais.total − despesas_futuras_agendadas (no mês) − despesas_passadas (no mês). É a capacidade de aporte real
+- Faz contas de cabeça (juros compostos: FV = PV·(1+i)^n + PMT·((1+i)^n−1)/i com i mensal)
+- Não invente dados que não estão no contexto. Se faltar, pergunta
+- Respostas curtas e práticas (2-4 parágrafos), a não ser que ele peça detalhe
+- Pode ser provocativo se ele tiver gastando mais do que faturando ou aportando pouco
+
+VOCÊ PODE AGIR NO SISTEMA. Inclua blocos quando fizer sentido — cada um vira um botão "Aplicar" no chat:
+
+1. **Mudar fases do simulador**:
 \`\`\`apply-fases
 [{"inicio": 0, "aporte": 2500}, {"inicio": 6, "aporte": 4000}]
 \`\`\`
-  Vai aparecer botão "Aplicar" pra ele adotar na hora.
-- Quando ele "viajar na maionese" (cenários hipotéticos), entra na brincadeira e faz a conta. Ex: "e se eu vender meu carro e jogar 30k?" → simula
-- Não invente dados que não estão no contexto. Se faltar, pergunta
-- Respostas curtas e práticas (2-4 parágrafos), a não ser que ele peça detalhe
-- Pode ser provocativo se ele tiver gastando mais do que faturando ou aportando pouco do faturamento`
+
+2. **Criar caixinha nova**:
+\`\`\`apply-caixinha-create
+{"nome": "Lazer", "valor_mensal": 300, "tipo": "gasto", "icone": "🎬", "cor": "#A78BFA"}
+\`\`\`
+   (tipo: "gasto" reseta no mês | "reserva" acumula | ícones: ⛽🚗🏠🛒🍔💊🎬📱✈️🎁🏥💼🐾🎓🆘💰)
+
+3. **Atualizar caixinha existente** (ex: aumentar valor mensal alocado, mudar nome):
+\`\`\`apply-caixinha-update
+{"id": "uuid-aqui", "valor_mensal": 500, "nome": "Gasolina novo"}
+\`\`\`
+
+4. **Registrar gasto numa caixinha**:
+\`\`\`apply-caixinha-mov
+{"caixinha_id": "uuid-aqui", "valor": 80, "descricao": "Posto Shell", "data": "${ctx.hoje}"}
+\`\`\`
+
+5. **Excluir caixinha**:
+\`\`\`apply-caixinha-delete
+{"id": "uuid-aqui", "nome": "Gasolina"}
+\`\`\`
+
+Use IDs reais do contexto (caixinhas[].id). Use APENAS quando o usuário pedir explicitamente ou quando você tiver uma sugestão clara de reorganização. Não polua a resposta com muitos blocos — 1 a 3 por mensagem no máximo.`
 
   const modelos = [
     'anthropic/claude-sonnet-4.6',
@@ -494,21 +557,98 @@ function wireChat(root) {
   root.querySelectorAll('.lib-chat-sug-btn').forEach(b =>
     b.addEventListener('click', () => enviarMsg(b.dataset.sug)))
 
-  // Aplicar sugestão de fases
+  // Aplicar ação sugerida pela IA (fases ou caixinhas)
   root.querySelectorAll('.lib-chat-apply').forEach(el => {
     const btn = el.querySelector('.btn')
-    btn?.addEventListener('click', () => {
+    btn?.addEventListener('click', async () => {
       try {
-        const fases = JSON.parse(el.dataset.apply)
-        _sim.fases = fases.sort((a,b) => a.inicio - b.inicio)
-        toast('Fases aplicadas no simulador 🎯')
-        render()
-        setTimeout(() => document.querySelector('.lib-sim')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100)
+        const act = JSON.parse(el.dataset.action)
+        await aplicarAcao(act)
+        btn.disabled = true
+        btn.textContent = '✓ Feito'
       } catch (e) {
         toast('Erro ao aplicar: ' + e.message, 'err')
       }
     })
   })
+}
+
+async function aplicarAcao(act) {
+  const p = act.payload || {}
+  switch (act.tipo) {
+    case 'fases': {
+      if (!Array.isArray(p)) throw new Error('payload inválido')
+      _sim.fases = p
+        .filter(f => Number.isFinite(+f.inicio) && Number.isFinite(+f.aporte))
+        .map(f => ({ inicio: +f.inicio, aporte: +f.aporte }))
+        .sort((a,b) => a.inicio - b.inicio)
+      // Auto-estende prazo se precisar
+      const ultima = _sim.fases[_sim.fases.length - 1]
+      if (ultima && ultima.inicio + 6 > _sim.meses) _sim.meses = Math.min(240, ultima.inicio + 24)
+      toast('Fases aplicadas no simulador 🎯')
+      render()
+      setTimeout(() => document.querySelector('.lib-sim')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100)
+      return
+    }
+    case 'caixinha-create': {
+      if (!p.nome || !(+p.valor_mensal > 0)) throw new Error('nome e valor_mensal obrigatórios')
+      const d = {
+        nome: p.nome,
+        valor_mensal: +p.valor_mensal,
+        tipo: p.tipo === 'reserva' ? 'reserva' : 'gasto',
+        icone: p.icone || '💰',
+        cor: p.cor || '#4A9EFF',
+      }
+      const { error } = await db.from('caixinhas').insert(d)
+      if (error) throw error
+      toast(`Caixinha "${p.nome}" criada 📦`)
+      await loadAll()
+      renderChatOnly()
+      return
+    }
+    case 'caixinha-update': {
+      if (!p.id) throw new Error('id obrigatório')
+      const upd = { atualizado_em: new Date().toISOString() }
+      if (p.nome) upd.nome = p.nome
+      if (p.valor_mensal != null) upd.valor_mensal = +p.valor_mensal
+      if (p.tipo) upd.tipo = p.tipo === 'reserva' ? 'reserva' : 'gasto'
+      if (p.icone) upd.icone = p.icone
+      if (p.cor) upd.cor = p.cor
+      const { error } = await db.from('caixinhas').update(upd).eq('id', p.id)
+      if (error) throw error
+      toast('Caixinha atualizada ✏️')
+      await loadAll()
+      renderChatOnly()
+      return
+    }
+    case 'caixinha-mov': {
+      if (!p.caixinha_id || !(+p.valor > 0)) throw new Error('caixinha_id e valor obrigatórios')
+      const d = {
+        caixinha_id: p.caixinha_id,
+        valor: +p.valor,
+        data: p.data || new Date().toISOString().slice(0,10),
+        descricao: p.descricao || null,
+      }
+      const { error } = await db.from('caixinhas_mov').insert(d)
+      if (error) throw error
+      toast('Gasto registrado 💸')
+      await loadAll()
+      renderChatOnly()
+      return
+    }
+    case 'caixinha-delete': {
+      if (!p.id) throw new Error('id obrigatório')
+      if (!confirm(`Excluir caixinha "${p.nome || ''}"? Movimentações também serão removidas.`)) return
+      const { error } = await db.from('caixinhas').delete().eq('id', p.id)
+      if (error) throw error
+      toast('Caixinha excluída')
+      await loadAll()
+      renderChatOnly()
+      return
+    }
+    default:
+      throw new Error('Tipo de ação desconhecido: ' + act.tipo)
+  }
 }
 
 // ───────────────────────────── LAYOUT ───────────────────────────────
@@ -596,32 +736,81 @@ function renderChatDrawer() {
 }
 
 function renderMsg(m) {
-  // Parse pra detectar tag de sugestão de fases
-  const sug = parseSugFases(m.content)
-  const cleanContent = sug ? m.content.replace(/```apply-fases[\s\S]*?```/g, '').trim() : m.content
+  const actions = parseActions(m.content)
+  // Remove os blocos de ação da resposta visível
+  const cleanContent = m.content.replace(/```apply-[a-z-]+[\s\S]*?```/g, '').trim()
   const html = mdLite(cleanContent)
   const role = m.role === 'user' ? 'user' : 'ai'
 
-  let applyBtn = ''
-  if (sug) {
-    const desc = sug.map(f => `${f.inicio === 0 ? 'Início' : `mês ${f.inicio}+`}: ${brl(f.aporte)}`).join(' · ')
-    applyBtn = `
-      <div class="lib-chat-apply" data-apply='${escapeAttr(JSON.stringify(sug))}'>
+  const applyBtns = actions.map((act, i) => {
+    const meta = describeAction(act)
+    return `
+      <div class="lib-chat-apply" data-action='${escapeAttr(JSON.stringify(act))}'>
         <div class="lib-chat-apply-info">
-          <div class="lib-chat-apply-lbl">💡 Sugestão pro simulador</div>
-          <div class="lib-chat-apply-desc">${desc}</div>
+          <div class="lib-chat-apply-lbl">${meta.label}</div>
+          <div class="lib-chat-apply-desc">${meta.desc}</div>
         </div>
-        <button class="btn bp bsm">Aplicar</button>
+        <button class="btn ${meta.cls || 'bp'} bsm">${meta.btn || 'Aplicar'}</button>
       </div>`
-  }
+  }).join('')
 
   return `<div class="lib-msg ${role}">
     ${role === 'ai' ? '<div class="lib-msg-avatar">🤖</div>' : ''}
     <div class="lib-msg-bubble">
       ${html}
-      ${applyBtn}
+      ${applyBtns}
     </div>
   </div>`
+}
+
+// Procura todos os blocos ```apply-xxx [...] ``` na resposta
+function parseActions(text) {
+  const actions = []
+  const re = /```apply-([a-z-]+)\s*([\s\S]*?)```/g
+  let m
+  while ((m = re.exec(text)) !== null) {
+    const tipo = m[1]
+    try {
+      const payload = JSON.parse(m[2].trim())
+      actions.push({ tipo, payload })
+    } catch (_) { /* ignora JSON inválido */ }
+  }
+  return actions
+}
+
+// Descreve a ação pro card de "Aplicar"
+function describeAction(act) {
+  const cx = (id) => _cxs.find(c => c.id === id)
+  switch (act.tipo) {
+    case 'fases': {
+      const arr = Array.isArray(act.payload) ? act.payload : []
+      const desc = arr.map(f => `${(+f.inicio) === 0 ? 'Início' : `mês ${+f.inicio}+`}: ${brl(+f.aporte)}`).join(' · ')
+      return { label: '💡 Sugestão pro simulador', desc, btn: 'Aplicar fases' }
+    }
+    case 'caixinha-create': {
+      const p = act.payload || {}
+      return { label: '📦 Criar caixinha', desc: `${p.icone || '💰'} ${p.nome || '?'} · ${brl(+p.valor_mensal || 0)}/mês · ${p.tipo === 'reserva' ? 'reserva' : 'gasto'}`, btn: 'Criar' }
+    }
+    case 'caixinha-update': {
+      const p = act.payload || {}; const c = cx(p.id)
+      const muda = []
+      if (p.nome && p.nome !== c?.nome) muda.push(`nome → "${p.nome}"`)
+      if (p.valor_mensal != null && +p.valor_mensal !== +c?.valor_mensal) muda.push(`valor → ${brl(+p.valor_mensal)}`)
+      if (p.icone && p.icone !== c?.icone) muda.push(`ícone → ${p.icone}`)
+      if (p.cor && p.cor !== c?.cor) muda.push('nova cor')
+      return { label: `✏️ Atualizar "${c?.nome || 'caixinha'}"`, desc: muda.join(' · ') || 'sem mudanças', btn: 'Aplicar' }
+    }
+    case 'caixinha-mov': {
+      const p = act.payload || {}; const c = cx(p.caixinha_id)
+      return { label: `− Gasto em "${c?.nome || 'caixinha'}"`, desc: `${p.data || 'hoje'} · ${brl(+p.valor || 0)} · ${p.descricao || 'sem desc'}`, btn: 'Registrar' }
+    }
+    case 'caixinha-delete': {
+      const p = act.payload || {}
+      return { label: `🗑️ Excluir caixinha`, desc: `"${p.nome || cx(p.id)?.nome || 'caixinha'}" — movimentações também serão removidas`, cls: 'bd', btn: 'Excluir' }
+    }
+    default:
+      return { label: act.tipo, desc: JSON.stringify(act.payload).slice(0, 80) }
+  }
 }
 
 // Markdown light — quebra linha, **negrito**, *itálico*, listas simples, código `inline`
@@ -635,17 +824,6 @@ function mdLite(s) {
     .replace(/\n/g, '<br>')
 }
 function escapeAttr(s) { return String(s).replace(/'/g, '&#39;').replace(/"/g, '&quot;') }
-
-// Procura ```apply-fases [{...}] ``` na resposta — se achar, devolve array de fases
-function parseSugFases(text) {
-  const m = text.match(/```apply-fases\s*([\s\S]*?)```/)
-  if (!m) return null
-  try {
-    const arr = JSON.parse(m[1].trim())
-    if (!Array.isArray(arr) || !arr.every(f => Number.isFinite(+f.inicio) && Number.isFinite(+f.aporte))) return null
-    return arr.map(f => ({ inicio: +f.inicio, aporte: +f.aporte }))
-  } catch (_) { return null }
-}
 
 function renderEmpty() {
   return `<div class="empty" style="padding:60px;text-align:center">
