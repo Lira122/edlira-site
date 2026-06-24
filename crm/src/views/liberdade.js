@@ -358,6 +358,78 @@ function contextoIA() {
   const mesesProjetar = Math.max(6, horizonteMeses)
   const compromissoFuturoTotal = +(totalRecMensal * mesesProjetar + totalDespFuturas).toFixed(2)
 
+  // ── PROJEÇÃO CONSOLIDADA MÊS A MÊS (a fonte da verdade pra IA) ──
+  // Calcula tudo: receita prevista, despesas, sobra. IA usa essa tabela
+  // direto sem precisar somar coisas separadas (que tava errando).
+  const aportePctMes = Number(_cfg.aporte_pct_faturamento || 20) / 100
+  const totalAlocCaixinhasMensal = _cxs.reduce((s, c) => s + Number(c.valor_mensal || 0), 0)
+
+  const projecaoMensal = []
+  for (let k = 0; k <= Math.max(12, mesesProjetar); k++) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() + k, 1)
+    const mm = d.getMonth() + 1, yy = d.getFullYear()
+    const ym = `${yy}-${String(mm).padStart(2,'0')}`
+    const isPast = k < 0  // sempre false aqui, mas mantém legível
+    const isCurrent = k === 0
+
+    // Receita: lançada (_fat) + recorrente ativa (se ainda não está lançada esse mês)
+    const fatLancado = _fat.filter(f => f.mes === mm && f.ano === yy)
+      .reduce((s, f) => s + Number(f.valor || 0), 0)
+    // Receita recorrente ainda não materializada (só conta pra futuro / mês atual)
+    let recPend = 0
+    for (const r of _recRec) {
+      if (!r.ativa) continue
+      const jaTem = _fat.some(f => f.recorrente_id === r.id && f.mes === mm && f.ano === yy)
+      if (!jaTem) recPend += Number(r.valor || 0)
+    }
+    const receitaTotal = fatLancado + recPend
+
+    // Despesas: pontuais lançadas + recorrentes que cobram todo mês
+    const despPontuais = _desp.filter(x => (x.data || '').startsWith(ym))
+      .reduce((s, x) => s + Number(x.valor || 0), 0)
+    let despRecPend = 0
+    for (const r of _despRec) {
+      if (!r.ativa) continue
+      const jaTem = _desp.some(x => x.recorrente_id === r.id && (x.data || '').startsWith(ym))
+      if (!jaTem) despRecPend += Number(r.valor || 0)
+    }
+    const despesaTotal = despPontuais + despRecPend
+
+    // Aportes registrados nesse mês (Liberdade)
+    const aportesNoMes = _aportes.filter(a => (a.data || '').startsWith(ym))
+      .reduce((s, a) => s + Number(a.valor || 0), 0)
+
+    // Caixinhas: gasto efetivo no mês + alocação mensal (compromisso fixo)
+    const cxsUsadoMes = _cxsMov.filter(x => (x.data || '').startsWith(ym))
+      .reduce((s, x) => s + Number(x.valor || 0), 0)
+
+    const lucroBruto = receitaTotal - despesaTotal
+    const sobraPosAporte = lucroBruto - aportesNoMes - totalAlocCaixinhasMensal
+    const aporteSugeridoMes = Math.round(receitaTotal * aportePctMes)
+
+    projecaoMensal.push({
+      mes: ym,
+      receita_prevista: +receitaTotal.toFixed(2),
+      _receita_breakdown: {
+        lancada: +fatLancado.toFixed(2),
+        recorrente_pendente: +recPend.toFixed(2),
+      },
+      despesa_prevista: +despesaTotal.toFixed(2),
+      _despesa_breakdown: {
+        pontuais_lancadas: +despPontuais.toFixed(2),
+        recorrentes_pendentes: +despRecPend.toFixed(2),
+      },
+      lucro_bruto: +lucroBruto.toFixed(2),
+      aporte_registrado: +aportesNoMes.toFixed(2),
+      caixinhas_alocacao_fixa: +totalAlocCaixinhasMensal.toFixed(2),
+      caixinhas_usado_real: +cxsUsadoMes.toFixed(2),
+      sobra_pos_aporte_e_caixinhas: +sobraPosAporte.toFixed(2),
+      aporte_sugerido: aporteSugeridoMes,
+      cabe_aporte_sugerido: lucroBruto - totalAlocCaixinhasMensal >= aporteSugeridoMes,
+      atual: isCurrent,
+    })
+  }
+
   // ── Caixinhas (saldos atuais) — com IDs pra IA poder mandar update ──
   const m = hoje.getMonth() + 1, y = hoje.getFullYear()
   const caixinhasInfo = _cxs.map(c => {
@@ -415,6 +487,12 @@ function contextoIA() {
       lista: receitasRec,
     },
     compromisso_futuro_total: compromissoFuturoTotal,
+
+    // ⭐ TABELA CONSOLIDADA — fonte da verdade pra qualquer projeção mês a mês
+    // Já calcula receita_prevista (lançada+recorrente), despesa, lucro, sobra
+    // pra cada mês. IA deve usar daqui em vez de somar os campos separados.
+    projecao_mensal: projecaoMensal,
+
     metas: metasInfo,
     aportes: {
       total_geral: +_aportes.reduce((s, a) => s + Number(a.valor || 0), 0).toFixed(2),
@@ -444,8 +522,22 @@ Você tem acesso COMPLETO ao contexto financeiro dele em JSON abaixo, atualizado
 ${JSON.stringify(ctx, null, 2)}
 \`\`\`
 
-Explicação dos campos:
-- **faturamento**: receita do negócio. \`medio_6m\` = média mensal; \`ultimos_12_meses\` = mês a mês detalhado; \`futuro_lancado\` = receitas já confirmadas pra meses futuros (raras)
+⭐ **CAMPO MAIS IMPORTANTE — \`projecao_mensal\`**:
+É um array com TODOS os meses já calculados (do mês atual até o horizonte). Cada item tem:
+- \`mes\` ("AAAA-MM")
+- \`receita_prevista\` = receita lançada + recorrente pendente (JÁ SOMADAS — USE ESTE NÚMERO)
+- \`despesa_prevista\` = despesas pontuais + recorrentes (JÁ SOMADAS)
+- \`lucro_bruto\` = receita − despesa
+- \`aporte_registrado\` = quanto JÁ foi registrado em aportes_fin nesse mês
+- \`caixinhas_alocacao_fixa\` = soma do valor_mensal de todas caixinhas (compromisso)
+- \`sobra_pos_aporte_e_caixinhas\` = lucro − aporte registrado − caixinhas (a sobra REAL)
+- \`aporte_sugerido\` = X% do faturamento desse mês
+- \`cabe_aporte_sugerido\` = boolean: se sobraria pra fazer o aporte sugerido
+
+Use esse array como fonte da verdade. NÃO some receita + lançamento separado — já tá somado em \`receita_prevista\`. Se a IA cometer erro de aritmética, é nessa parte.
+
+Explicação dos demais campos:
+- **faturamento**: dados históricos. \`medio_6m\`, \`mes_atual\`, \`ultimos_12_meses\` mês a mês passado
 - **despesas_passadas**: gastos pontuais já efetuados nos últimos 12 meses. \`por_categoria_12m\` (ia, infra, marketing, operacional, pessoal, outro); \`por_mes_12m\` mostra curva mensal
 - **despesas_futuras_agendadas**: TODOS os gastos pontuais agendados pra frente (sem limite). \`horizonte_meses\` = até onde vai a previsão; \`ultima_data\` = data da despesa mais distante; \`lista_completa\` com cada item; \`por_mes\` com curva. SE O USUÁRIO TEM CONTAS LANÇADAS ATÉ JANEIRO, ELAS ESTÃO TODAS AQUI
 - **contas_fixas_mensais**: assinaturas/contas recorrentes que cobram TODO mês. \`total\` é o fixo mensal; \`total_projetado_no_horizonte\` = total × meses_projetados (alcance do horizonte de despesas futuras)
