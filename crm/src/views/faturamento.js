@@ -17,7 +17,8 @@ let _despesas    = []
 let _recDespesas = []
 let _recReceitas = []
 let _aportes     = []  // aportes_fin — descontados do lucro mensal no Resumo
-let _cxsMov      = []  // caixinhas_mov — também abate do lucro (gastos planejados)
+let _cxsMov      = []  // caixinhas_mov — gastos reais registrados nas caixinhas
+let _cxs         = []  // caixinhas — definição (valor_mensal alocado por mês)
 let _clis        = []
 let _view        = 'receita'
 let _delegationAttached = false
@@ -83,13 +84,14 @@ function attachDelegation() {
 }
 
 async function loadAll() {
-  const [f, d, rd, rr, ap, cm, cli] = await Promise.all([
+  const [f, d, rd, rr, ap, cm, cx, cli] = await Promise.all([
     db.from('faturamento').select('*').order('ano', { ascending: false }).order('mes', { ascending: false }),
     selectAll('despesas',             { order: { column: 'data', ascending: false } }),
     selectAll('despesas_recorrentes', { order: { column: 'criado_em', ascending: false } }),
     selectAll('receitas_recorrentes', { order: { column: 'criado_em', ascending: false } }),
     db.from('aportes_fin').select('data,valor').order('data', { ascending: false }),
-    db.from('caixinhas_mov').select('data,valor').order('data', { ascending: false }),
+    db.from('caixinhas_mov').select('data,valor,caixinha_id').order('data', { ascending: false }),
+    db.from('caixinhas').select('id,valor_mensal,ativa,criado_em').eq('ativa', true),
     selectAll('clientes', { columns: 'id,nome,empresa,status' }),
   ])
   _fat         = f.data || []
@@ -98,6 +100,7 @@ async function loadAll() {
   _recReceitas = rr.data || []
   _aportes     = (ap && !ap.error) ? (ap.data || []) : []
   _cxsMov      = (cm && !cm.error) ? (cm.data || []) : []
+  _cxs         = (cx && !cx.error) ? (cx.data || []) : []
   _clis        = cli.data || []
 }
 
@@ -373,20 +376,41 @@ function projecaoMes(mesAlvo, anoAlvo) {
     .filter(a => (a.data || '').startsWith(mStr))
     .reduce((s, a) => s + Number(a.valor || 0), 0)
 
-  // Caixinhas_mov do mês — gastos planejados (gasolina, mercado, etc.)
-  const cxsUsado = _cxsMov
+  // Caixinhas: o que está comprometido neste mês.
+  // Pra cada caixinha ativa criada até o fim do mês alvo:
+  //   comprometido = max(valor_mensal alocado, gasto real registrado no mês)
+  // Razão: criar uma caixinha "Gasolina R$500/mês" já reserva R$500 do orçamento
+  // do mês — não espera você gastar pra descontar. Se estourou (gastou mais),
+  // conta o estouro.
+  const fimMes = new Date(anoAlvo, mesAlvo, 0)  // último dia do mês alvo
+  const gastoReal = _cxsMov
     .filter(c => (c.data || '').startsWith(mStr))
     .reduce((s, c) => s + Number(c.valor || 0), 0)
+  let cxsComprometido = 0
+  let cxsAlocacao     = 0
+  for (const cx of _cxs) {
+    if (!cx.ativa) continue
+    const criadoEm = cx.criado_em ? new Date(cx.criado_em) : new Date(0)
+    if (criadoEm > fimMes) continue  // caixinha criada depois desse mês, ignora
+    const aloc = Number(cx.valor_mensal || 0)
+    const gasto = _cxsMov
+      .filter(c => c.caixinha_id === cx.id && (c.data || '').startsWith(mStr))
+      .reduce((s, c) => s + Number(c.valor || 0), 0)
+    cxsAlocacao     += aloc
+    cxsComprometido += Math.max(aloc, gasto)
+  }
 
   const lucroProj = (recReal + recPend) - (desReal + desPend)
-  const sobra     = lucroProj - aportes - cxsUsado
+  const sobra     = lucroProj - aportes - cxsComprometido
 
   return {
     recReal, recPend, recProj: recReal + recPend,
     desReal, desPend, desProj: desReal + desPend,
     lucroProj,
     aportes,
-    cxsUsado,
+    cxsUsado:        gastoReal,         // gasto real (legado, ainda mostrado)
+    cxsAlocacao,                        // soma dos valor_mensal ativos
+    cxsComprometido,                    // o que efetivamente desce do lucro
     sobra,
     isPast,
   }
@@ -516,17 +540,17 @@ function renderResumo() {
             : 'sem aporte'}</div>
         </div>
         <div class="sc" style="background:rgba(74,158,255,.06);border:1px solid rgba(74,158,255,.15)">
-          <div class="sl">Gasto em Caixinhas</div>
-          <div class="sv" style="color:#4A9EFF">${brl(mesSel.cxsUsado)}</div>
-          <div class="ss">${mesSel.cxsUsado > 0
-            ? 'gasolina, mercado, etc.'
-            : 'sem movimentação'}</div>
+          <div class="sl">Caixinhas</div>
+          <div class="sv" style="color:#4A9EFF">${brl(mesSel.cxsComprometido)}</div>
+          <div class="ss">${mesSel.cxsAlocacao > 0
+            ? `${brl(mesSel.cxsUsado)} gasto · ${brl(mesSel.cxsAlocacao)} alocado/mês`
+            : 'nenhuma caixinha'}</div>
         </div>
         <div class="sc" style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.18)">
           <div class="sl">Sobrou pra você</div>
           <div class="sv" style="color:${mesSel.sobra>=0?'#34D399':'var(--danger)'}">${brl(mesSel.sobra)}</div>
           <div class="ss">${mesSel.lucroProj > 0
-            ? `${Math.round((mesSel.aportes + mesSel.cxsUsado) / mesSel.lucroProj * 100)}% do lucro alocado`
+            ? `${Math.round((mesSel.aportes + mesSel.cxsComprometido) / mesSel.lucroProj * 100)}% do lucro alocado`
             : 'lucro insuficiente'}</div>
         </div>
       </div>
