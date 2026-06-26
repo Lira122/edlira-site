@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Eleva · Claude Usage Monitor",
+  "description": "Lê o uso da janela 5h do Claude.ai e envia pro painel da Eleva Digital.",
+  "version": "1.0.0",
+  "icons": {
+    "16": "icon-16.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
+  },
+  "permissions": ["alarms", "storage"],
+  "host_permissions": [
+    "https://claude.ai/*",
+    "https://flzpblpegoqjxaacjvhf.supabase.co/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Eleva Claude Usage",
+    "default_popup": "popup.html"
+  }
+}

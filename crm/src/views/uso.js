@@ -182,6 +182,39 @@ function tempoCompact(iso) {
   return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
+function formatarTempoAteReset(iso) {
+  if (!iso) return '—'
+  const ms = new Date(iso).getTime() - Date.now()
+  if (ms <= 0) return 'agora'
+  const min = Math.floor(ms / 60000)
+  if (min < 60) return `${min}min`
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  return m ? `${h}h ${m}min` : `${h}h`
+}
+
+// Alerta baseado em % real do claude.ai (não em tokens estimados)
+function checarAlerta5hReal(pct) {
+  const fracao = pct / 100
+  let alerted = getAlerted5h()
+  alerted = alerted.filter(t => fracao >= t)
+  const novos = THRESHOLDS.filter(t => fracao >= t && !alerted.includes(t))
+  if (novos.length) {
+    const maior = Math.max(...novos)
+    const nivel = maior >= 0.8 ? 'urgente' : 'aviso'
+    const pctStr = Math.round(maior * 100)
+    const titulo = nivel === 'urgente'
+      ? `🚨 Janela 5h do Claude em ${pctStr}%`
+      : `⚠️ Janela 5h em ${pctStr}%`
+    const corpo = `${pct}% da sessão atual já foi consumido.`
+    beep(nivel)
+    notificar(titulo, corpo)
+    toast(`${titulo} — ${corpo}`, 'warn')
+    alerted = [...alerted, ...novos]
+  }
+  setAlerted5h(alerted)
+}
+
 async function fetchStats() {
   const { data } = await sbAuth.auth.getSession()
   const tok = data?.session?.access_token
@@ -352,13 +385,60 @@ function buildHTML(stats) {
         </div>` : ''}`
   }
 
-  // Janela 5h (Anthropic rate limit) — alerta PRINCIPAL
+  // Claude.ai consumer (extensão) — TEM PRIORIDADE se conectada
+  const cc = stats.claude_consumer || {}
+
+  let janelaHTML = ''
+  if (cc.conectado && !cc.stale && cc.sessao_pct != null) {
+    const pct = Math.round(cc.sessao_pct)
+    const cor = pct >= 80 ? 'var(--danger)' : pct >= 50 ? 'var(--warn)' : 'var(--ok)'
+    const resetTxt = cc.sessao_reseta_em ? formatarTempoAteReset(cc.sessao_reseta_em) : '—'
+    const semanaTxt = cc.semana_pct != null ? `<span style="color:var(--text-3);font-size:11px">· Semana: <strong style="color:var(--text-2)">${Math.round(cc.semana_pct)}%</strong></span>` : ''
+    const opusTxt = cc.opus_pct != null ? `<span style="color:var(--text-3);font-size:11px">· Opus: <strong style="color:var(--text-2)">${Math.round(cc.opus_pct)}%</strong></span>` : ''
+    janelaHTML = `
+      <div class="tw" style="padding:18px;margin-bottom:14px;border-left:4px solid ${cor};background:${pct >= 80 ? 'rgba(255,92,92,.05)' : 'transparent'}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:4px">🚦 Janela 5h do Claude · ${esc(cc.plano || 'plano')}</div>
+            <div style="font-size:13px;color:var(--text-2)">Dados reais do claude.ai (via extensão) · atualiza a cada 5min</div>
+          </div>
+          <div style="font-size:12px;color:var(--text-3)">Reinicia em <strong style="color:${cor}">${esc(resetTxt)}</strong></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:8px">
+          <span style="color:${cor};font-weight:600;font-size:24px">${pct}% <span style="font-size:13px;color:var(--text-3);font-weight:400">da sessão atual</span></span>
+          <span>${semanaTxt} ${opusTxt}</span>
+        </div>
+        <div style="height:10px;background:rgba(255,255,255,.04);border-radius:5px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${cor};transition:width .4s,background .4s"></div>
+        </div>
+      </div>`
+
+    // Atualiza alerta de janela 5h baseado em % real (não tokens estimados)
+    checarAlerta5hReal(pct)
+  } else if (cc.conectado && cc.stale) {
+    janelaHTML = `
+      <div class="tw" style="padding:14px 18px;margin-bottom:14px;border-left:3px solid var(--warn)">
+        <div style="font-size:13px;color:var(--warn);font-weight:500">⚠️ Extensão conectou mas tá sem atualizar há mais de 30 minutos</div>
+        <div style="font-size:12px;color:var(--text-3);margin-top:4px">Abre o claude.ai pra reativar a sessão da extensão, ou clica no ícone dela e em "Sincronizar agora".</div>
+      </div>`
+  } else {
+    janelaHTML = `
+      <div class="tw" style="padding:18px;margin-bottom:14px;border-left:4px solid var(--text-3);background:rgba(197,248,42,.04)">
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--accent)">🚦 Janela 5h do Claude — extensão não conectada</div>
+        <div style="font-size:13px;color:var(--text-2);line-height:1.6">
+          Pra ver os 23% da sessão e quanto falta pro reset (como no painel do claude.ai), instale a extensão <strong>Eleva · Claude Usage Monitor</strong> no Chrome.
+          <br><span style="color:var(--text-3);font-size:12px">A extensão fica na pasta <code style="background:rgba(255,255,255,.05);padding:1px 5px;border-radius:3px;font-family:ui-monospace,monospace">/extensao-claude-usage</code> do projeto.</span>
+        </div>
+      </div>`
+  }
+
+  // Janela 5h estimada (Anthropic Admin API) — só mostra se Admin Key configurada
   const tokens5h = Number(ant.janela_5h?.total_tokens || 0)
   const limit5h = getLimit5h()
   const pct5h = limit5h > 0 ? Math.min(100, Math.round(tokens5h / limit5h * 100)) : 0
   const cor5h = pct5h >= 80 ? 'var(--danger)' : pct5h >= 50 ? 'var(--warn)' : 'var(--ok)'
 
-  const janelaHTML = ant.configurado && !ant.erro ? `
+  const janelaAdminHTML = ant.configurado && !ant.erro ? `
     <div class="tw" style="padding:18px;margin-bottom:14px;border-left:4px solid ${cor5h};background:${pct5h >= 80 ? 'rgba(255,92,92,.05)' : 'transparent'}">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px">
         <div>
@@ -431,6 +511,7 @@ function buildHTML(stats) {
     </div>
 
     ${janelaHTML}
+    ${janelaAdminHTML}
     ${budgetHTML}
 
     <div class="sg" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px">${statCards}</div>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Eleva · Claude Usage</title>
+<style>
+  *,*::before,*::after { box-sizing:border-box;margin:0;padding:0 }
+  body {
+    width: 320px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #0A0F0A;
+    color: #fff;
+    padding: 18px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  h1 { font-size: 14px; font-weight: 600; margin-bottom: 4px; letter-spacing: -.01em; }
+  .sub { font-size: 11px; color: #555; margin-bottom: 18px }
+  label { display:block; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:#777; margin-bottom:6px; font-weight:600 }
+  input {
+    width: 100%; background: #1c1c1c; border: 1px solid rgba(255,255,255,.08);
+    color: #fff; padding: 9px 11px; border-radius: 6px; font-size: 13px;
+    font-family: ui-monospace, monospace;
+  }
+  input:focus { outline: 1px solid #C5F82A; border-color: #C5F82A }
+  button {
+    width: 100%; background: #C5F82A; color: #0A0F0A; border: none;
+    padding: 10px; border-radius: 6px; font-weight: 600; font-size: 13px;
+    cursor: pointer; margin-top: 10px;
+  }
+  button.secundario { background: rgba(255,255,255,.06); color: #fff; border: 1px solid rgba(255,255,255,.1) }
+  .status {
+    margin-top: 14px; padding: 11px; background: rgba(255,255,255,.03);
+    border-radius: 6px; font-size: 11px; color: #A0A0A0;
+  }
+  .status .ok { color: #34D399 }
+  .status .err { color: #FF5C5C }
+  .status pre { font-size:10px; margin-top:6px; color:#777; white-space:pre-wrap; word-break:break-word; max-height:80px; overflow:auto }
+</style>
+</head>
+<body>
+  <h1>Eleva · Claude Usage</h1>
+  <div class="sub">Lê uso da janela 5h do claude.ai e envia pro CRM</div>
+
+  <label for="token">Ingest token</label>
+  <input id="token" type="password" placeholder="Cola o token gerado no CRM" autocomplete="off">
+  <button id="salvar">Salvar token</button>
+  <button id="sync" class="secundario">Sincronizar agora</button>
+
+  <div class="status" id="status">Carregando status…</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

@@ -24,6 +24,31 @@ const supabase = createClient(
 const ANTHROPIC_ADMIN_KEY = Deno.env.get('ANTHROPIC_ADMIN_KEY') || ''
 const TZ = 'America/Sao_Paulo'
 
+// Lê o último snapshot do claude.ai consumer enviado pela extensão
+async function buscarClaudeConsumer() {
+  const { data, error } = await supabase
+    .from('claude_usage_snapshots')
+    .select('*')
+    .order('capturado_em', { ascending: false })
+    .limit(1)
+  if (error) return { conectado: false, erro: error.message }
+  const ultimo = (data || [])[0]
+  if (!ultimo) return { conectado: false, motivo: 'Nenhum snapshot ainda. Instale a extensão Eleva · Claude Usage Monitor.' }
+  const idadeMs = Date.now() - new Date(ultimo.capturado_em).getTime()
+  const stale = idadeMs > 30 * 60 * 1000
+  return {
+    conectado: true,
+    stale,
+    capturado_em: ultimo.capturado_em,
+    plano: ultimo.plano,
+    sessao_pct: ultimo.sessao_pct == null ? null : Number(ultimo.sessao_pct),
+    sessao_reseta_em: ultimo.sessao_reseta_em,
+    semana_pct: ultimo.semana_pct == null ? null : Number(ultimo.semana_pct),
+    semana_reseta_em: ultimo.semana_reseta_em,
+    opus_pct: ultimo.opus_pct == null ? null : Number(ultimo.opus_pct),
+  }
+}
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -210,9 +235,10 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS })
 
   try {
-    const [bot, anthropic] = await Promise.all([
+    const [bot, anthropic, claudeConsumer] = await Promise.all([
       buscarBot(),
       buscarAnthropic(),
+      buscarClaudeConsumer(),
     ])
 
     return new Response(JSON.stringify({
@@ -220,6 +246,7 @@ Deno.serve(async (req: Request) => {
       gerado_em: new Date().toISOString(),
       bot,
       anthropic,
+      claude_consumer: claudeConsumer,
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...CORS },
