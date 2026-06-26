@@ -1026,10 +1026,8 @@ body[data-view="pipeline"] .kcards { flex: 1; overflow-y: auto; min-height: 0; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
 
 @media (max-width: 768px) {
-  .sb { width: 56px; }
-  .sb-brand, .ni span, .sb-foot, .sb-group { display: none; }
-  .ni { justify-content: center; padding: 11px; }
-  .ni.on::before { display: none; }
+  /* Sidebar agora vira drawer no bloco mobile principal (linha ~1175). */
+  /* Aqui só ajustes de grids e paddings. */
   .sg { grid-template-columns: 1fr 1fr; }
   .fs { grid-template-columns: 1fr; }
   .frow { grid-template-columns: 1fr; }
