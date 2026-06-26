@@ -1,8 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { sendTextHumano } from '../_shared/humano.ts'
 
 const supabase    = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-const UAZAPI_URL  = Deno.env.get('UAZAPI_URL')!
-const UAZAPI_TOKEN = Deno.env.get('UAZAPI_TOKEN')!
 const CAL_TIMEZONE = 'America/Sao_Paulo'
 
 // ─── Mensagens personalizadas Eleva Digital ─────────────────────────────────────────
@@ -32,22 +31,17 @@ function msgFim(nome: string) {
 }
 
 // ─── Envio WhatsApp ───────────────────────────────────────────────────────────
+// Usa sendTextHumano do _shared, que aciona o delay NATIVO da UazAPI
+// (mostra "digitando..." pro lead durante 2-10s antes de mandar).
+// Antes esperava em silêncio no JS — lead percebia o bot.
 
 async function sendText(phone: string, text: string) {
   const number = phone.replace(/\D/g, '')
   const full   = (number.startsWith('55') ? number : '55' + number) + '@s.whatsapp.net'
 
-  const delay = Math.min(1200 + text.length * 25, 3500)
-  await new Promise(r => setTimeout(r, delay))
-
-  const res = await fetch(`${UAZAPI_URL}/send/text`, {
-    method: 'POST',
-    headers: { token: UAZAPI_TOKEN, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ number: full, text })
-  })
-  if (!res.ok) {
-    const err = await res.text()
-    console.error(`[FOLLOWUP] Erro ao enviar para ${phone}:`, err)
+  const r = await sendTextHumano(full, text)
+  if (!r.ok) {
+    console.error(`[FOLLOWUP] Erro ao enviar para ${phone}:`, r.status, r.body)
     return false
   }
   return true

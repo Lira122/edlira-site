@@ -10,14 +10,13 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { logIAUsage } from '../_shared/usage-log.ts'
+import { sendSequenciaHumana } from '../_shared/humano.ts'
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 )
 
-const UAZAPI_URL         = Deno.env.get('UAZAPI_URL')!
-const UAZAPI_TOKEN       = Deno.env.get('UAZAPI_TOKEN')!
 const GROQ_API_KEY       = Deno.env.get('GROQ_API_KEY')
 const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY')
 
@@ -154,14 +153,8 @@ function tier(obs: string): number {
   return 3
 }
 
-async function sendText(phone: string, text: string, delayMs = 0) {
-  const res = await fetch(`${UAZAPI_URL}/send/text`, {
-    method: 'POST',
-    headers: { 'token': UAZAPI_TOKEN, 'Content-Type': 'application/json; charset=utf-8' },
-    body: JSON.stringify({ number: phone, text, delay: delayMs }),
-  })
-  if (!res.ok) throw new Error(`UazAPI ${res.status}: ${(await res.text()).slice(0, 200)}`)
-}
+// Envio agora usa sendSequenciaHumana — delay nativo UazAPI (2-10s
+// proporcional ao tamanho), com "digitando..." aparecendo pro lead
 
 Deno.serve(async () => {
   // Hora de Brasília
@@ -239,19 +232,14 @@ Deno.serve(async () => {
     }
 
     const partes = opener.split(/\n\s*\n+/).map((p) => p.trim()).filter(Boolean)
-    try {
-      for (let i = 0; i < partes.length; i++) {
-        // Delay 3-6s no UazAPI (mostra "digitando..." no Zap do lead, parece humano)
-        const delay = 3000 + Math.floor(Math.random() * 3000)
-        await sendText(phone, partes[i], delay)
-        // Espera o UazAPI realmente entregar antes da próxima mensagem
-        if (i < partes.length - 1) await new Promise((r) => setTimeout(r, delay + 500))
-      }
-    } catch (_e) {
+    // Envia parecendo humano: delay nativo UazAPI 2-10s proporcional ao
+    // tamanho do texto, com "digitando..." aparecendo pro lead antes
+    const env = await sendSequenciaHumana(phone, partes)
+    if (!env.ok) {
       // Número não está no WhatsApp — marca e tenta o próximo
       await supabase.from('clientes').update({
         status: 'perdido',
-        observacoes: (lead.observacoes || '') + '\n[Disparo] Número sem WhatsApp.',
+        observacoes: (lead.observacoes || '') + '\n[Disparo] Número sem WhatsApp: ' + (env.erro || ''),
         atualizado_em: new Date().toISOString(),
       }).eq('id', lead.id)
       if (++falhas >= 5) {

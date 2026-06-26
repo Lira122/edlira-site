@@ -41,6 +41,7 @@ async function loadViews() {
     { render: renderLiberdade },
     { render: renderCaixinhas },
     { render: renderSenhas },
+    { render: renderTestarBot },
   ] = await Promise.all([
     import('./views/dashboard.js'),
     import('./views/agenda.js'),
@@ -63,6 +64,7 @@ async function loadViews() {
     import('./views/liberdade.js'),
     import('./views/caixinhas.js'),
     import('./views/senhas.js'),
+    import('./views/testar-bot.js'),
   ])
   VIEWS = {
     dashboard:    { title: 'Dashboard',    render: renderDash },
@@ -86,6 +88,7 @@ async function loadViews() {
     liberdade:    { title: 'Liberdade Financeira', render: renderLiberdade },
     caixinhas:    { title: 'Caixinhas',    render: renderCaixinhas },
     senhas:       { title: 'Cofre de Senhas', render: renderSenhas },
+    testar_bot:   { title: 'Testar Bot',   render: renderTestarBot },
   }
   return VIEWS
 }
