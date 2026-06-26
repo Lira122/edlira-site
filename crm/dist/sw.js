@@ -3,7 +3,7 @@
 // CACHE FIRST pros assets versionados (que mudam de hash quando o build muda).
 // Não cacheia chamadas Supabase pra não servir dado antigo.
 
-const VERSION = 'eleva-crm-v3'
+const VERSION = 'eleva-crm-v4'
 const CACHE_ASSETS = `${VERSION}-assets`
 
 // Sem precache: deixa o cache ir enchendo conforme o usuário navega
