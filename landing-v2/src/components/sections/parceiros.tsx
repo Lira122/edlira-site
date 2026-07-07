@@ -9,6 +9,7 @@ const logos = [
   { src: '/logos/spetialist.jpg', alt: 'Spetialist', invert: false },
   { src: '/logos/aderis-festin.jpeg', alt: 'Aderis Le Festin', invert: false },
   { src: '/logos/amo-make.jpeg', alt: 'Amo Make', invert: false },
+  { src: '/logos/valept.jpeg', alt: 'Vale Pet Distribuidora', invert: false },
 ];
 
 const LogoCard: React.FC<{ src: string; alt: string }> = ({ src, alt }) => (
