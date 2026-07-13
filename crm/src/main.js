@@ -101,6 +101,9 @@ export function go(v) {
   document.querySelectorAll('.ni').forEach(el => el.classList.toggle('on', el.dataset.v === v))
   document.getElementById('vtitle').textContent = VIEWS[v].title
   document.getElementById('tbacts').innerHTML = ''
+  // Marca o content com a view atual — usado por instancia.js e outras
+  // views que rodam polling/interval pra abortar quando o usuário sai.
+  document.getElementById('content').dataset.view = v
   document.body.dataset.view = v
   VIEWS[v].render()
 }
