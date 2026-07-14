@@ -10,11 +10,13 @@ const FN_URL = `${SB_URL}/functions/v1/instancia`
 let _polling = null
 let _state   = null
 
-// Marca: quando a view tá montada, o content tem data-view="instancia".
-// Se o usuário navega pra outra tela, o data-view some — aí abortamos o polling.
+// Marca: quando a view tá montada, o body tem data-view="instancia" (setado
+// pelo main.js.go()). Se o usuário navega pra outra tela, o body muda pra
+// outra view — aí abortamos o polling. ANTES a gente checava só content.dataset,
+// mas isso era bug: innerHTML=... não limpa atributos do próprio elemento,
+// então o polling continuava sobrescrevendo o Pipeline etc.
 function viewAtiva() {
-  const c = document.getElementById('content')
-  return c && c.dataset.view === 'instancia'
+  return document.body.dataset.view === 'instancia'
 }
 function pararPolling() {
   if (_polling) { clearInterval(_polling); _polling = null }
