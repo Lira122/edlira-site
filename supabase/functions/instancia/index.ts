@@ -67,6 +67,59 @@ Deno.serve(async (req: Request) => {
         result = await uaz('/instance/disconnect', 'POST', {})
         break
 
+      case 'groups': {
+        // Lista grupos do WhatsApp. UazAPI tem variações entre builds —
+        // tenta endpoints comuns em ordem e devolve o que funcionar.
+        const buscar = url.searchParams.get('q')?.toLowerCase() || ''
+        const tentativas = [
+          { path: '/group/list',     method: 'POST', body: { force: true } },
+          { path: '/group/list',     method: 'GET',  body: null },
+          { path: '/group',          method: 'GET',  body: null },
+          { path: '/group/findAll',  method: 'GET',  body: null },
+          { path: '/chats',          method: 'POST', body: { onlyGroups: true } },
+        ]
+        let achados: any = null
+        for (const t of tentativas) {
+          const r: any = await uaz(t.path, t.method, t.body)
+          if (r.ok && r.data && (Array.isArray(r.data) || typeof r.data === 'object')) {
+            achados = r
+            break
+          }
+        }
+        if (!achados) {
+          result = { ok: false, erro: 'Nenhum endpoint de grupos respondeu', tentativas: tentativas.map(t => t.path) }
+          break
+        }
+        // Normaliza: extrai array de grupos do payload
+        const raw = achados.data
+        let grupos: any[] = []
+        if (Array.isArray(raw))           grupos = raw
+        else if (Array.isArray(raw.data)) grupos = raw.data
+        else if (Array.isArray(raw.groups)) grupos = raw.groups
+        else if (Array.isArray(raw.chats)) grupos = raw.chats.filter((c: any) => c.isGroup || c.JID?.endsWith('@g.us'))
+        // Filtra por busca, se houver
+        const nomeDe = (g: any) =>
+          g.name || g.subject || g.chatName || g.title || g.groupName || g.Name || g.Subject || ''
+        const filtrados = buscar
+          ? grupos.filter((g: any) => nomeDe(g).toLowerCase().includes(buscar))
+          : grupos
+        const debug = url.searchParams.get('debug') === '1'
+        result = {
+          ok: true,
+          path_usado: achados.path,
+          total: grupos.length,
+          encontrados: filtrados.length,
+          grupos: filtrados.map((g: any) => ({
+            nome:       g.name || g.subject || g.chatName || g.title || g.groupName || g.Name || g.Subject || '(sem nome)',
+            jid:        g.JID || g.id || g.chatId || g.jid,
+            participantes: g.size || g.participantsCount || g.participants?.length || null,
+            criado_em:  g.creation || g.created || null,
+          })),
+          raw_sample: debug ? grupos.slice(0, 2) : undefined,
+        }
+        break
+      }
+
       default:
         return new Response(JSON.stringify({ error: 'Ação inválida: ' + action }), {
           status: 400, headers: CORS,
