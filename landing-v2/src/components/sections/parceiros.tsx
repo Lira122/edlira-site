@@ -10,6 +10,8 @@ const logos = [
   { src: '/logos/aderis-festin.jpeg', alt: 'Aderis Le Festin', invert: false },
   { src: '/logos/amo-make.jpeg', alt: 'Amo Make', invert: false },
   { src: '/logos/valept.jpeg', alt: 'Vale Pet Distribuidora', invert: false },
+  { src: '/logos/mach80.jpg', alt: 'Mach 80 Viagens', invert: false },
+  { src: '/logos/marmoraria-colorado.png', alt: 'Marmoraria Colorado', invert: false },
 ];
 
 const LogoCard: React.FC<{ src: string; alt: string }> = ({ src, alt }) => (
