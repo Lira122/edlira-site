@@ -45,6 +45,7 @@ async function loadViews() {
     { render: renderPesquisas },
     { render: renderConteudo },
     { render: renderAgentesApi },
+    { render: renderBomDia },
   ] = await Promise.all([
     import('./views/dashboard.js'),
     import('./views/agenda.js'),
@@ -71,8 +72,10 @@ async function loadViews() {
     import('./views/pesquisas.js'),
     import('./views/conteudo.js'),
     import('./views/agentes-api.js'),
+    import('./views/bomdia.js'),
   ])
   VIEWS = {
+    bomdia:       { title: 'Bom Dia',      render: renderBomDia },
     dashboard:    { title: 'Dashboard',    render: renderDash },
     agenda:       { title: 'Agenda',       render: renderAgenda },
     projetos:     { title: 'Projetos',     render: renderProjetos },
@@ -118,7 +121,9 @@ async function showApp() {
   await loadViews()
   document.getElementById('auth').style.display = 'none'
   document.getElementById('app').classList.remove('h')
-  go('dashboard')
+  // Home padrão respeita preferência do user (default: bomdia = briefing matinal)
+  const homeView = localStorage.getItem('eleva_home_view') || 'bomdia'
+  go(homeView)
   refreshEngineState()
   setInterval(refreshEngineState, 30000) // sincroniza a cada 30s
 }
