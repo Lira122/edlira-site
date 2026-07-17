@@ -225,10 +225,19 @@ async function player(script) {
   let ultimoT = 0
   let controlHideT = 0
 
+  // Estado de camera e gravacao
+  let camStream = null
+  let camAtiva = false
+  let recorder = null
+  let recChunks = []
+  let recIniciou = 0
+  let recTimerId = 0
+
   const ov = document.createElement('div')
   ov.id = 'tp-player-ov'
   ov.setAttribute('role', 'application')
   ov.innerHTML = `
+    <video id="tp-cam" class="tp-cam" autoplay muted playsinline></video>
     <div class="tp-player-marker"></div>
     <div class="tp-player-scroll" id="tp-scroll">
       <div class="tp-player-inner">
@@ -236,6 +245,9 @@ async function player(script) {
         <div class="tp-player-texto" id="tp-texto">${esc(script.conteudo).replace(/\n/g, '<br>')}</div>
         <div class="tp-player-botspacer"></div>
       </div>
+    </div>
+    <div class="tp-rec-badge" id="tp-rec-badge" style="display:none">
+      <span class="tp-rec-dot"></span><span id="tp-rec-time">0:00</span>
     </div>
     <div class="tp-player-controls" id="tp-controls">
       <button class="tp-btn tp-btn-close" id="tp-close" title="Sair (Esc)">✕</button>
@@ -250,6 +262,8 @@ async function player(script) {
         <button class="tp-btn" id="tp-font-up" title="Fonte maior">A+</button>
       </div>
       <button class="tp-btn ${mirror?'tp-btn-on':''}" id="tp-mirror" title="Modo espelho">⇋</button>
+      <button class="tp-btn" id="tp-cam-btn" title="Ativar camera">🎥</button>
+      <button class="tp-btn tp-btn-rec" id="tp-rec-btn" style="display:none" title="Gravar">🔴</button>
     </div>
     <div class="tp-player-hint" id="tp-hint">Toque na tela pra play/pause</div>
     <style>
@@ -258,13 +272,50 @@ async function player(script) {
         display:flex;flex-direction:column;align-items:stretch;
         overflow:hidden;-webkit-user-select:none;user-select:none;
       }
+      .tp-cam {
+        position:absolute;inset:0;width:100%;height:100%;
+        object-fit:cover;z-index:0;opacity:0;
+        transition:opacity .3s;
+        /* Espelha o preview da camera frontal (self-view natural) */
+        transform: scaleX(-1);
+      }
+      #tp-player-ov.tp-cam-on .tp-cam { opacity:1 }
+      #tp-player-ov.tp-cam-on .tp-player-texto {
+        text-shadow: 0 0 12px rgba(0,0,0,.95), 0 2px 8px rgba(0,0,0,.9), 0 0 24px rgba(0,0,0,.6);
+        color: #fff;
+      }
+      #tp-player-ov.tp-cam-on .tp-player-scroll {
+        background: linear-gradient(180deg,
+          rgba(0,0,0,.35) 0%,
+          rgba(0,0,0,.5) 30%,
+          rgba(0,0,0,.5) 60%,
+          rgba(0,0,0,.35) 100%);
+      }
+      .tp-rec-badge {
+        position:absolute;top: max(18px, env(safe-area-inset-top));
+        left:50%;transform:translateX(-50%);
+        display:flex;align-items:center;gap:8px;
+        background:rgba(255,0,0,.85);color:#fff;
+        padding:6px 14px;border-radius:20px;
+        font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;
+        z-index:20;box-shadow:0 4px 12px rgba(0,0,0,.4);
+      }
+      .tp-rec-dot {
+        width:9px;height:9px;border-radius:50%;background:#fff;
+        animation: tp-rec-pulse 1s infinite;
+      }
+      @keyframes tp-rec-pulse {
+        0%,100% { opacity:1 } 50% { opacity:.3 }
+      }
+      .tp-btn-rec { background:rgba(255,0,0,.2);border-color:rgba(255,0,0,.4) }
+      .tp-btn-rec.on { background:#ff3b3b;color:#fff }
       .tp-player-marker {
         position:absolute;left:0;right:0;top:35%;height:2px;
         background:linear-gradient(90deg,transparent,#C5F82A,transparent);
         opacity:.45;pointer-events:none;z-index:10;
       }
       .tp-player-scroll {
-        flex:1;overflow:hidden;position:relative;
+        flex:1;overflow:hidden;position:relative;z-index:5;
       }
       .tp-player-inner {
         transform: ${mirror ? 'scaleX(-1)' : 'none'};
@@ -390,6 +441,9 @@ async function player(script) {
 
   function fecharPlayer() {
     pause()
+    if (recorder && recorder.state !== 'inactive') { try { recorder.stop() } catch (_) {} }
+    if (recTimerId) clearInterval(recTimerId)
+    if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null }
     soltarWakeLock()
     ov.remove()
     db.from('teleprompter_scripts').update({
@@ -398,6 +452,138 @@ async function player(script) {
     }).eq('id', script.id).then(() => {}, () => {})
     document.removeEventListener('keydown', onKey)
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
+  }
+
+  // ═══ Camera + gravacao (bonus, ativa on-demand) ═══
+  async function ativarCamera() {
+    try {
+      camStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'user',
+          width:  { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+        audio: true,
+      })
+      const videoEl = document.getElementById('tp-cam')
+      videoEl.srcObject = camStream
+      camAtiva = true
+      ov.classList.add('tp-cam-on')
+      document.getElementById('tp-cam-btn').textContent = '🎥'
+      document.getElementById('tp-cam-btn').classList.add('tp-btn-on')
+      document.getElementById('tp-rec-btn').style.display = ''
+      toast('Camera ativa. Texto rola por cima do video.')
+    } catch (e) {
+      console.error('[tp-cam]', e)
+      toast('Nao consegui acessar a camera: ' + (e.message || e.name), 'err')
+    }
+  }
+  function desativarCamera() {
+    if (recorder && recorder.state !== 'inactive') pararGravacao()
+    if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null }
+    document.getElementById('tp-cam').srcObject = null
+    camAtiva = false
+    ov.classList.remove('tp-cam-on')
+    document.getElementById('tp-cam-btn').classList.remove('tp-btn-on')
+    document.getElementById('tp-rec-btn').style.display = 'none'
+  }
+
+  function escolherMimeType() {
+    const opcoes = [
+      'video/mp4;codecs=avc1,mp4a',
+      'video/mp4',
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm',
+    ]
+    for (const t of opcoes) {
+      if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) return t
+    }
+    return ''
+  }
+
+  function iniciarGravacao() {
+    if (!camStream) return
+    recChunks = []
+    const mimeType = escolherMimeType()
+    try {
+      recorder = new MediaRecorder(camStream, mimeType ? { mimeType, videoBitsPerSecond: 4_000_000 } : undefined)
+    } catch (e) {
+      toast('Gravacao nao suportada nesse navegador', 'err')
+      return
+    }
+    recorder.ondataavailable = (e) => { if (e.data && e.data.size) recChunks.push(e.data) }
+    recorder.onstop = () => {
+      const tipo = recorder.mimeType || mimeType || 'video/webm'
+      const blob = new Blob(recChunks, { type: tipo })
+      const url = URL.createObjectURL(blob)
+      const ext = tipo.includes('mp4') ? 'mp4' : 'webm'
+      const nome = `${script.titulo.replace(/[^\w-]+/g, '_').slice(0, 40)}_${new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}.${ext}`
+      mostrarDownload(url, nome, blob.size)
+    }
+    recorder.start(1000) // chunk a cada 1s
+    recIniciou = Date.now()
+    document.getElementById('tp-rec-badge').style.display = 'flex'
+    document.getElementById('tp-rec-btn').textContent = '⏹'
+    document.getElementById('tp-rec-btn').classList.add('on')
+    recTimerId = setInterval(() => {
+      const seg = Math.floor((Date.now() - recIniciou) / 1000)
+      const m = Math.floor(seg / 60), s = seg % 60
+      document.getElementById('tp-rec-time').textContent = `${m}:${String(s).padStart(2, '0')}`
+    }, 500)
+    if (!playing) play()
+  }
+  function pararGravacao() {
+    if (!recorder || recorder.state === 'inactive') return
+    try { recorder.stop() } catch (_) {}
+    clearInterval(recTimerId); recTimerId = 0
+    document.getElementById('tp-rec-badge').style.display = 'none'
+    document.getElementById('tp-rec-btn').textContent = '🔴'
+    document.getElementById('tp-rec-btn').classList.remove('on')
+    if (playing) pause()
+  }
+  function toggleRec() {
+    if (!camAtiva) return
+    if (recorder && recorder.state === 'recording') pararGravacao()
+    else iniciarGravacao()
+  }
+
+  function mostrarDownload(url, nome, tamanho) {
+    const mb = (tamanho / 1024 / 1024).toFixed(1)
+    const painel = document.createElement('div')
+    painel.style.cssText = `
+      position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:10001;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:24px;gap:16px;
+    `
+    painel.innerHTML = `
+      <div style="font-size:14px;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Gravaçao pronta</div>
+      <video src="${url}" controls playsinline style="max-width:min(90vw,720px);max-height:60vh;border-radius:10px;border:1px solid rgba(255,255,255,.08)"></video>
+      <div style="font-size:12px;color:var(--text-3)">${esc(nome)} · ${mb} MB</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+        <a href="${url}" download="${esc(nome)}" class="btn bp" style="text-decoration:none;padding:12px 22px">⬇ Baixar</a>
+        <button class="btn bg" id="tp-share" style="padding:12px 22px">Compartilhar</button>
+        <button class="btn bd" id="tp-descartar" style="padding:12px 22px">Descartar</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-3);max-width:480px;text-align:center;line-height:1.5">
+        No celular: apos baixar, o arquivo vai pra pasta Downloads. Voce pode subir no Instagram/TikTok/YouTube depois. No iPhone use o botao Compartilhar pra salvar no Rolo.
+      </div>
+    `
+    document.body.appendChild(painel)
+    painel.querySelector('#tp-descartar').addEventListener('click', () => {
+      URL.revokeObjectURL(url); painel.remove()
+    })
+    painel.querySelector('#tp-share').addEventListener('click', async () => {
+      if (!navigator.share) { toast('Compartilhamento nao suportado, use Baixar', 'warn'); return }
+      try {
+        const resp = await fetch(url)
+        const blob = await resp.blob()
+        const file = new File([blob], nome, { type: blob.type })
+        await navigator.share({ files: [file], title: script.titulo })
+      } catch (e) {
+        if (e.name !== 'AbortError') toast('Erro ao compartilhar', 'err')
+      }
+    })
   }
 
   function onKey(e) {
@@ -426,6 +612,10 @@ async function player(script) {
   btnPlay.addEventListener('click', toggle)
   btnClose.addEventListener('click', fecharPlayer)
   btnMirror.addEventListener('click', () => { mirror = !mirror; atualizarMirror() })
+  document.getElementById('tp-cam-btn').addEventListener('click', () => {
+    if (camAtiva) desativarCamera(); else ativarCamera()
+  })
+  document.getElementById('tp-rec-btn').addEventListener('click', toggleRec)
   document.getElementById('tp-speed-up').addEventListener('click', () => { wpm = Math.min(300, wpm + 10); atualizarWpm() })
   document.getElementById('tp-speed-down').addEventListener('click', () => { wpm = Math.max(60, wpm - 10); atualizarWpm() })
   document.getElementById('tp-font-up').addEventListener('click', () => { fonte = Math.min(120, fonte + 4); atualizarFonte() })
