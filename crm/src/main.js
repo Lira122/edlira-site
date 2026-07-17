@@ -46,6 +46,7 @@ async function loadViews() {
     { render: renderConteudo },
     { render: renderAgentesApi },
     { render: renderBomDia },
+    { render: renderTeleprompter },
   ] = await Promise.all([
     import('./views/dashboard.js'),
     import('./views/agenda.js'),
@@ -73,6 +74,7 @@ async function loadViews() {
     import('./views/conteudo.js'),
     import('./views/agentes-api.js'),
     import('./views/bomdia.js'),
+    import('./views/teleprompter.js'),
   ])
   VIEWS = {
     bomdia:       { title: 'Bom Dia',      render: renderBomDia },
@@ -101,6 +103,7 @@ async function loadViews() {
     testar_bot:   { title: 'Testar Bot',   render: renderTestarBot },
     conteudo:     { title: 'Pauta',        render: renderConteudo },
     agentes_api:  { title: 'API Agentes',  render: renderAgentesApi },
+    teleprompter: { title: 'Teleprompter', render: renderTeleprompter },
   }
   return VIEWS
 }
