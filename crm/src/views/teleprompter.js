@@ -145,7 +145,7 @@ function editorForm(s = {}) {
     <div class="frow" style="margin-bottom:11px">
       <div class="fg">
         <label class="fl">Velocidade (palavras/min)</label>
-        <input class="fi" type="number" id="tp-wpm" value="${wpm}" min="60" max="300" step="10">
+        <input class="fi" type="number" id="tp-wpm" value="${wpm}" min="60" max="500" step="10">
         <div style="font-size:10px;color:var(--text-3);margin-top:3px">150 = leitura normal · 180 = ritmo Reels · 220 = rapido</div>
       </div>
       <div class="fg">
@@ -413,9 +413,17 @@ async function player(script) {
   }
 
   function velocidadePxPorSeg() {
-    const linhasPorMin = wpm / 10
+    // Formula calibrada: mede largura real do container e estima
+    // chars por linha baseado no font-size atual. Aproxima muito
+    // melhor o wpm real do que o chute grosseiro anterior.
+    const scrollEl = document.getElementById('tp-scroll')
+    const larguraCont = Math.min(scrollEl?.clientWidth || 400, 1100) - 48
+    const larguraChar = fonte * 0.5                  // largura media pra Inter
+    const charsPorLinha = Math.max(10, Math.floor(larguraCont / larguraChar))
+    const charsPorSeg = wpm * 6 / 60                 // 6 chars por palavra (5+espaco)
+    const linhasPorSeg = charsPorSeg / charsPorLinha
     const alturaLinha = fonte * 1.35
-    return (linhasPorMin * alturaLinha) / 60
+    return linhasPorSeg * alturaLinha
   }
 
   function loop(t) {
@@ -679,7 +687,7 @@ async function player(script) {
     if (e.key === ' ')      { toggle(); e.preventDefault() }
     if (e.key === 'ArrowUp')    { fonte = Math.min(120, fonte + 4); atualizarFonte() }
     if (e.key === 'ArrowDown')  { fonte = Math.max(24, fonte - 4); atualizarFonte() }
-    if (e.key === 'ArrowRight') { wpm = Math.min(300, wpm + 10); atualizarWpm() }
+    if (e.key === 'ArrowRight') { wpm = Math.min(500, wpm + 10); atualizarWpm() }
     if (e.key === 'ArrowLeft')  { wpm = Math.max(60, wpm - 10); atualizarWpm() }
   }
 
@@ -705,7 +713,7 @@ async function player(script) {
   })
   document.getElementById('tp-rec-btn').addEventListener('click', toggleRec)
   document.getElementById('tp-mic-btn').addEventListener('click', trocarMic)
-  document.getElementById('tp-speed-up').addEventListener('click', () => { wpm = Math.min(300, wpm + 10); atualizarWpm() })
+  document.getElementById('tp-speed-up').addEventListener('click', () => { wpm = Math.min(500, wpm + 10); atualizarWpm() })
   document.getElementById('tp-speed-down').addEventListener('click', () => { wpm = Math.max(60, wpm - 10); atualizarWpm() })
   document.getElementById('tp-font-up').addEventListener('click', () => { fonte = Math.min(120, fonte + 4); atualizarFonte() })
   document.getElementById('tp-font-down').addEventListener('click', () => { fonte = Math.max(24, fonte - 4); atualizarFonte() })
