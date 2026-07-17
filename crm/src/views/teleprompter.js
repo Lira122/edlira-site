@@ -462,8 +462,21 @@ async function player(script) {
           facingMode: 'user',
           width:  { ideal: 1920 },
           height: { ideal: 1080 },
+          frameRate: { ideal: 30 },
         },
-        audio: true,
+        audio: {
+          // AGC bomba a voz e causa distorcao ("pumping"). Desliga.
+          autoGainControl:   false,
+          // Noise suppression ajuda em ambiente barulhento, mas em
+          // mobile costuma cortar sibilantes. Mantem soft.
+          noiseSuppression:  true,
+          // Echo cancellation OK, evita retorno se falar auto-alto.
+          echoCancellation:  true,
+          // Sample rate alto pra codec ter margem de qualidade.
+          sampleRate:        48000,
+          // Mono e' melhor pra fala. Menos processing weirdness.
+          channelCount:      1,
+        },
       })
       const videoEl = document.getElementById('tp-cam')
       videoEl.srcObject = camStream
@@ -506,11 +519,18 @@ async function player(script) {
     if (!camStream) return
     recChunks = []
     const mimeType = escolherMimeType()
+    const cfg = { videoBitsPerSecond: 4_000_000, audioBitsPerSecond: 192_000 }
+    if (mimeType) cfg.mimeType = mimeType
     try {
-      recorder = new MediaRecorder(camStream, mimeType ? { mimeType, videoBitsPerSecond: 4_000_000 } : undefined)
+      recorder = new MediaRecorder(camStream, cfg)
     } catch (e) {
-      toast('Gravacao nao suportada nesse navegador', 'err')
-      return
+      // Fallback sem audioBitsPerSecond (alguns browsers antigos)
+      try {
+        recorder = new MediaRecorder(camStream, mimeType ? { mimeType, videoBitsPerSecond: 4_000_000 } : undefined)
+      } catch (_) {
+        toast('Gravacao nao suportada nesse navegador', 'err')
+        return
+      }
     }
     recorder.ondataavailable = (e) => { if (e.data && e.data.size) recChunks.push(e.data) }
     recorder.onstop = () => {
