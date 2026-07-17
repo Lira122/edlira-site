@@ -232,6 +232,9 @@ async function player(script) {
   let recChunks = []
   let recIniciou = 0
   let recTimerId = 0
+  let audioDevices = []
+  let audioDeviceId = getPrefs().audioDeviceId || null
+  let audioModoExterno = !!getPrefs().audioModoExterno
 
   const ov = document.createElement('div')
   ov.id = 'tp-player-ov'
@@ -263,8 +266,10 @@ async function player(script) {
       </div>
       <button class="tp-btn ${mirror?'tp-btn-on':''}" id="tp-mirror" title="Modo espelho">⇋</button>
       <button class="tp-btn" id="tp-cam-btn" title="Ativar camera">🎥</button>
+      <button class="tp-btn" id="tp-mic-btn" style="display:none" title="Trocar microfone">🎙</button>
       <button class="tp-btn tp-btn-rec" id="tp-rec-btn" style="display:none" title="Gravar">🔴</button>
     </div>
+    <div class="tp-mic-chip" id="tp-mic-chip" style="display:none"></div>
     <div class="tp-player-hint" id="tp-hint">Toque na tela pra play/pause</div>
     <style>
       #tp-player-ov {
@@ -299,6 +304,15 @@ async function player(script) {
         padding:6px 14px;border-radius:20px;
         font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;
         z-index:20;box-shadow:0 4px 12px rgba(0,0,0,.4);
+      }
+      .tp-mic-chip {
+        position:absolute; top: calc(max(18px, env(safe-area-inset-top)) + 40px);
+        left:50%; transform:translateX(-50%);
+        background:rgba(0,0,0,.55);color:rgba(255,255,255,.75);
+        padding:5px 12px; border-radius:16px;
+        font-size:11px; z-index:24;
+        border:1px solid rgba(255,255,255,.1);
+        pointer-events:none;
       }
       .tp-rec-dot {
         width:9px;height:9px;border-radius:50%;background:#fff;
@@ -455,6 +469,31 @@ async function player(script) {
   }
 
   // ═══ Camera + gravacao (bonus, ativa on-demand) ═══
+  function buildAudioConstraints() {
+    // Mic externo (lapela, headset, USB): passa limpo, sem processing
+    if (audioModoExterno) {
+      const c = {
+        autoGainControl:   false,
+        noiseSuppression:  false,
+        echoCancellation:  false,
+        sampleRate:        48000,
+        channelCount:      1,
+      }
+      if (audioDeviceId) c.deviceId = { exact: audioDeviceId }
+      return c
+    }
+    // Mic do celular: processing leve pra limpar ambiente
+    const c = {
+      autoGainControl:   false,   // AGC sempre off (causa pumping)
+      noiseSuppression:  true,
+      echoCancellation:  true,
+      sampleRate:        48000,
+      channelCount:      1,
+    }
+    if (audioDeviceId) c.deviceId = { exact: audioDeviceId }
+    return c
+  }
+
   async function ativarCamera() {
     try {
       camStream = await navigator.mediaDevices.getUserMedia({
@@ -464,19 +503,7 @@ async function player(script) {
           height: { ideal: 1080 },
           frameRate: { ideal: 30 },
         },
-        audio: {
-          // AGC bomba a voz e causa distorcao ("pumping"). Desliga.
-          autoGainControl:   false,
-          // Noise suppression ajuda em ambiente barulhento, mas em
-          // mobile costuma cortar sibilantes. Mantem soft.
-          noiseSuppression:  true,
-          // Echo cancellation OK, evita retorno se falar auto-alto.
-          echoCancellation:  true,
-          // Sample rate alto pra codec ter margem de qualidade.
-          sampleRate:        48000,
-          // Mono e' melhor pra fala. Menos processing weirdness.
-          channelCount:      1,
-        },
+        audio: buildAudioConstraints(),
       })
       const videoEl = document.getElementById('tp-cam')
       videoEl.srcObject = camStream
@@ -485,11 +512,52 @@ async function player(script) {
       document.getElementById('tp-cam-btn').textContent = '🎥'
       document.getElementById('tp-cam-btn').classList.add('tp-btn-on')
       document.getElementById('tp-rec-btn').style.display = ''
+      document.getElementById('tp-mic-btn').style.display = ''
+      // Enumera devices e mostra o mic atual
+      try {
+        const devs = await navigator.mediaDevices.enumerateDevices()
+        audioDevices = devs.filter(d => d.kind === 'audioinput')
+        atualizarMicChip()
+      } catch (_) {}
       toast('Camera ativa. Texto rola por cima do video.')
     } catch (e) {
       console.error('[tp-cam]', e)
       toast('Nao consegui acessar a camera: ' + (e.message || e.name), 'err')
     }
+  }
+
+  function atualizarMicChip() {
+    const chip = document.getElementById('tp-mic-chip')
+    if (!chip) return
+    const trilha = camStream?.getAudioTracks?.()[0]
+    const settings = trilha?.getSettings?.() || {}
+    const idAtivo = settings.deviceId || audioDeviceId
+    const dev = audioDevices.find(d => d.deviceId === idAtivo)
+    const nome = dev?.label?.replace(/\(.*\)$/, '').trim() || 'Mic'
+    chip.innerHTML = `🎙 <strong style="color:#fff">${esc(nome.slice(0,26))}</strong>${audioModoExterno ? ' · <span style="color:#C5F82A">externo</span>' : ''}`
+    chip.style.display = ''
+  }
+
+  async function trocarMic() {
+    if (!audioDevices.length) return
+    const opcoes = audioDevices.map((d, i) => `${i+1}. ${d.label || 'Mic ' + (i+1)}`).join('\n')
+    const escolha = prompt(`Escolhe o mic (1-${audioDevices.length}):\n\n${opcoes}\n\nOu escreve "externo" pra alternar modo mic externo (sem processing).`)
+    if (!escolha) return
+    if (/^ext/i.test(escolha)) {
+      audioModoExterno = !audioModoExterno
+      setPrefs({ ...getPrefs(), audioModoExterno })
+    } else {
+      const n = parseInt(escolha, 10)
+      if (!(n >= 1 && n <= audioDevices.length)) return
+      audioDeviceId = audioDevices[n - 1].deviceId
+      setPrefs({ ...getPrefs(), audioDeviceId })
+    }
+    // Reinicia stream com nova config
+    const eraGravando = recorder && recorder.state === 'recording'
+    if (eraGravando) pararGravacao()
+    camStream?.getTracks().forEach(t => t.stop())
+    camStream = null
+    await ativarCamera()
   }
   function desativarCamera() {
     if (recorder && recorder.state !== 'inactive') pararGravacao()
@@ -636,6 +704,7 @@ async function player(script) {
     if (camAtiva) desativarCamera(); else ativarCamera()
   })
   document.getElementById('tp-rec-btn').addEventListener('click', toggleRec)
+  document.getElementById('tp-mic-btn').addEventListener('click', trocarMic)
   document.getElementById('tp-speed-up').addEventListener('click', () => { wpm = Math.min(300, wpm + 10); atualizarWpm() })
   document.getElementById('tp-speed-down').addEventListener('click', () => { wpm = Math.max(60, wpm - 10); atualizarWpm() })
   document.getElementById('tp-font-up').addEventListener('click', () => { fonte = Math.min(120, fonte + 4); atualizarFonte() })
