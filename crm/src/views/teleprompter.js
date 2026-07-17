@@ -335,7 +335,7 @@ async function player(script) {
         letter-spacing:-.01em;
       }
       .tp-player-controls {
-        position:absolute;left:0;right:0;bottom:0;
+        position:absolute;left:0;right:0;bottom:0;z-index:30;
         display:flex;align-items:center;justify-content:center;gap:14px;
         padding: 16px max(24px,env(safe-area-inset-left)) max(20px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-right));
         background:linear-gradient(to top, rgba(0,0,0,.85), transparent);
@@ -357,7 +357,7 @@ async function player(script) {
       .tp-btn-group { display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.04);padding:4px;border-radius:12px }
       .tp-badge { font-size:12px;color:#A0A0A0;padding:0 8px;min-width:70px;text-align:center }
       .tp-player-hint {
-        position:absolute;top:18px;left:50%;transform:translateX(-50%);
+        position:absolute;top:18px;left:50%;transform:translateX(-50%);z-index:25;
         font-size:12px;color:rgba(255,255,255,.5);padding:6px 14px;
         background:rgba(0,0,0,.5);border-radius:20px;
         pointer-events:none;transition:opacity .4s;
