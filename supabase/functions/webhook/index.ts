@@ -297,7 +297,7 @@ function parseWebhook(body: unknown) {
         const pushName = String(msg.senderName || msg.pushName || (e.chat as Record<string, unknown>)?.name || '')
 
         if (!text && !isAudio) continue
-        return { phone, text, isAudio, audioBase64: null, audioUrl: null, audioMessageId: messageId, pushName }
+        return { phone, text, isAudio, audioBase64: null, audioUrl: null, audioMessageId: messageId, pushName, msgKey: messageId }
       }
 
       // ── Formato Evolution/WhatsApp Web (key + message) ──
@@ -898,8 +898,94 @@ Deno.serve(async (req: Request) => {
     const parsed = parseWebhook(body)
     if (!parsed) return new Response('OK', { status: 200 })
 
-    const { phone, text, isAudio, audioBase64, audioUrl, audioMessageId, pushName } = parsed
+    const { phone, text, isAudio, audioBase64, audioUrl, audioMessageId, pushName, msgKey } = parsed
     console.log(`[MSG] ${phone} (${pushName}): ${isAudio ? '[ÁUDIO]' : text}`)
+
+    // ── DELAY DE 30s + DEDUP ────────────────────────────────────────────────
+    // Modo assistente pessoal e áudios processam já (nao precisa delay).
+    // Pra leads comuns em texto: marca como pendente, retorna OK imediato pro
+    // UazAPI (senao ele retenta e gera mensagem dupla), espera 30s em
+    // background e so processa se essa msg ainda for a mais recente do lead
+    // (se veio outra msg no meio, aquela vai processar tudo junto).
+    const modoPessoal = !LIRA_PERSONAL_OFF && (phone === LIRA_PERSONAL || phone === LIRA_PERSONAL.replace('55', ''))
+    if (!isAudio && !modoPessoal && msgKey) {
+      // Marca como pendente ANTES de retornar OK
+      try {
+        const { data: conv } = await supabase
+          .from('chatbot_conversations')
+          .select('lead_data').eq('phone', phone).maybeSingle()
+        const leadData = (conv?.lead_data || {}) as Record<string, unknown>
+        // Dedup: se essa mesma msgKey já é a pendente, é retry do UazAPI. Ignora.
+        if (leadData._msg_pendente === msgKey) {
+          console.log(`[DEDUP] ${phone} msgKey ${msgKey} já é pendente — retry ignorado`)
+          return new Response('OK', { status: 200 })
+        }
+        await supabase.from('chatbot_conversations').upsert({
+          phone,
+          lead_data: { ...leadData, _msg_pendente: msgKey, _msg_pendente_em: new Date().toISOString() },
+        }, { onConflict: 'phone' })
+      } catch (e) {
+        console.error('[DEDUP] falha ao marcar pendente:', e)
+      }
+
+      // Dispatch em background (fire-and-forget) e retorna OK imediato
+      const bgTask = (async () => {
+        try {
+          await new Promise(r => setTimeout(r, 30000))
+          // Recarrega e checa se ainda somos a msg pendente
+          const { data: conv2 } = await supabase
+            .from('chatbot_conversations')
+            .select('lead_data').eq('phone', phone).maybeSingle()
+          const leadData2 = (conv2?.lead_data || {}) as Record<string, unknown>
+          if (leadData2._msg_pendente !== msgKey) {
+            console.log(`[DEDUP] ${phone} outra msg chegou no meio — ${msgKey} abortado`)
+            return
+          }
+          // Limpa flag pendente antes de processar
+          await supabase.from('chatbot_conversations').update({
+            lead_data: (() => { const c = { ...leadData2 }; delete c._msg_pendente; delete c._msg_pendente_em; return c })(),
+          }).eq('phone', phone)
+
+          await processarMensagem(parsed)
+        } catch (e) {
+          console.error('[BG] falha no processamento:', e)
+        }
+      })()
+
+      // EdgeRuntime.waitUntil segura o worker até a promise terminar (se disponivel)
+      const rt = (globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime
+      if (rt?.waitUntil) rt.waitUntil(bgTask)
+
+      return new Response('OK', { status: 200 })
+    }
+
+    // Áudio e modo pessoal seguem processo direto
+    await processarMensagem(parsed)
+    return new Response('OK', { status: 200 })
+  } catch (err) {
+    console.error('[Webhook] erro no top-level:', err)
+    return new Response('OK', { status: 200 })
+  }
+})
+
+// ═══════════════════════════════════════════════════════════════════════
+//  processarMensagem: fluxo original do webhook, agora extraído pra
+//  ser chamável em background depois do delay + dedup.
+// ═══════════════════════════════════════════════════════════════════════
+type ParsedMsg = {
+  phone: string
+  text: string | null
+  isAudio: boolean
+  audioBase64: string | null
+  audioUrl: string | null
+  audioMessageId: string
+  pushName: string
+  msgKey: string
+}
+
+async function processarMensagem(parsed: ParsedMsg) {
+  try {
+    const { phone, text, isAudio, audioBase64, audioUrl, audioMessageId, pushName } = parsed
 
     let messageText = text
 
@@ -927,7 +1013,7 @@ Deno.serve(async (req: Request) => {
 
       if (!transcript) {
         await sendTextDelayed(phone, 'Não consegui entender o áudio. Pode digitar a mensagem?')
-        return new Response('OK', { status: 200 })
+        return
       }
       messageText = `[Áudio transcrito]: ${transcript}`
       console.log(`[Groq] Transcrito: ${transcript}`)
@@ -938,13 +1024,13 @@ Deno.serve(async (req: Request) => {
     if (!LIRA_PERSONAL_OFF && (phone === LIRA_PERSONAL || phone === LIRA_PERSONAL.replace('55', ''))) {
       const reply = await handlePersonalAssistant(phone, messageText!)
       await sendText(phone, reply)
-      return new Response('OK', { status: 200 })
+      return
     }
 
     // ── Robô desativado no painel — não responde leads (modo pessoal acima segue ativo) ──
     if (!(await isBotActive())) {
       console.log(`[BOT] Robô desativado no painel — ignorando ${phone}`)
-      return new Response('OK', { status: 200 })
+      return
     }
 
     const conversation = await getOrCreateConversation(phone)
@@ -957,7 +1043,7 @@ Deno.serve(async (req: Request) => {
         messages: [{ role: 'assistant', content: welcomeText }],
         lead_data: { nome: pushName || '' }
       })
-      return new Response('OK', { status: 200 })
+      return
     }
 
     if (conversation.stage === 'encerrado' || conversation.stage === 'em_pausa') {
@@ -966,14 +1052,14 @@ Deno.serve(async (req: Request) => {
         const pauseUntil = (conversation.lead_data as Record<string, unknown>)?.pausado_ate as string
         if (pauseUntil && new Date(pauseUntil) > new Date()) {
           console.log(`[BOT] ${phone} em pausa até ${pauseUntil} — ignorando`)
-          return new Response('OK', { status: 200 })
+          return
         }
         // Pausa venceu — reativa
         await updateConversation(phone, { stage: 'situacao' })
         await supabase.from('clientes').update({ status: 'qualificado', pausado_ate: null, temperatura: 'frio', atualizado_em: new Date().toISOString() })
           .eq('whatsapp', phone)
       } else {
-        return new Response('OK', { status: 200 })
+        return
       }
     }
 
@@ -997,7 +1083,7 @@ Deno.serve(async (req: Request) => {
         atualizado_em: new Date().toISOString(),
       }).eq('whatsapp', phone)
       console.log(`[BOT] Opt-out registrado: ${phone}`)
-      return new Response('OK', { status: 200 })
+      return
     }
 
     // ── Detecta intenção de pausa ("não é o momento") ────────────────────────
@@ -1020,7 +1106,7 @@ Deno.serve(async (req: Request) => {
         pausar: true,
         pausado_ate
       })
-      return new Response('OK', { status: 200 })
+      return
     }
 
     const result = await processMessage(conversation, messageText!)
@@ -1085,7 +1171,7 @@ Deno.serve(async (req: Request) => {
         )
       }
 
-      return new Response('OK', { status: 200 })
+      return
     }
 
     // ── Fluxo normal ─────────────────────────────────────────────────────────
@@ -1100,6 +1186,4 @@ Deno.serve(async (req: Request) => {
   } catch (err) {
     console.error('[ERRO]', err)
   }
-
-  return new Response('OK', { status: 200 })
-})
+}
