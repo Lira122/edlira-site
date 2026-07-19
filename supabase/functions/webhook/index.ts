@@ -901,65 +901,121 @@ Deno.serve(async (req: Request) => {
     const { phone, text, isAudio, audioBase64, audioUrl, audioMessageId, pushName, msgKey } = parsed
     console.log(`[MSG] ${phone} (${pushName}): ${isAudio ? '[ÁUDIO]' : text}`)
 
-    // ── DELAY DE 30s + DEDUP ────────────────────────────────────────────────
-    // Modo assistente pessoal e áudios processam já (nao precisa delay).
-    // Pra leads comuns em texto: marca como pendente, retorna OK imediato pro
-    // UazAPI (senao ele retenta e gera mensagem dupla), espera 30s em
-    // background e so processa se essa msg ainda for a mais recente do lead
-    // (se veio outra msg no meio, aquela vai processar tudo junto).
+    // ── BUFFER DE MENSAGENS + DELAY 30s ─────────────────────────────────────
+    // Modo assistente pessoal processa direto (Lira não espera nada).
+    // Pra leads comuns:
+    //  1. Se áudio: transcreve JÁ (mas em background).
+    //  2. Anexa texto ao buffer em lead_data._buffer.
+    //  3. Marca timestamp desta chegada.
+    //  4. Retorna 200 OK imediato pro UazAPI (senão ele retenta).
+    //  5. Em background: espera 30s.
+    //  6. Se chegou msg mais nova nesse meio, aborta (a mais nova vai processar
+    //     TUDO — inclusive as antigas que estão no buffer).
+    //  7. Se ainda somos a última: pega buffer inteiro, junta as mensagens,
+    //     limpa buffer, e manda pra IA responder como se fosse uma msg só.
+    //
+    // Efeito prático: lead manda "oi" ... 5s depois "quanto custa?" ... 3s
+    // depois "consegue começar essa semana?" → Sofia responde as 3 juntas
+    // com contexto completo, ~30s depois da última.
     const modoPessoal = !LIRA_PERSONAL_OFF && (phone === LIRA_PERSONAL || phone === LIRA_PERSONAL.replace('55', ''))
-    if (!isAudio && !modoPessoal && msgKey) {
-      // Marca como pendente ANTES de retornar OK
+    if (!modoPessoal && msgKey) {
+      // Dedup rápido: msgKey igual a alguma no buffer = retry do UazAPI
       try {
-        const { data: conv } = await supabase
+        const { data: convDup } = await supabase
           .from('chatbot_conversations')
           .select('lead_data').eq('phone', phone).maybeSingle()
-        const leadData = (conv?.lead_data || {}) as Record<string, unknown>
-        // Dedup: se essa mesma msgKey já é a pendente, é retry do UazAPI. Ignora.
-        if (leadData._msg_pendente === msgKey) {
-          console.log(`[DEDUP] ${phone} msgKey ${msgKey} já é pendente — retry ignorado`)
+        const ldDup = (convDup?.lead_data || {}) as Record<string, unknown>
+        const bufDup = Array.isArray(ldDup._buffer) ? ldDup._buffer as Array<Record<string, unknown>> : []
+        if (bufDup.some(m => m.msg_key === msgKey)) {
+          console.log(`[BUFFER] ${phone} msgKey ${msgKey} já está no buffer — retry ignorado`)
           return new Response('OK', { status: 200 })
         }
-        await supabase.from('chatbot_conversations').upsert({
-          phone,
-          lead_data: { ...leadData, _msg_pendente: msgKey, _msg_pendente_em: new Date().toISOString() },
-        }, { onConflict: 'phone' })
-      } catch (e) {
-        console.error('[DEDUP] falha ao marcar pendente:', e)
-      }
+      } catch (_) { /* segue mesmo se falhar */ }
 
-      // Dispatch em background (fire-and-forget) e retorna OK imediato
       const bgTask = (async () => {
         try {
+          // 1. Se áudio, transcreve agora pra virar texto que dá pra bufferar
+          let textoParaBuffer = text
+          if (isAudio) {
+            let transcript: string | null = null
+            if (audioBase64) transcript = await transcribeAudio({ base64: audioBase64 })
+            if (!transcript && audioMessageId) {
+              const bytes = await downloadAudioFromUazAPI(audioMessageId)
+              if (bytes) transcript = await transcribeAudio({ bytes })
+            }
+            if (!transcript && audioUrl) transcript = await transcribeAudio({ url: audioUrl })
+            if (!transcript) {
+              await sendTextDelayed(phone, 'Não consegui entender o áudio. Pode digitar a mensagem?')
+              return
+            }
+            textoParaBuffer = `[Áudio transcrito]: ${transcript}`
+          }
+
+          // 2. Anexa ao buffer
+          const meuTs = Date.now()
+          const { data: conv1 } = await supabase
+            .from('chatbot_conversations')
+            .select('lead_data').eq('phone', phone).maybeSingle()
+          const ld1 = (conv1?.lead_data || {}) as Record<string, unknown>
+          const buffer1 = Array.isArray(ld1._buffer) ? ld1._buffer as Array<Record<string, unknown>> : []
+          buffer1.push({ text: textoParaBuffer, is_audio: isAudio, msg_key: msgKey, at: meuTs })
+          await supabase.from('chatbot_conversations').upsert({
+            phone,
+            lead_data: {
+              ...ld1,
+              _buffer: buffer1,
+              _buffer_ts: meuTs,
+              _pushName: pushName || ld1._pushName,
+            },
+          }, { onConflict: 'phone' })
+
+          // 3. Espera 30s
           await new Promise(r => setTimeout(r, 30000))
-          // Recarrega e checa se ainda somos a msg pendente
+
+          // 4. Recarrega e verifica se somos ainda a última chegada
           const { data: conv2 } = await supabase
             .from('chatbot_conversations')
             .select('lead_data').eq('phone', phone).maybeSingle()
-          const leadData2 = (conv2?.lead_data || {}) as Record<string, unknown>
-          if (leadData2._msg_pendente !== msgKey) {
-            console.log(`[DEDUP] ${phone} outra msg chegou no meio — ${msgKey} abortado`)
+          const ld2 = (conv2?.lead_data || {}) as Record<string, unknown>
+          if (ld2._buffer_ts !== meuTs) {
+            console.log(`[BUFFER] ${phone} chegou msg mais nova depois de ${meuTs} — essa aborta, a próxima vai processar tudo`)
             return
           }
-          // Limpa flag pendente antes de processar
+
+          // 5. Somos a última: pega buffer inteiro, junta texto, limpa buffer
+          const bufFinal = Array.isArray(ld2._buffer) ? ld2._buffer as Array<Record<string, unknown>> : []
+          const textosJuntos = bufFinal.map(m => String(m.text || '')).join('\n').trim()
+          const teveAudio = bufFinal.some(m => m.is_audio === true)
+
+          const ldLimpo = { ...ld2 }
+          delete ldLimpo._buffer
+          delete ldLimpo._buffer_ts
           await supabase.from('chatbot_conversations').update({
-            lead_data: (() => { const c = { ...leadData2 }; delete c._msg_pendente; delete c._msg_pendente_em; return c })(),
+            lead_data: ldLimpo,
           }).eq('phone', phone)
 
-          await processarMensagem(parsed)
+          console.log(`[BUFFER] ${phone} processando ${bufFinal.length} msg(s) juntas`)
+
+          // 6. Chama processamento com texto combinado (isAudio=false porque
+          //    já viramos tudo em texto; se veio audio, respeitamos a
+          //    preferência do lead respondendo em áudio via flag externa)
+          await processarMensagem({
+            phone, text: textosJuntos, isAudio: teveAudio,
+            audioBase64: null, audioUrl: null, audioMessageId: '',
+            pushName, msgKey,
+          })
         } catch (e) {
-          console.error('[BG] falha no processamento:', e)
+          console.error('[BG] falha no buffer/processamento:', e)
         }
       })()
 
-      // EdgeRuntime.waitUntil segura o worker até a promise terminar (se disponivel)
       const rt = (globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime
       if (rt?.waitUntil) rt.waitUntil(bgTask)
 
       return new Response('OK', { status: 200 })
     }
 
-    // Áudio e modo pessoal seguem processo direto
+    // Modo assistente pessoal segue processo direto (sem buffer)
     await processarMensagem(parsed)
     return new Response('OK', { status: 200 })
   } catch (err) {
@@ -989,7 +1045,10 @@ async function processarMensagem(parsed: ParsedMsg) {
 
     let messageText = text
 
-    if (isAudio) {
+    // Se veio isAudio=true mas SEM fontes de áudio (base64/messageId/url),
+    // significa que já transcrevemos antes de bufferar. Pula transcrição.
+    const jaTranscrito = isAudio && !audioBase64 && !audioMessageId && !audioUrl
+    if (isAudio && !jaTranscrito) {
       let transcript: string | null = null
 
       // 1. Tenta base64 direto
