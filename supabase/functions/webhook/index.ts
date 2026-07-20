@@ -25,7 +25,7 @@ const LIRA_PERSONAL      = '5512981668507'   // Modo assistente pessoal
 const LIRA_PERSONAL_OFF  = ['1', 'true', 'on'].includes((Deno.env.get('LIRA_PERSONAL_OFF') ?? '').toLowerCase())
 
 const WELCOME_MSGS = [
-  `Oi! Aqui é o Lira, da Eleva Digital (elevabrands.com.br). Que bom que você chamou. Com quem eu falo?`
+  `Oi, aqui é o Lira, da Eleva Digital. Que bom que você chegou aqui. Fica à vontade, sem pressa. Posso te chamar de quê?`
 ]
 
 
@@ -969,8 +969,8 @@ Deno.serve(async (req: Request) => {
             },
           }, { onConflict: 'phone' })
 
-          // 3. Espera 30s
-          await new Promise(r => setTimeout(r, 30000))
+          // 3. Espera 60s (tom concierge, sem pressa)
+          await new Promise(r => setTimeout(r, 60000))
 
           // 4. Recarrega e verifica se somos ainda a última chegada
           const { data: conv2 } = await supabase

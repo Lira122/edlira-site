@@ -15,17 +15,20 @@ const UAZAPI_URL   = Deno.env.get('UAZAPI_URL')!
 const UAZAPI_TOKEN = Deno.env.get('UAZAPI_TOKEN')!
 
 /**
- * Calcula um delay realista de digitação pra uma mensagem.
- * - Base de 1.5s ("pensando antes de digitar")
- * - + 45ms por caractere (simula ~40 palavras/min)
- * - + 0-1s de ruído aleatório (humano não é máquina)
- * - Clamp: 2s mínimo, 10s máximo
+ * Calcula um delay realista de digitação pra uma mensagem (estilo concierge).
+ * - Base de 3s ("pensando antes de digitar com atenção")
+ * - + 65ms por caractere (simula ~28 palavras/min, ritmo pausado)
+ * - + 0-2s de ruído aleatório (humano não é máquina)
+ * - Clamp: 4s mínimo, 15s máximo
+ *
+ * Filosofia: concierge lê a mensagem, pensa, formula, digita com calma.
+ * Não é vendedor jogando texto pronto de script.
  */
 export function humanDelay(text: string): number {
   const len = String(text || '').length
-  const base = 1500 + len * 45
-  const ruido = Math.floor(Math.random() * 1000)
-  return Math.min(Math.max(base + ruido, 2000), 10000)
+  const base = 3000 + len * 65
+  const ruido = Math.floor(Math.random() * 2000)
+  return Math.min(Math.max(base + ruido, 4000), 15000)
 }
 
 /**
